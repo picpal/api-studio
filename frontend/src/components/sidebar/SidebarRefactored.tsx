@@ -459,7 +459,7 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
 
   if (collapsed) {
     return (
-      <div className="w-12 h-screen bg-white flex flex-col items-center py-3">
+      <div className="w-12 h-screen border-r border-gray-200 bg-white flex flex-col items-center py-3">
         {/* Toggle Button - Collapsed State */}
         <div className="mb-3">
           <button 

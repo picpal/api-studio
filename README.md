@@ -1,86 +1,93 @@
-# API Feature Test
+# 프로젝트 이름 (플레이스홀더)
 
-이 프로젝트는 웹 기반의 API 테스트 도구입니다. Postman이나 Insomnia와 같이 API 요청을 폴더별로 관리하고 실행하며, 응답을 확인할 수 있는 기능을 제공합니다.
+이 프로젝트는 프론트엔드 애플리케이션과 백엔드 API로 구성되어 있습니다. 이 README는 개발 환경을 설정하고 애플리케이션의 두 부분을 실행하는 방법에 대한 지침을 제공합니다.
 
-## 🚀 주요 기능
+## 목차
+- [사전 준비 사항](#사전-준비-사항)
+- [백엔드 설정 및 실행](#백엔드-설정-및-실행)
+  - [설정](#백엔드-설정)
+  - [실행](#백엔드-실행)
+- [프론트엔드 설정 및 실행](#프론트엔드-설정-및-실행)
+  - [설정](#프론트엔드-설정)
+  - [실행](#프론트엔드-실행)
+- [인증 방식](#인증-방식)
+- [Postman 컬렉션 사용 안내](#postman-컬렉션-사용-안내)
 
-- API 요청을 관리하기 위한 폴더 생성, 조회, 수정, 삭제 (CRUD)
-- 폴더 내 API 아이템(요청) 생성, 조회, 수정, 삭제 (CRUD)
-- HTTP 메서드(GET, POST, PUT, DELETE 등)를 포함한 API 요청 설정
-- API 요청 실행 및 서버 응답 (상태 코드, 헤더, 본문) 확인
-- 드래그 앤 드롭을 이용한 폴더 및 아이템 순서 변경
+## 사전 준비 사항
+시작하기 전에 다음 소프트웨어가 시스템에 설치되어 있는지 확인하십시오:
 
-## 🛠️ 기술 스택
+*   **Node.js**: [Node.js 다운로드 및 설치](https://nodejs.org/) (npm 포함)
+    *   또는 **Yarn**을 사용할 수 있습니다: `npm install -g yarn`
+*   **Java Development Kit (JDK)**: 버전 17 이상을 권장합니다.
+    *   [Oracle JDK](https://www.oracle.com/java/technologies/downloads/)에서 다운로드하거나 [Adoptium Temurin](https://adoptium.net/)과 같은 OpenJDK 배포판을 사용할 수 있습니다.
+*   **Git**: 저장소를 클론하기 위해 필요합니다.
 
-### Backend
+## 백엔드 설정 및 실행
 
-- **언어**: Java 17
-- **프레임워크**: Spring Boot 3.2.2
-- **빌드 도구**: Gradle
-- **데이터베이스**: H2 (In-memory)
-- **API**: REST API
+백엔드는 Gradle로 빌드된 Spring Boot 애플리케이션입니다.
 
-### Frontend
+### 백엔드 설정
+호환되는 JDK가 설치되어 있는 것 외에는 특별한 설정 단계가 필요하지 않습니다. 프로젝트는 Gradle Wrapper를 사용하므로 Gradle을 전역으로 설치할 필요가 없습니다.
 
-- **언어**: TypeScript
-- **라이브러리**: React
-- **스타일링**: Tailwind CSS, Styled-components
-- **상태 관리**: React Hooks
-- **HTTP 클라이언트**: Axios
-- **코드 에디터**: Monaco Editor
+### 백엔드 실행
+백엔드 서버를 시작하려면 `backend` 디렉토리로 이동하여 다음 명령어를 실행하십시오:
 
-## 🏁 시작하기
+```bash
+cd backend
+./gradlew bootRun
+```
+백엔드 서버는 일반적으로 `http://localhost:8080`에서 실행됩니다.
 
-프로젝트를 로컬 환경에서 실행하려면 다음 단계를 따르세요.
+## 프론트엔드 설정 및 실행
 
-### 사전 요구 사항
+프론트엔드는 Vite로 빌드되고 Tailwind CSS로 스타일링된 React 애플리케이션입니다.
 
-- Java 17 이상 (JDK)
-- Node.js (v16 이상 권장) 및 npm
-- Git
-
-### Backend 실행
-
-1.  **백엔드 디렉토리로 이동합니다.**
-    ```bash
-    cd backend
-    ```
-
-2.  **Gradle을 사용하여 프로젝트를 빌드하고 실행합니다.**
-    ```bash
-    ./gradlew bootRun
-    ```
-    서버는 `http://localhost:8080`에서 실행됩니다. H2 데이터베이스 콘솔은 `http://localhost:8080/h2-console`에서 확인할 수 있습니다.
-
-### Frontend 실행
-
-1.  **프론트엔드 디렉토리로 이동합니다.**
+### 프론트엔드 설정
+1.  `frontend` 디렉토리로 이동하십시오:
     ```bash
     cd frontend
     ```
-
-2.  **필요한 패키지를 설치합니다.**
+2.  필요한 Node.js 의존성을 설치하십시오:
     ```bash
     npm install
+    # 또는 yarn을 사용하는 경우
+    # yarn install
     ```
 
-3.  **개발 서버를 시작합니다.**
-    ```bash
-    npm start
-    ```
-    애플리케이션은 `http://localhost:3000`에서 열립니다.
+### 프론트엔드 실행
+프론트엔드 개발 서버를 시작하려면 `frontend` 디렉토리로 이동하여 다음 명령어를 실행하십시오:
 
-## 📁 프로젝트 구조
-
+```bash
+cd frontend
+npm run dev
+# 또는 yarn을 사용하는 경우
+# yarn dev
 ```
-.
-├── backend/      # Spring Boot 백엔드 서버
-│   ├── build.gradle
-│   └── src/
-└── frontend/     # React 프론트엔드 애플리케이션
-    ├── package.json
-    └── src/
-```
+프론트엔드 애플리케이션은 일반적으로 `http://localhost:5173`에서 접근할 수 있습니다 (5173 포트가 사용 중인 경우 다른 포트).
 
--   `backend`: Java와 Spring Boot로 구현된 API 서버입니다.
--   `frontend`: TypeScript와 React로 구현된 사용자 인터페이스입니다.
+## 인증 방식
+
+이 프로젝트의 백엔드는 **세션 기반 인증**을 사용합니다. 이는 사용자가 성공적으로 로그인하면 서버가 세션을 생성하고 해당 세션 ID를 포함하는 쿠키(예: `JSESSIONID`)를 클라이언트에게 발급한다는 의미입니다. 이후 클라이언트가 인증이 필요한 API 엔드포인트에 요청을 보낼 때, 이 세션 쿠키가 자동으로 함께 전송되어 서버가 사용자를 식별하고 인증 상태를 유지합니다.
+
+**Postman 테스트 시 유의사항:**
+
+1.  **로그인 선행**: 인증이 필요한 API를 테스트하기 전에, 반드시 `POST /api/auth/login` 엔드포인트를 통해 먼저 로그인해야 합니다.
+2.  **세션 쿠키 자동 관리**: Postman은 로그인 응답으로 받은 세션 쿠키를 자동으로 저장하고, 이후 동일한 도메인으로 보내는 모든 요청에 해당 쿠키를 자동으로 포함시킵니다. 따라서 로그인 후에는 별도로 인증 헤더를 설정할 필요 없이 다른 인증된 API를 테스트할 수 있습니다.
+3.  **세션 유지**: Postman 애플리케이션을 재시작하거나, Postman의 쿠키를 수동으로 지우지 않는 한 세션은 유지됩니다. 세션이 만료되거나 무효화되면 다시 로그인해야 합니다.
+
+## Postman 컬렉션 사용 안내
+
+제공된 `.json` 파일들은 Postman 컬렉션으로, 백엔드 API를 테스트하기 위한 요청 예시들을 포함하고 있습니다.
+
+**사용 방법:**
+
+1.  **Postman 실행**: Postman 데스크톱 애플리케이션 또는 웹 버전을 실행합니다.
+2.  **컬렉션 임포트**:
+    *   Postman 좌측 사이드바에서 `Collections` 탭을 선택합니다.
+    *   `Import` 버튼을 클릭합니다.
+    *   `Upload Files`를 선택하고, 제공된 `Postman_Auth_API.json`, `Postman_AdminActivity_API.json` 등 모든 `.json` 파일을 선택하여 임포트합니다.
+3.  **환경 설정 (선택 사항)**: API의 기본 URL(`http://localhost:8080`)이 변경될 수 있는 경우, Postman 환경 변수를 설정하여 유연하게 관리할 수 있습니다.
+4.  **요청 실행**: 임포트된 컬렉션에서 원하는 요청을 선택하고 `Send` 버튼을 클릭하여 API를 테스트합니다.
+5.  **`YOUR_UNIQUE_POSTMAN_ID`**: 각 `.json` 파일 내의 `_postman_id` 필드는 Postman이 컬렉션을 식별하는 데 사용하는 고유 ID입니다. 이 값은 임포트 시 Postman에 의해 자동으로 생성되므로, 파일을 직접 수정할 필요는 없습니다.
+
+**참고:** 관리자 권한이 필요한 API(`Postman_Admin_API.json`, `Postman_AdminActivity_API.json`)를 테스트하려면, 먼저 관리자 계정으로 로그인해야 합니다.

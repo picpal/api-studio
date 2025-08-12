@@ -1,0 +1,202 @@
+{
+	"info": {
+		"_postman_id": "YOUR_UNIQUE_POSTMAN_ID",
+		"name": "Backend Admin API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"description": "Collection for testing admin-related user and folder permission APIs. All requests require admin privileges."
+	},
+	"item": [
+		{
+			"name": "Get All Users",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/admin/users",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"admin",
+						"users"
+					]
+				},
+				"description": "Retrieves a list of all registered users. Requires admin privileges."
+			},
+			"response": []
+		},
+		{
+			"name": "Update User Status",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"status\": \"APPROVED\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/admin/users/1/status",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"admin",
+						"users",
+						"1",
+						"status"
+					]
+				},
+				"description": "Updates the status of a specific user (e.g., APPROVED, PENDING, REJECTED). Requires admin privileges."
+			},
+			"response": []
+		},
+		{
+			"name": "Update User Role",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"role\": \"ADMIN\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/admin/users/1/role",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"admin",
+						"users",
+						"1",
+						"role"
+					]
+				},
+				"description": "Updates the role of a specific user (e.g., USER, ADMIN). Requires admin privileges."
+			},
+			"response": []
+		},
+		{
+			"name": "Grant Folder Permission",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"userId\": 1,\n    \"permission\": \"READ\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/admin/folders/1/permissions",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"admin",
+						"folders",
+						"1",
+						"permissions"
+					]
+				},
+				"description": "Grants a specific permission (READ, WRITE, NONE) to a user for a given folder. Requires admin privileges."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Folder Permissions",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/admin/folders/1/permissions",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"admin",
+						"folders",
+						"1",
+						"permissions"
+					]
+				},
+				"description": "Retrieves all permissions set for a specific folder. Requires admin privileges."
+			},
+			"response": []
+		},
+		{
+			"name": "Revoke Folder Permission",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/admin/folders/1/permissions/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"admin",
+						"folders",
+						"1",
+						"permissions",
+						"1"
+					]
+				},
+				"description": "Revokes a specific folder permission from a user. Requires admin privileges."
+			},
+			"response": []
+		},
+		{
+			"name": "Get All Folders (Admin)",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/admin/folders",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"admin",
+						"folders"
+					]
+				},
+				"description": "Retrieves a list of all folders in the system. Requires admin privileges."
+			},
+			"response": []
+		}
+	]
+}
