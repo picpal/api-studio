@@ -28,8 +28,8 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
   const [activeTab, setActiveTab] = useState<'params' | 'headers' | 'body' | 'curl'>('params');
   const [responseTab, setResponseTab] = useState<'body' | 'headers'>('body');
 
-  const [paramsList, setParamsList] = useState<Array<{key: string, value: string, id: string}>>([
-    { key: '', value: '', id: '1' }
+  const [paramsList, setParamsList] = useState<Array<{key: string, value: string, description: string, required: boolean, id: string}>>([
+    { key: '', value: '', description: '', required: false, id: '1' }
   ]);
 
   const [headersList, setHeadersList] = useState<Array<{key: string, value: string, id: string}>>([
@@ -99,12 +99,14 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
       const loadedParams = Object.entries(savedParams).map(([key, value], index) => ({
         key,
         value: String(value),
+        description: '',
+        required: false,
         id: (index + 1).toString()
       }));
       if (loadedParams.length === 0) {
-        setParamsList([{ key: '', value: '', id: '1' }]);
+        setParamsList([{ key: '', value: '', description: '', required: false, id: '1' }]);
       } else {
-        setParamsList([...loadedParams, { key: '', value: '', id: (loadedParams.length + 1).toString() }]);
+        setParamsList([...loadedParams, { key: '', value: '', description: '', required: false, id: (loadedParams.length + 1).toString() }]);
       }
 
       // headersList 로드
@@ -376,7 +378,7 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
   };
 
   const addParam = () => {
-    setParamsList([...paramsList, { key: '', value: '', id: Date.now().toString() }]);
+    setParamsList([...paramsList, { key: '', value: '', description: '', required: false, id: Date.now().toString() }]);
   };
 
   const removeParam = (id: string) => {
@@ -417,7 +419,7 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
     }
   };
 
-  const updateParam = (id: string, field: 'key' | 'value', value: string) => {
+  const updateParam = (id: string, field: 'key' | 'value' | 'description' | 'required', value: string | boolean) => {
     // 업데이트된 paramsList 계산
     const updatedParamsList = paramsList.map(p => 
       p.id === id ? { ...p, [field]: value } : p
@@ -436,10 +438,10 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
         // 기존 키 제거 (있다면)
         if (oldParam.key) delete updatedParams[oldParam.key];
         // 새 키로 값 설정 (키와 값이 모두 있다면)
-        if (value && updatedParam.value) updatedParams[value] = updatedParam.value;
+        if (value && updatedParam.value) updatedParams[value as string] = updatedParam.value;
       } else {
         // value 필드 업데이트
-        if (updatedParam.key) updatedParams[updatedParam.key] = value;
+        if (updatedParam.key) updatedParams[updatedParam.key] = value as string;
       }
     }
     
@@ -531,126 +533,161 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
       headers: {},
       body: ''
     });
-    setParamsList([{ key: '', value: '', id: '1' }]);
+    setParamsList([{ key: '', value: '', description: '', required: false, id: '1' }]);
     setHeadersList([{ key: '', value: '', id: '1' }]);
     setResponse(null);
     setActiveTab('params');
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-gray-50">
-      {/* API Description Section */}
+    <div className="flex-1 flex flex-col bg-white">
+      {/* API Name Section */}
       <div className="bg-white border-b border-gray-200 p-4">
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-4">
-            <h2 className="text-lg font-semibold text-gray-800">API Description</h2>
-            {!isEditingDescription && (
+            <h2 className="text-lg font-semibold text-gray-800">
+              {selectedItem ? selectedItem.name : 'No API Selected'}
+            </h2>
+            {selectedItem && !isEditingDescription && (
               <button 
                 onClick={handleEditDescription}
                 className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
               >
-                Edit
+                Edit Description
               </button>
             )}
           </div>
           <button 
             onClick={handleSaveApi}
             disabled={!selectedItem || saving}
-            className={`px-4 py-2 text-white rounded flex items-center gap-2 transition-colors ${
+            className={`px-4 py-1.5
+             text-white rounded flex items-center gap-2 transition-colors ${
               selectedItem && !saving 
                 ? 'bg-blue-600 hover:bg-blue-700' 
                 : 'bg-gray-400 cursor-not-allowed'
             }`}
           >
-            💾 {saving ? 'Saving...' : 'Save API'}
+            {saving ? 'Saving...' : 'Save'}
           </button>
         </div>
         
-        {isEditingDescription ? (
-          // 편집 모드
-          <div>
-            <div className="bg-gray-50 p-3 rounded border mb-3">
-              <textarea 
-                className="w-full h-24 bg-transparent border-none outline-none resize-none text-sm text-gray-700 placeholder-gray-500"
-                placeholder="이 API의 목적과 사용 방법에 대해 설명해주세요..."
-                value={tempDescription}
-                onChange={(e) => setTempDescription(e.target.value)}
-                autoFocus
-              />
+        {selectedItem ? (
+          isEditingDescription ? (
+            // 편집 모드
+            <div>
+              <div className="bg-gray-50 p-3 rounded border mb-3">
+                <textarea 
+                  className="w-full h-24 bg-transparent border-none outline-none resize-none text-sm text-gray-700 placeholder-gray-500"
+                  placeholder="이 API의 목적과 사용 방법에 대해 설명해주세요..."
+                  value={tempDescription}
+                  onChange={(e) => setTempDescription(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleSaveDescription}
+                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                >
+                  저장
+                </button>
+                <button
+                  onClick={handleCancelDescription}
+                  className="px-3 py-1 text-sm bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors"
+                >
+                  취소
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleSaveDescription}
-                className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-              >
-                저장
-              </button>
-              <button
-                onClick={handleCancelDescription}
-                className="px-3 py-1 text-sm bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors"
-              >
-                취소
-              </button>
+          ) : (
+            // 표시 모드
+            <div 
+              className="bg-gray-50 p-4 rounded border min-h-16 cursor-pointer hover:bg-gray-100 transition-colors"
+              onClick={handleEditDescription}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-gray-500 font-medium">API Description</span>
+                <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                  selectedItem.method === 'GET' ? 'bg-green-100 text-green-800' :
+                  selectedItem.method === 'POST' ? 'bg-blue-100 text-blue-800' :
+                  selectedItem.method === 'PUT' ? 'bg-orange-100 text-orange-800' :
+                  selectedItem.method === 'DELETE' ? 'bg-red-100 text-red-800' :
+                  selectedItem.method === 'PATCH' ? 'bg-purple-100 text-purple-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {selectedItem.method}
+                </span>
+              </div>
+              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                {apiDescription || '이 API에 대한 설명을 추가하려면 클릭하세요...'}
+              </p>
+              {selectedItem.url && (
+                <div className="mt-2 pt-2 border-t border-gray-200">
+                  <span className="text-xs text-gray-500">Endpoint: </span>
+                  <code className="text-xs text-gray-700 bg-gray-100 px-1 py-0.5 rounded">{selectedItem.url}</code>
+                </div>
+              )}
             </div>
-          </div>
+          )
         ) : (
-          // 표시 모드
-          <div 
-            className="bg-gray-50 p-4 rounded border min-h-16 cursor-pointer hover:bg-gray-100 transition-colors"
-            onClick={handleEditDescription}
-          >
-            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-              {apiDescription}
+          // 선택된 API가 없을 때
+          <div className="bg-gray-50 p-8 rounded border text-center">
+            <div className="text-4xl mb-4">📋</div>
+            <h3 className="text-lg font-medium text-gray-700 mb-2">API를 선택하세요</h3>
+            <p className="text-sm text-gray-500">
+              좌측 사이드바에서 API를 선택하거나 새로운 API를 생성하여 시작하세요
             </p>
           </div>
         )}
       </div>
 
-      {/* Request Section */}
-      <div className="bg-white border-b border-gray-200 p-6">
-        <div className="flex items-center gap-0">
-          {/* Method Selector with dropdown arrow */}
+      {/* Request Section - Compact Insomnia Style */}
+      <div className="bg-white border-b border-gray-200 px-3 py-2">
+        <div className="flex items-center">
+          {/* Method Selector - Compact */}
           <div className="relative">
             <select 
-              className={`appearance-none border border-r-0 px-4 py-3 pr-8 text-sm font-medium rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${getMethodColor(request.method)}`}
+              className={`appearance-none border-0 px-3 py-2 pr-6 text-xs font-bold rounded-sm focus:outline-none focus:ring-1 focus:ring-blue-400 ${getMethodColor(request.method)}`}
               value={request.method}
               onChange={(e) => handleMethodChange(e.target.value)}
             >
-              <option value="GET" className="text-green-600 bg-green-50">GET</option>
-              <option value="POST" className="text-blue-600 bg-blue-50">POST</option>
-              <option value="PUT" className="text-orange-600 bg-orange-50">PUT</option>
-              <option value="DELETE" className="text-red-600 bg-red-50">DELETE</option>
-              <option value="PATCH" className="text-purple-600 bg-purple-50">PATCH</option>
+              <option value="GET">GET</option>
+              <option value="POST">POST</option>
+              <option value="PUT">PUT</option>
+              <option value="DELETE">DELETE</option>
+              <option value="PATCH">PATCH</option>
             </select>
-            <div className={`pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 ${getMethodColor(request.method).split(' ')[0]}`}>
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <div className={`pointer-events-none absolute inset-y-0 right-0 flex items-center px-1 ${getMethodColor(request.method).split(' ')[0]}`}>
+              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
               </svg>
             </div>
           </div>
           
-          {/* URL Input */}
+          {/* URL Input - Compact */}
           <input
             type="text"
-            className="flex-1 px-4 py-3 border border-gray-300 border-l-0 border-r-0 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:z-10"
+            className="flex-1 mx-2 px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
             value={request.url}
             onChange={(e) => setRequest({...request, url: e.target.value})}
-            placeholder="Enter URL or paste text"
+            placeholder="https://api.example.com/endpoint"
           />
           
-          {/* Send Button with dropdown */}
-          <div className="relative">
-            <button
-              onClick={handleSend}
-              disabled={loading}
-              className="bg-blue-600 text-white px-6 py-3 rounded-r-md hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {loading ? 'Sending...' : 'Send'}
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+          {/* Send Button - Compact */}
+          <button
+            onClick={handleSend}
+            disabled={loading}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-blue-400 min-w-[60px] justify-center"
+          >
+            {loading ? (
+              <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-            </button>
-          </div>
+            ) : (
+              'Send'
+            )}
+          </button>
         </div>
       </div>
 
@@ -658,18 +695,18 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
       <div className="flex-1 flex">
         {/* Request Section - Left Side */}
         <div className="flex-1 flex flex-col border-r border-gray-200">
-          {/* Request Tabs */}
-          <div className="bg-white border-b border-gray-200">
-            <div className="flex justify-between items-center">
+          {/* Request Tabs - Compact */}
+          <div className="bg-gray-50 border-b border-gray-200">
+            <div className="flex justify-between items-center h-9">
               <div className="flex">
                 {(['params', 'headers', 'body', 'curl'] as const).map((tab) => (
                   <button
                     key={tab}
-                    className={`px-4 py-2 text-sm font-medium border-b-2 ${
+                    className={`px-3 py-1.5 text-xs font-medium border-b-2 ${
                       activeTab === tab 
-                        ? 'border-blue-600 text-blue-600' 
-                        : 'border-transparent text-gray-600 hover:text-gray-800'
-                    }`}
+                        ? 'border-blue-500 text-blue-600 bg-white' 
+                        : 'border-transparent text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+                    } transition-colors`}
                     onClick={() => setActiveTab(tab)}
                   >
                     {tab === 'curl' ? 'cURL' : tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -678,7 +715,7 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
               </div>
               <button
                 onClick={handleReset}
-                className="mx-4 px-3 py-1 text-sm text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                className="mx-3 px-2 py-1 text-xs text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
               >
                 Reset
               </button>
@@ -686,31 +723,66 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
           </div>
 
           {/* Tab Content */}
-          <div className="bg-white p-4 flex-1 overflow-auto">
+          <div className="bg-white p-3 flex-1 overflow-auto max-h-96">
             {activeTab === 'params' && (
-              <div>
+              <div className="h-full overflow-y-auto">
                 <div className="grid grid-cols-12 gap-2 mb-4 text-sm font-medium text-gray-600">
-                  <div className="col-span-5">Key</div>
-                  <div className="col-span-6">Value</div>
+                  <div className="col-span-1 text-center">
+                    <span className="text-xs cursor-help" title="Required">*</span>
+                  </div>
+                  <div className="col-span-3">Key</div>
+                  <div className="col-span-3">Value</div>
+                  <div className="col-span-4">Description</div>
                   <div className="col-span-1"></div>
                 </div>
                 {paramsList.map((param) => (
-                  <div key={param.id} className="grid grid-cols-12 gap-2 mb-2">
+                  <div key={param.id} className="grid grid-cols-12 gap-2 mb-2 items-center">
+                    <div className="col-span-1 flex justify-center items-center">
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="sr-only peer"
+                          checked={param.required}
+                          onChange={(e) => updateParam(param.id, 'required', e.target.checked)}
+                        />
+                        <div className="relative w-5 h-5 bg-white border-2 border-gray-300 rounded peer-checked:bg-blue-600 peer-checked:border-blue-600 peer-hover:border-blue-400 transition-colors duration-200">
+                          <svg
+                            className={`absolute inset-0 w-3 h-3 m-0.5 text-white transition-opacity duration-200 ${
+                              param.required ? 'opacity-100' : 'opacity-0'
+                            }`}
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </div>
+                      </label>
+                    </div>
                     <input
-                      className="col-span-5 px-3 py-2 border border-gray-300 rounded text-sm"
+                      className="col-span-3 px-3 py-2 border border-gray-300 rounded text-sm"
                       placeholder="key"
                       value={param.key}
                       onChange={(e) => updateParam(param.id, 'key', e.target.value)}
                     />
                     <input
-                      className="col-span-6 px-3 py-2 border border-gray-300 rounded text-sm"
+                      className="col-span-3 px-3 py-2 border border-gray-300 rounded text-sm"
                       placeholder="value"
                       value={param.value}
                       onChange={(e) => updateParam(param.id, 'value', e.target.value)}
                     />
+                    <input
+                      className="col-span-4 px-3 py-2 border border-gray-300 rounded text-sm"
+                      placeholder="description"
+                      value={param.description}
+                      onChange={(e) => updateParam(param.id, 'description', e.target.value)}
+                    />
                     <button
                       onClick={() => removeParam(param.id)}
-                      className="col-span-1 text-gray-400 hover:text-red-600 text-center"
+                      className="col-span-1 text-gray-400 hover:text-red-600 text-center transition-colors duration-200"
                     >
                       ×
                     </button>
@@ -726,7 +798,7 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
             )}
 
             {activeTab === 'headers' && (
-              <div>
+              <div className="h-full overflow-y-auto">
                 <div className="grid grid-cols-12 gap-2 mb-2 text-sm font-medium text-gray-600">
                   <div className="col-span-5">Key</div>
                   <div className="col-span-6">Value</div>
@@ -856,24 +928,24 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
 
         {/* Response Section - Right Side */}
         <div className="flex-1 flex flex-col bg-white">
-          {/* Response Header */}
-          <div className="border-b border-gray-200 p-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-sm font-medium text-gray-700">Response</h3>
-              <div className="flex items-center gap-4">
-                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+          {/* Response Header - Compact */}
+          <div className="bg-gray-50 border-b border-gray-200">
+            <div className="flex justify-between items-center h-9">
+              <h3 className="text-xs px-3 font-medium text-gray-700">Response</h3>
+              <div className="flex items-center gap-3">
+                <span className={`px-2 py-0.5 mr-3 rounded text-xs font-semibold ${
                   !response 
                     ? 'bg-gray-100 text-gray-500' 
                     : response.status >= 200 && response.status < 300 
                       ? 'bg-green-100 text-green-800' 
                       : 'bg-red-100 text-red-800'
                 }`}>
-                  {response ? response.status : 'None'}
+                  {response ? response.status : '-'}
                 </span>
                 {response && (
                   <>
-                    <span className="text-gray-600 text-sm">Time: {response.time}ms</span>
-                    <span className="text-gray-600 text-sm">Size: {response.size}</span>
+                    <span className="text-gray-600 text-xs">Time: {response.time}ms</span>
+                    <span className="text-gray-600 text-xs">Size: {response.size}</span>
                   </>
                 )}
               </div>
@@ -883,16 +955,16 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
           {response ? (
             <>
 
-              <div className="border-b border-gray-200">
-                <div className="flex">
+              <div className="bg-gray-50 border-b border-gray-200">
+                <div className="flex h-9 items-center">
                   {(['body', 'headers'] as const).map((tab) => (
                     <button
                       key={tab}
-                      className={`px-4 py-2 text-sm font-medium border-b-2 ${
+                      className={`px-3 py-1.5 text-xs font-medium border-b-2 ${
                         responseTab === tab 
-                          ? 'border-blue-600 text-blue-600' 
-                          : 'border-transparent text-gray-600 hover:text-gray-800'
-                      }`}
+                          ? 'border-blue-500 text-blue-600 bg-white' 
+                          : 'border-transparent text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+                      } transition-colors`}
                       onClick={() => setResponseTab(tab)}
                     >
                       {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -901,7 +973,7 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
                 </div>
               </div>
 
-              <div className="p-4 flex-1 overflow-auto">
+              <div className="p-3 flex-1 overflow-auto">
                 {responseTab === 'body' && (
                   <div className="h-full">
                     {renderSyntaxHighlighter(response.data)}

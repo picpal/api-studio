@@ -9,6 +9,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
 });
 
 // 백엔드 <-> 프론트엔드 타입 변환 함수들
@@ -102,4 +103,32 @@ export const itemApi = {
   }
 };
 
+// Auth API 함수들
+export const authApi = {
+  // 로그인
+  login: async (email: string, password: string): Promise<{message: string, user: any}> => {
+    const response = await apiClient.post('/auth/login', { email, password });
+    return response.data;
+  },
+
+  // 회원가입
+  register: async (email: string, password: string): Promise<{message: string}> => {
+    const response = await apiClient.post('/auth/register', { email, password });
+    return response.data;
+  },
+
+  // 현재 사용자 정보 확인
+  me: async (): Promise<{user: any}> => {
+    const response = await apiClient.get('/auth/me');
+    return response.data;
+  },
+
+  // 로그아웃
+  logout: async (): Promise<void> => {
+    await apiClient.post('/auth/logout');
+  }
+};
+
+// Default export는 apiClient로, named export는 api로
 export default apiClient;
+export const api = apiClient;
