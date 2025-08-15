@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ApiRequest, ApiResponse, BaseUrl, ApiItem } from '../types/api';
-import { itemApi } from '../services/api';
+import { ApiRequest, ApiResponse, BaseUrl, ApiItem, ApiItemHistory } from '../types/api';
+import { itemApi, historyApi } from '../services/api';
+import SaveHistoryModal from './SaveHistoryModal';
 import axios from 'axios';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -43,10 +44,14 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
   const [tempDescription, setTempDescription] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // 히스토리 관련 상태
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [historyList, setHistoryList] = useState<any[]>([]);
+  const [selectedHistoryId, setSelectedHistoryId] = useState<string>('');
+
   // 선택된 아이템이 변경될 때 폼을 로드
   useEffect(() => {
     if (selectedItem) {
-      console.log('Loading item data:', selectedItem);
       
       // 저장된 params 파싱
       let savedParams = {};
@@ -95,18 +100,38 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
       // API 설명 로드
       setApiDescription(selectedItem.description || '이 API의 목적과 사용 방법에 대해 설명해주세요...');
       
-      // paramsList 로드
-      const loadedParams = Object.entries(savedParams).map(([key, value], index) => ({
-        key,
-        value: String(value),
-        description: '',
-        required: false,
-        id: (index + 1).toString()
-      }));
-      if (loadedParams.length === 0) {
+      // requestParams JSON에서 파라미터 로딩
+      try {
+        let parametersArray = [];
+        if (selectedItem.requestParams && typeof selectedItem.requestParams === 'string') {
+          parametersArray = JSON.parse(selectedItem.requestParams);
+        }
+        
+        if (parametersArray && Array.isArray(parametersArray) && parametersArray.length > 0) {
+          const paramsWithIds = parametersArray.map((param, index) => ({
+            ...param,
+            id: (Date.now() + index).toString()
+          }));
+          const nextId = (Date.now() + paramsWithIds.length + 1).toString();
+          setParamsList([...paramsWithIds, { key: '', value: '', description: '', required: false, id: nextId }]);
+          
+          // request.params도 업데이트
+          const params: { [key: string]: string } = {};
+          parametersArray.forEach((param: any) => {
+            if (param.key && param.value) {
+              params[param.key] = param.value;
+            }
+          });
+          setRequest(prev => ({ ...prev, params }));
+        } else {
+          setParamsList([{ key: '', value: '', description: '', required: false, id: '1' }]);
+          setRequest(prev => ({ ...prev, params: {} }));
+        }
+      } catch (error) {
+        console.error('Error parsing requestParams:', error);
+        // JSON 파싱 에러 시 빈 파라미터 리스트로 초기화
         setParamsList([{ key: '', value: '', description: '', required: false, id: '1' }]);
-      } else {
-        setParamsList([...loadedParams, { key: '', value: '', description: '', required: false, id: (loadedParams.length + 1).toString() }]);
+        setRequest(prev => ({ ...prev, params: {} }));
       }
 
       // headersList 로드
@@ -124,10 +149,14 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
       // 응답 초기화
       setResponse(null);
       setActiveTab('params');
+      
+      // 히스토리 목록 로드
+      loadHistoryList();
+      setSelectedHistoryId('');
     }
   }, [selectedItem]);
 
-  // Save API 기능
+  // Save API 기능 - 기본 저장 (히스토리 없이)
   const handleSaveApi = async () => {
     if (!selectedItem) {
       alert('저장할 아이템이 선택되지 않았습니다.');
@@ -137,27 +166,145 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
     setSaving(true);
     try {
       const itemId = parseInt(selectedItem.id);
+      // 파라미터 목록을 JSON 문자열로 변환 (빈 항목 제외)
+      const filteredParams = paramsList.filter(p => p.key || p.value || p.description);
+      
       const updateData = {
         name: selectedItem.name, // 이름은 변경하지 않음
         method: request.method,
         url: request.url,
         description: apiDescription,
-        requestParams: JSON.stringify(request.params),
+        requestParams: JSON.stringify(filteredParams), // 파라미터 배열을 JSON으로 저장
         requestHeaders: JSON.stringify(request.headers),
         requestBody: request.body
       };
 
-      console.log('Saving item:', itemId, updateData);
-      
       await itemApi.update(itemId, updateData);
       
-      alert('API 정보가 성공적으로 저장되었습니다!');
+      // 히스토리 저장 팝업 표시
+      setShowSaveModal(true);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save API:', error);
-      alert('API 저장 중 오류가 발생했습니다.');
+      console.error('Error details:', error.response?.data || error.message);
+      alert(`API 저장 중 오류가 발생했습니다: ${error.response?.data?.message || error.message}`);
     }
     setSaving(false);
+  };
+
+  // 히스토리 저장 (중복 호출 방지)
+  const [isSavingHistory, setIsSavingHistory] = useState(false);
+  
+  const handleSaveHistory = async (historyName: string) => {
+    if (!selectedItem || isSavingHistory) return;
+
+    setIsSavingHistory(true);
+    try {
+      const itemId = parseInt(selectedItem.id);
+      const savedHistory = await historyApi.save(itemId, historyName);
+      
+      // 히스토리 목록 새로고침
+      await loadHistoryList();
+      
+      // 방금 저장한 히스토리를 선택 상태로 설정
+      if (savedHistory && savedHistory.id) {
+        setSelectedHistoryId(savedHistory.id.toString());
+      }
+      
+      setShowSaveModal(false);
+      alert('히스토리가 성공적으로 저장되었습니다!');
+      
+    } catch (error: any) {
+      console.error('Failed to save history:', error);
+      alert(`히스토리 저장 중 오류가 발생했습니다: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setIsSavingHistory(false);
+    }
+  };
+
+  // 히스토리 목록 로드
+  const loadHistoryList = async () => {
+    if (!selectedItem) {
+      setHistoryList([]);
+      return;
+    }
+
+    try {
+      const itemId = parseInt(selectedItem.id);
+      console.log('Loading history for item:', itemId); // 임시 디버그 로그
+      const histories = await historyApi.getList(itemId);
+      console.log('Loaded histories:', histories); // 임시 디버그 로그
+      setHistoryList(histories || []);
+      
+      // 가장 최신 히스토리 자동 선택 (첫 번째 히스토리)
+      if (histories && histories.length > 0) {
+        setSelectedHistoryId(histories[0].id.toString());
+      } else {
+        setSelectedHistoryId('');
+      }
+    } catch (error: any) {
+      console.error('Failed to load history list:', error);
+      setHistoryList([]);
+      setSelectedHistoryId('');
+    }
+  };
+
+  // 히스토리 선택
+  const handleHistorySelect = async (historyId: string) => {
+    if (!selectedItem || !historyId) {
+      setSelectedHistoryId('');
+      return;
+    }
+
+    try {
+      const itemId = parseInt(selectedItem.id);
+      const historyDetail = await historyApi.getDetail(itemId, parseInt(historyId));
+      
+      if (historyDetail && historyDetail.snapshot) {
+        const snapshot = historyDetail.snapshot;
+        
+        // 폼 데이터 복원
+        setRequest({
+          method: snapshot.method,
+          url: snapshot.url,
+          params: snapshot.requestParams ? JSON.parse(snapshot.requestParams) : {},
+          headers: snapshot.requestHeaders ? JSON.parse(snapshot.requestHeaders) : {},
+          body: snapshot.requestBody || ''
+        });
+        
+        setApiDescription(snapshot.description || '');
+        
+        // 파라미터 목록 복원
+        if (snapshot.parameters && Array.isArray(snapshot.parameters)) {
+          const paramsWithIds = snapshot.parameters.map((param: any, index: number) => ({
+            ...param,
+            id: (Date.now() + index).toString()
+          }));
+          setParamsList([...paramsWithIds, { key: '', value: '', description: '', required: false, id: (Date.now() + paramsWithIds.length + 1).toString() }]);
+        } else {
+          setParamsList([{ key: '', value: '', description: '', required: false, id: '1' }]);
+        }
+        
+        // 헤더 목록 복원
+        const savedHeaders = snapshot.requestHeaders ? JSON.parse(snapshot.requestHeaders) : {};
+        const loadedHeaders = Object.entries(savedHeaders).map(([key, value], index) => ({
+          key,
+          value: String(value),
+          id: (index + 1).toString()
+        }));
+        if (loadedHeaders.length === 0) {
+          setHeadersList([{ key: '', value: '', id: '1' }]);
+        } else {
+          setHeadersList([...loadedHeaders, { key: '', value: '', id: (loadedHeaders.length + 1).toString() }]);
+        }
+      }
+      
+      setSelectedHistoryId(historyId);
+      
+    } catch (error: any) {
+      console.error('Failed to load history detail:', error);
+      alert('히스토리를 불러오는 중 오류가 발생했습니다.');
+    }
   };
 
   // 유지보수성을 위한 헬퍼 함수들
@@ -236,7 +383,16 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
           border: '1px solid #e5e7eb',
           borderRadius: '6px',
           fontSize: '14px',
-          lineHeight: '1.4'
+          lineHeight: '1.4',
+          width: '100%',
+          maxWidth: '100%',
+          minWidth: 0,
+          overflowX: 'auto',
+          overflowY: 'auto',
+          maxHeight: '400px',
+          wordBreak: 'break-all',
+          whiteSpace: 'pre-wrap',
+          boxSizing: 'border-box'
         }}
         showLineNumbers={stringContent.split('\n').length > 10}
       >
@@ -330,11 +486,30 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
   };
 
   const handleSend = async () => {
+    // 필수 파라미터 검증
+    for (const param of paramsList) {
+      if (param.required) {
+        // key가 없거나 value가 없으면 오류
+        if (!param.key.trim() || !param.value.trim()) {
+          const message = param.description.trim() 
+            ? `[${param.description}] 항목의 값을 입력해주세요.`
+            : '필수 값을 입력해주세요.';
+          alert(message);
+          return;
+        }
+      }
+    }
+
     setLoading(true);
     const startTime = Date.now();
     
     try {
-      const fullUrl = request.url;
+      let fullUrl = request.url;
+      
+      // 외부 API인 경우 프록시 경로로 변경
+      if (fullUrl.includes('devpg.bluewalnut.co.kr')) {
+        fullUrl = fullUrl.replace('https://devpg.bluewalnut.co.kr', '/api/external');
+      }
       
       const axiosConfig: any = {
         method: request.method.toLowerCase(),
@@ -378,7 +553,27 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
   };
 
   const addParam = () => {
-    setParamsList([...paramsList, { key: '', value: '', description: '', required: false, id: Date.now().toString() }]);
+    const newParamId = Date.now().toString();
+    setParamsList([...paramsList, { key: '', value: '', description: '', required: false, id: newParamId }]);
+    
+    // 새로 추가된 description input에 포커스하고 Add Parameter 버튼으로 스크롤
+    setTimeout(() => {
+      const descInput = document.querySelector(`input[data-param-id="${newParamId}"][data-field="description"]`) as HTMLInputElement;
+      const addButton = document.querySelector('[data-add-param-button]') as HTMLElement;
+      
+      if (descInput) {
+        descInput.focus();
+      }
+      
+      // Add Parameter 버튼이 보이도록 스크롤
+      if (addButton) {
+        addButton.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'end',
+          inline: 'nearest'
+        });
+      }
+    }, 10);
   };
 
   const removeParam = (id: string) => {
@@ -426,11 +621,16 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
     );
     setParamsList(updatedParamsList);
     
+    // description이나 required 필드는 request.params에 영향 없음
+    if (field === 'description' || field === 'required') {
+      return;
+    }
+    
     // 업데이트된 paramsList에서 현재 파라미터 정보 가져오기
     const updatedParam = updatedParamsList.find(p => p.id === id);
     const oldParam = paramsList.find(p => p.id === id);
     
-    // Update request params
+    // Update request params (key, value 필드만)
     const updatedParams = { ...request.params };
     
     if (updatedParam && oldParam) {
@@ -439,19 +639,16 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
         if (oldParam.key) delete updatedParams[oldParam.key];
         // 새 키로 값 설정 (키와 값이 모두 있다면)
         if (value && updatedParam.value) updatedParams[value as string] = updatedParam.value;
-      } else {
+      } else if (field === 'value') {
         // value 필드 업데이트
         if (updatedParam.key) updatedParams[updatedParam.key] = value as string;
       }
     }
     
-    console.log('Updated params:', updatedParams); // 디버깅용
-    
     // 한 번에 모든 상태를 업데이트
     if (request.method === 'POST' || request.method === 'PUT' || request.method === 'PATCH') {
       const formData = convertParamsToFormData(updatedParams);
       const newHeaders = {...request.headers};
-      console.log('Generated formData:', formData); // 디버깅용
       
       if (formData) {
         newHeaders['Content-Type'] = 'application/json';
@@ -541,6 +738,33 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
 
   return (
     <div className="flex-1 flex flex-col bg-white">
+      {/* History Selection Section - 상단 분리 */}
+      {selectedItem && (
+        <div className="px-4 py-2">
+          <div className="flex justify-end">
+            <div className="flex items-center gap-2">
+              <select
+                value={selectedHistoryId}
+                onChange={(e) => handleHistorySelect(e.target.value)}
+                disabled={historyList.length === 0}
+                className={`px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white min-w-48 ${
+                  historyList.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                <option value="">
+                  {historyList.length === 0 ? '히스토리 없음' : '히스토리 선택'}
+                </option>
+                {historyList.map((history) => (
+                  <option key={history.id} value={history.id}>
+                    {history.historyName} ({new Date(history.savedAt).toLocaleDateString()})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* API Name Section */}
       <div className="bg-white border-b border-gray-200 p-4">
         <div className="flex justify-between items-center mb-4">
@@ -557,23 +781,25 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
               </button>
             )}
           </div>
-          <button 
-            onClick={handleSaveApi}
-            disabled={!selectedItem || saving}
-            className={`px-4 py-1.5
-             text-white rounded flex items-center gap-2 transition-colors ${
-              selectedItem && !saving 
-                ? 'bg-blue-600 hover:bg-blue-700' 
-                : 'bg-gray-400 cursor-not-allowed'
-            }`}
-          >
-            {saving ? 'Saving...' : 'Save'}
-          </button>
+          <div className="flex items-center">
+            {/* Save 버튼만 여기에 */}
+            <button 
+              onClick={handleSaveApi}
+              disabled={!selectedItem || saving}
+              className={`px-4 py-1.5 text-white rounded flex items-center gap-2 transition-colors ${
+                selectedItem && !saving 
+                  ? 'bg-blue-600 hover:bg-blue-700' 
+                  : 'bg-gray-400 cursor-not-allowed'
+              }`}
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+          </div>
         </div>
         
         {selectedItem ? (
           isEditingDescription ? (
-            // 편집 모드
+            // 편집 모드 - 모바일에서도 표시
             <div>
               <div className="bg-gray-50 p-3 rounded border mb-3">
                 <textarea 
@@ -600,14 +826,14 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
               </div>
             </div>
           ) : (
-            // 표시 모드
+            // 표시 모드 - 모바일에서도 표시
             <div 
               className="bg-gray-50 p-4 rounded border min-h-16 cursor-pointer hover:bg-gray-100 transition-colors"
               onClick={handleEditDescription}
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-gray-500 font-medium">API Description</span>
-                <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                <span className="hidden md:block text-xs text-gray-500 font-medium">API Description</span>
+                <span className={`hidden md:block px-2 py-0.5 text-xs font-medium rounded ${
                   selectedItem.method === 'GET' ? 'bg-green-100 text-green-800' :
                   selectedItem.method === 'POST' ? 'bg-blue-100 text-blue-800' :
                   selectedItem.method === 'PUT' ? 'bg-orange-100 text-orange-800' :
@@ -621,12 +847,6 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
               <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
                 {apiDescription || '이 API에 대한 설명을 추가하려면 클릭하세요...'}
               </p>
-              {selectedItem.url && (
-                <div className="mt-2 pt-2 border-t border-gray-200">
-                  <span className="text-xs text-gray-500">Endpoint: </span>
-                  <code className="text-xs text-gray-700 bg-gray-100 px-1 py-0.5 rounded">{selectedItem.url}</code>
-                </div>
-              )}
             </div>
           )
         ) : (
@@ -692,9 +912,22 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
       </div>
 
       {/* Main Content Area - Split into Request and Response */}
-      <div className="flex-1 flex">
-        {/* Request Section - Left Side */}
-        <div className="flex-1 flex flex-col border-r border-gray-200">
+      <div className="flex-1 flex flex-col lg:flex-row">
+        {/* Request Section - Left Side - 60% width on desktop, full width on tablet */}
+        <div className="lg:flex-[3] flex flex-col lg:border-r border-b lg:border-b-0 border-gray-200">
+          {/* Request Header - Compact */}
+          <div className="bg-gray-50 border-b border-gray-200">
+            <div className="flex justify-between items-center h-9">
+              <h3 className="text-xs px-3 font-medium text-gray-700">Request</h3>
+              <button
+                onClick={handleReset}
+                className="mx-3 px-2 py-1 text-xs text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+
           {/* Request Tabs - Compact */}
           <div className="bg-gray-50 border-b border-gray-200">
             <div className="flex justify-between items-center h-9">
@@ -702,7 +935,7 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
                 {(['params', 'headers', 'body', 'curl'] as const).map((tab) => (
                   <button
                     key={tab}
-                    className={`px-3 py-1.5 text-xs font-medium border-b-2 ${
+                    className={`px-3 py-1.5 text-xs font-medium border-b-2 max-h ${
                       activeTab === tab 
                         ? 'border-blue-500 text-blue-600 bg-white' 
                         : 'border-transparent text-gray-600 hover:text-gray-800 hover:bg-gray-100'
@@ -713,114 +946,216 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
                   </button>
                 ))}
               </div>
-              <button
-                onClick={handleReset}
-                className="mx-3 px-2 py-1 text-xs text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
-              >
-                Reset
-              </button>
             </div>
           </div>
 
           {/* Tab Content */}
-          <div className="bg-white p-3 flex-1 overflow-auto max-h-96">
+          <div className={`bg-white ${activeTab === 'params' ? 'p-0' : 'p-3'}`}>
             {activeTab === 'params' && (
-              <div className="h-full overflow-y-auto">
-                <div className="grid grid-cols-12 gap-2 mb-4 text-sm font-medium text-gray-600">
-                  <div className="col-span-1 text-center">
-                    <span className="text-xs cursor-help" title="Required">*</span>
-                  </div>
-                  <div className="col-span-3">Key</div>
-                  <div className="col-span-3">Value</div>
-                  <div className="col-span-4">Description</div>
-                  <div className="col-span-1"></div>
-                </div>
-                {paramsList.map((param) => (
-                  <div key={param.id} className="grid grid-cols-12 gap-2 mb-2 items-center">
-                    <div className="col-span-1 flex justify-center items-center">
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          className="sr-only peer"
-                          checked={param.required}
-                          onChange={(e) => updateParam(param.id, 'required', e.target.checked)}
-                        />
-                        <div className="relative w-5 h-5 bg-white border-2 border-gray-300 rounded peer-checked:bg-blue-600 peer-checked:border-blue-600 peer-hover:border-blue-400 transition-colors duration-200">
-                          <svg
-                            className={`absolute inset-0 w-3 h-3 m-0.5 text-white transition-opacity duration-200 ${
-                              param.required ? 'opacity-100' : 'opacity-0'
-                            }`}
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                              clipRule="evenodd"
+              <div>
+                {/* Desktop Table Layout */}
+                <div className="hidden md:block">
+                  <table className="w-full border-collapse">
+                    <thead className="bg-gray-50 border-b border-gray-300">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-600 border-r border-gray-300 w-12">
+                          <span className="cursor-help" title="Required parameter">Must</span>
+                        </th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-600 border-r border-gray-300" style={{width: '40%'}}>
+                          Description
+                        </th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-600 border-r border-gray-300" style={{width: '30%'}}>
+                          Key
+                        </th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-600 border-r border-gray-300" style={{width: '30%'}}>
+                          Value
+                        </th>
+                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-600 w-10">
+                          Del
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white">
+                      {paramsList.map((param) => (
+                        <tr key={param.id} className="hover:bg-gray-50 border-b border-gray-300">
+                          <td className="px-3 py-2 border-r border-gray-300">
+                            <div className="flex items-center justify-center h-full">
+                              <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  className="sr-only peer"
+                                  checked={param.required}
+                                  onChange={(e) => updateParam(param.id, 'required', e.target.checked)}
+                                />
+                                <div className="relative w-4 h-4 bg-white border border-gray-300 rounded peer-checked:bg-blue-600 peer-checked:border-blue-600 peer-hover:border-blue-400 transition-colors duration-200">
+                                  <svg
+                                    className={`absolute inset-0 w-2.5 h-2.5 m-0.5 text-white transition-opacity duration-200 ${
+                                      param.required ? 'opacity-100' : 'opacity-0'
+                                    }`}
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                </div>
+                              </label>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 border-r border-gray-300">
+                            <input
+                              className="w-full px-2 py-1 border-0 bg-transparent text-xs focus:outline-none focus:ring-1 focus:ring-blue-400 rounded"
+                              placeholder="description"
+                              value={param.description}
+                              onChange={(e) => updateParam(param.id, 'description', e.target.value)}
+                              data-param-id={param.id}
+                              data-field="description"
                             />
-                          </svg>
-                        </div>
-                      </label>
+                          </td>
+                          <td className="px-3 py-2 border-r border-gray-300">
+                            <input
+                              className="w-full px-2 py-1 border-0 bg-transparent text-xs focus:outline-none focus:ring-1 focus:ring-blue-400 rounded"
+                              placeholder="key"
+                              value={param.key}
+                              onChange={(e) => updateParam(param.id, 'key', e.target.value)}
+                            />
+                          </td>
+                          <td className="px-3 py-2 border-r border-gray-300">
+                            <input
+                              className="w-full px-2 py-1 border-0 bg-transparent text-xs focus:outline-none focus:ring-1 focus:ring-blue-400 rounded"
+                              placeholder="value"
+                              value={param.value}
+                              onChange={(e) => updateParam(param.id, 'value', e.target.value)}
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <button
+                              onClick={() => removeParam(param.id)}
+                              className="text-gray-400 hover:text-red-600 transition-colors duration-200 text-sm w-6 h-6 flex items-center justify-center mx-auto rounded hover:bg-red-50"
+                              title="Del"
+                            >
+                              ×
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {/* Add Parameter Row */}
+                      <tr className="bg-gray-50">
+                        <td colSpan={5} className="px-3 py-3 border-t border-gray-300">
+                          <button
+                            onClick={addParam}
+                            className="bg-blue-600 bg-opacity-10 hover:bg-opacity-100 text-blue-700 hover:text-white text-xs font-medium px-3 py-1.5 rounded border border-blue-200 hover:border-blue-600 transition-all duration-200 flex items-center gap-1 w-full justify-center"
+                            title="Add Parameter"
+                            data-add-param-button
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            Add Parameter
+                          </button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Table Layout */}
+                <div className="md:hidden">
+                  <div className="bg-gray-50 border-b border-gray-300">
+                    <div className="flex text-xs font-medium text-gray-600">
+                      <div className="px-3 py-2 border-r border-gray-300" style={{width: '40%'}}>Description</div>
+                      <div className="px-3 py-2 text-center border-r border-gray-300" style={{width: '30%'}}>Key</div>
+                      <div className="px-3 py-2 text-center border-r border-gray-300" style={{width: '30%'}}>Value</div>
+                      <div className="w-12 px-3 py-2 text-center">Del</div>
                     </div>
-                    <input
-                      className="col-span-3 px-3 py-2 border border-gray-300 rounded text-sm"
-                      placeholder="key"
-                      value={param.key}
-                      onChange={(e) => updateParam(param.id, 'key', e.target.value)}
-                    />
-                    <input
-                      className="col-span-3 px-3 py-2 border border-gray-300 rounded text-sm"
-                      placeholder="value"
-                      value={param.value}
-                      onChange={(e) => updateParam(param.id, 'value', e.target.value)}
-                    />
-                    <input
-                      className="col-span-4 px-3 py-2 border border-gray-300 rounded text-sm"
-                      placeholder="description"
-                      value={param.description}
-                      onChange={(e) => updateParam(param.id, 'description', e.target.value)}
-                    />
-                    <button
-                      onClick={() => removeParam(param.id)}
-                      className="col-span-1 text-gray-400 hover:text-red-600 text-center transition-colors duration-200"
-                    >
-                      ×
-                    </button>
                   </div>
-                ))}
-                <button
-                  onClick={addParam}
-                  className="text-sm text-blue-600 hover:text-blue-800 mt-2"
-                >
-                  + Add Parameter
-                </button>
+                  <div className="bg-white">
+                    {paramsList.map((param) => (
+                      <div key={param.id} className="flex items-center border-b border-gray-300">
+                        <div className="px-3 py-2 border-r border-gray-300" style={{width: '40%'}}>
+                          <input
+                            className="w-full px-2 py-1 border-0 bg-transparent text-xs focus:outline-none focus:ring-1 focus:ring-blue-400 rounded"
+                            placeholder="Description"
+                            value={param.description}
+                            onChange={(e) => updateParam(param.id, 'description', e.target.value)}
+                            data-param-id={param.id}
+                            data-field="description"
+                          />
+                        </div>
+                        <div className="px-3 py-2 border-r border-gray-300" style={{width: '30%'}}>
+                          <input
+                            className="w-full px-2 py-1 border-0 bg-transparent text-xs focus:outline-none focus:ring-1 focus:ring-blue-400 rounded text-center"
+                            placeholder="Key"
+                            value={param.key}
+                            onChange={(e) => updateParam(param.id, 'key', e.target.value)}
+                          />
+                        </div>
+                        <div className="px-3 py-2 border-r border-gray-300" style={{width: '30%'}}>
+                          <input
+                            className="w-full px-2 py-1 border-0 bg-transparent text-xs focus:outline-none focus:ring-1 focus:ring-blue-400 rounded text-center"
+                            placeholder="Value"
+                            value={param.value}
+                            onChange={(e) => updateParam(param.id, 'value', e.target.value)}
+                          />
+                        </div>
+                        <div className="w-12 px-3 py-2 flex justify-center">
+                          <button
+                            onClick={() => removeParam(param.id)}
+                            className="text-gray-400 hover:text-red-600 text-sm transition-colors duration-200 w-6 h-6 flex items-center justify-center rounded hover:bg-red-50"
+                            title="Del"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    {/* Add Parameter Row for Mobile */}
+                    <div className="bg-gray-50 px-3 py-3">
+                      <button
+                        onClick={addParam}
+                        className="bg-blue-600 bg-opacity-10 hover:bg-opacity-100 text-blue-700 hover:text-white text-xs font-medium px-3 py-1.5 rounded border border-blue-200 hover:border-blue-600 transition-all duration-200 flex items-center gap-1 w-full justify-center"
+                        title="Add Parameter"
+                        data-add-param-button
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Add Parameter
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
             {activeTab === 'headers' && (
-              <div className="h-full overflow-y-auto">
-                <div className="grid grid-cols-12 gap-2 mb-2 text-sm font-medium text-gray-600">
+              <div>
+                <div className="grid grid-cols-12 gap-2 mb-3 text-xs font-medium text-gray-600">
                   <div className="col-span-5">Key</div>
                   <div className="col-span-6">Value</div>
-                  <div className="col-span-1"></div>
+                  <div className="col-span-1 text-center">Del</div>
                 </div>
                 {headersList.map((header) => (
-                  <div key={header.id} className="grid grid-cols-12 gap-2 mb-2">
+                  <div key={header.id} className="grid grid-cols-12 gap-2 mb-1.5">
                     <input
-                      className="col-span-5 px-3 py-2 border border-gray-300 rounded text-sm"
+                      className="col-span-5 px-2 py-1.5 border border-gray-300 rounded text-xs"
                       placeholder="key"
                       value={header.key}
                       onChange={(e) => updateHeader(header.id, 'key', e.target.value)}
                     />
                     <input
-                      className="col-span-6 px-3 py-2 border border-gray-300 rounded text-sm"
+                      className="col-span-6 px-2 py-1.5 border border-gray-300 rounded text-xs"
                       placeholder="value"
                       value={header.value}
                       onChange={(e) => updateHeader(header.id, 'value', e.target.value)}
                     />
                     <button
                       onClick={() => setHeadersList(headersList.filter(h => h.id !== header.id))}
-                      className="col-span-1 text-gray-400 hover:text-red-600 text-center"
+                      className="col-span-1 text-gray-400 hover:text-red-600 text-center text-sm"
+                      title="Del"
                     >
                       ×
                     </button>
@@ -836,7 +1171,7 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
             )}
 
             {activeTab === 'body' && (
-              <div className="h-full flex flex-col">
+              <div className="flex flex-col">
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-4">
                     <span className="text-sm text-gray-700">Request Body</span>
@@ -904,7 +1239,7 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
             )}
 
             {activeTab === 'curl' && (
-              <div className="h-full flex flex-col">
+              <div className="flex flex-col">
                 <div className="flex justify-between items-center mb-4">
                   <h4 className="text-sm font-medium text-gray-700">Generated cURL Command</h4>
                   <button
@@ -926,8 +1261,8 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
           </div>
         </div>
 
-        {/* Response Section - Right Side */}
-        <div className="flex-1 flex flex-col bg-white">
+        {/* Response Section - Right Side - 40% width on desktop, full width on tablet */}
+        <div className="h-1/2 lg:flex-[2] flex flex-col bg-white min-h-0 lg:h-auto lg:min-w-0 lg:max-w-full overflow-hidden">
           {/* Response Header - Compact */}
           <div className="bg-gray-50 border-b border-gray-200">
             <div className="flex justify-between items-center h-9">
@@ -944,8 +1279,8 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
                 </span>
                 {response && (
                   <>
-                    <span className="text-gray-600 text-xs">Time: {response.time}ms</span>
-                    <span className="text-gray-600 text-xs">Size: {response.size}</span>
+                    <span className="text-gray-600 text-xs mr-3">Time: {response.time}ms</span>
+                    <span className="text-gray-600 text-xs mr-3">Size: {response.size}</span>
                   </>
                 )}
               </div>
@@ -973,20 +1308,24 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
                 </div>
               </div>
 
-              <div className="p-3 flex-1 overflow-auto">
+              <div className="p-3 flex-1 overflow-hidden min-h-[200px] max-h-[500px] w-full">
                 {responseTab === 'body' && (
-                  <div className="h-full">
-                    {renderSyntaxHighlighter(response.data)}
+                  <div className="h-full max-h-[450px] overflow-auto w-full">
+                    <div className="w-0 min-w-full overflow-x-auto">
+                      {renderSyntaxHighlighter(response.data)}
+                    </div>
                   </div>
                 )}
                 
                 {responseTab === 'headers' && (
-                  <div className="text-sm">
-                    {Object.entries(response.headers).map(([key, value]) => (
-                      <div key={key} className="mb-2">
-                        <span className="font-medium text-gray-800">{key}:</span> {value}
-                      </div>
-                    ))}
+                  <div className="text-sm h-full max-h-[450px] overflow-auto w-full">
+                    <div className="w-0 min-w-full">
+                      {Object.entries(response.headers).map(([key, value]) => (
+                        <div key={key} className="mb-2 break-all">
+                          <span className="font-medium text-gray-800">{key}:</span> <span className="break-words">{value}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1017,6 +1356,14 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
           </div>
         </div>
       )}
+
+      {/* Save History Modal */}
+      <SaveHistoryModal
+        isOpen={showSaveModal}
+        onSave={handleSaveHistory}
+        onCancel={() => setShowSaveModal(false)}
+        defaultName={selectedItem?.name ? `${selectedItem.name} v${new Date().toISOString().slice(0, 10)}` : ''}
+      />
     </div>
   );
 };

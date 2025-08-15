@@ -22,7 +22,8 @@ export const convertBackendToFrontendItem = (backendItem: BackendApiItem): ApiIt
   requestParams: backendItem.requestParams,
   requestHeaders: backendItem.requestHeaders,
   requestBody: backendItem.requestBody,
-  folder: backendItem.folderId?.toString()
+  folder: backendItem.folderId?.toString(),
+  parameters: backendItem.parameters // 파라미터 배열 추가
 });
 
 export const convertBackendToFrontendFolder = (backendFolder: BackendApiFolder, items: BackendApiItem[] = []): ApiFolder => ({
@@ -85,6 +86,12 @@ export const itemApi = {
     return response.data;
   },
 
+  // 특정 아이템 조회 (파라미터 포함)
+  getById: async (id: number): Promise<BackendApiItem> => {
+    const response = await apiClient.get(`/items/${id}`);
+    return response.data;
+  },
+
   // 아이템 생성
   create: async (item: Omit<BackendApiItem, 'id'>): Promise<BackendApiItem> => {
     const response = await apiClient.post('/items', item);
@@ -100,6 +107,35 @@ export const itemApi = {
   // 아이템 삭제
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/items/${id}`);
+  }
+};
+
+// History API 함수들
+export const historyApi = {
+  // 히스토리 저장
+  save: async (itemId: number, historyName: string): Promise<any> => {
+    const response = await apiClient.post(`/history/items/${itemId}`, { 
+      historyName 
+    });
+    return response.data;
+  },
+
+  // 히스토리 목록 조회
+  getList: async (itemId: number): Promise<any[]> => {
+    const response = await apiClient.get(`/history/items/${itemId}`);
+    return response.data;
+  },
+
+  // 히스토리 상세 조회
+  getDetail: async (itemId: number, historyId: number): Promise<any> => {
+    const response = await apiClient.get(`/history/items/${itemId}/${historyId}`);
+    return response.data;
+  },
+
+
+  // 히스토리 삭제
+  delete: async (itemId: number, historyId: number): Promise<void> => {
+    await apiClient.delete(`/history/items/${itemId}/${historyId}`);
   }
 };
 

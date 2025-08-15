@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Header from './Header';
-import Sidebar from './Sidebar';
+import Sidebar from './sidebar/SidebarRefactored';
 import MainContent from './MainContent';
 import AdminPage from './AdminPage';
 import { BaseUrl, ApiItem } from '../types/api';
@@ -19,7 +19,10 @@ const Layout: React.FC<LayoutProps> = () => {
 
   const [selectedItem, setSelectedItem] = useState<ApiItem | null>(null);
   const [showAdminPage, setShowAdminPage] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    // 데스크톱에서는 열린 상태, 모바일에서는 닫힌 상태로 시작
+    return window.innerWidth < 768;
+  });
 
   const handleAddBaseUrl = (newBaseUrl: Omit<BaseUrl, 'id'>) => {
     const id = (baseUrls.length + 1).toString();
@@ -36,13 +39,22 @@ const Layout: React.FC<LayoutProps> = () => {
     setBaseUrls(baseUrls.filter(url => url.id !== id));
   };
 
-  const handleSelectItem = (item: ApiItem, folderId: string) => {
-    console.log('Selected item:', item);
-    setSelectedItem({ ...item, folder: folderId });
+  const handleSelectItem = async (item: ApiItem, folderId: string) => {
+    try {
+      // 개별 아이템 상세 정보 (파라미터 포함) 조회
+      const { itemApi, convertBackendToFrontendItem } = await import('../services/api');
+      const detailedItem = await itemApi.getById(parseInt(item.id));
+      const convertedItem = convertBackendToFrontendItem(detailedItem);
+      
+      setSelectedItem({ ...convertedItem, folder: folderId });
+    } catch (error) {
+      console.error('Failed to fetch item details:', error);
+      // 에러 시 기본 아이템 정보만 사용
+      setSelectedItem({ ...item, folder: folderId });
+    }
   };
 
   const handleResetForm = () => {
-    console.log('Reset form');
     setSelectedItem(null);
   };
 
@@ -54,9 +66,14 @@ const Layout: React.FC<LayoutProps> = () => {
 
   return (
     <div className="h-screen bg-white flex flex-col">
-      <Header onOpenAdmin={() => setShowAdminPage(true)} />
-      <div className="flex flex-1 overflow-hidden">
-        <div className={`flex-shrink-0 border-r border-gray-400 transition-all duration-300 ${sidebarCollapsed ? 'w-12' : 'w-80'}`}>
+      <Header 
+        onOpenAdmin={() => setShowAdminPage(true)}
+        onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+        sidebarCollapsed={sidebarCollapsed}
+      />
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Desktop Sidebar */}
+        <div className={`hidden md:block flex-shrink-0 border-r border-gray-400 transition-all duration-300 ${sidebarCollapsed ? 'w-12' : 'w-80'}`}>
           <Sidebar
             baseUrls={baseUrls}
             onAddBaseUrl={handleAddBaseUrl}
@@ -69,7 +86,37 @@ const Layout: React.FC<LayoutProps> = () => {
             onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
           />
         </div>
-        <div className="flex-1 flex flex-col overflow-y-auto">
+
+        {/* Mobile Sidebar Overlay */}
+        <div className={`md:hidden fixed inset-y-0 left-0 z-30 transform transition-transform duration-300 ease-in-out ${
+          sidebarCollapsed ? '-translate-x-full' : 'translate-x-0'
+        }`} style={{ top: '64px' }}>
+          <div className="w-80 h-full border-r border-gray-400 bg-white shadow-lg">
+            <Sidebar
+              baseUrls={baseUrls}
+              onAddBaseUrl={handleAddBaseUrl}
+              onUpdateBaseUrl={handleUpdateBaseUrl}
+              onDeleteBaseUrl={handleDeleteBaseUrl}
+              onSelectItem={handleSelectItem}
+              onResetForm={handleResetForm}
+              selectedItem={selectedItem}
+              collapsed={false}
+              onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+            />
+          </div>
+        </div>
+
+        {/* Mobile Backdrop */}
+        {!sidebarCollapsed && (
+          <div 
+            className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-20"
+            style={{ top: '64px' }}
+            onClick={() => setSidebarCollapsed(true)}
+          />
+        )}
+
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col overflow-y-auto md:ml-0">
           <MainContent
             baseUrls={baseUrls}
             selectedItem={selectedItem}

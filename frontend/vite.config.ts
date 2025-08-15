@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite'
+// @ts-ignore
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
@@ -13,6 +14,14 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
+    proxy: {
+      '/api/external': {
+        target: 'https://devpg.bluewalnut.co.kr',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/external/, ''),
+        secure: true,
+      },
+    },
   },
   build: {
     outDir: 'build',

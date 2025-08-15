@@ -229,16 +229,11 @@ export const useSidebar = () => {
 
   // 아이템을 다른 폴더로 이동
   const moveItemToFolder = async (itemId: string, sourceFolderId: string, targetFolderId: string) => {
-    console.log('moveItemToFolder called:', { itemId, sourceFolderId, targetFolderId });
-    
     const draggedItem = folders.find(f => f.id === sourceFolderId)?.items.find(i => i.id === itemId);
     
     if (!draggedItem) {
-      console.log('Dragged item not found');
       return;
     }
-
-    console.log('Found dragged item:', draggedItem);
 
     // UI 먼저 업데이트 (빠른 반응성)
     setFolders(prev => prev.map(folder => {
@@ -253,13 +248,9 @@ export const useSidebar = () => {
 
     // 백엔드에 저장
     try {
-      console.log('Calling itemApi.update with:', { itemId: parseInt(itemId), folderId: parseInt(targetFolderId) });
-      
-      const result = await itemApi.update(parseInt(itemId), { 
+      await itemApi.update(parseInt(itemId), { 
         folderId: parseInt(targetFolderId)
       });
-      
-      console.log('Backend update successful:', result);
     } catch (error) {
       console.error('아이템 폴더 변경 중 오류:', error);
       // 실패 시 원래 상태로 되돌림

@@ -209,6 +209,23 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
     }
   };
 
+  // Expand/Collapse All handlers
+  const handleExpandAll = () => {
+    folders.forEach(folder => {
+      if (!folder.isExpanded) {
+        toggleFolder(folder.id);
+      }
+    });
+  };
+
+  const handleCollapseAll = () => {
+    folders.forEach(folder => {
+      if (folder.isExpanded) {
+        toggleFolder(folder.id);
+      }
+    });
+  };
+
   // 선택 핸들러
   const handleSelectFolder = (folderId: string) => {
     setSelectedFolderId(folderId);
@@ -361,12 +378,9 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
     const { active } = event;
     const activeId = active.id as string;
     
-    console.log('Drag start:', activeId);
-    
     if (activeId.startsWith('item-')) {
       const [, itemId] = activeId.split('-');
       const item = filteredFolders.find(f => f.items.some(i => i.id === itemId))?.items.find(i => i.id === itemId);
-      console.log('Dragging item:', item);
       setActiveItem(item);
     }
   };
@@ -431,13 +445,8 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
         // 아이템을 다른 폴더로 이동
         const targetFolderId = overId.replace('droppable-folder-', '');
         
-        console.log('Drop detected on folder:', { itemId, sourceFolderId, targetFolderId });
-        
         if (sourceFolderId !== targetFolderId) {
-          console.log('Moving item to different folder');
           moveItemToFolder(itemId, sourceFolderId, targetFolderId);
-        } else {
-          console.log('Same folder, not moving');
         }
       } else if (overId.startsWith('item-')) {
         // 같은 폴더 내 아이템 순서 변경
@@ -640,6 +649,8 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
         <SearchBar 
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
+          onExpandAll={handleExpandAll}
+          onCollapseAll={handleCollapseAll}
         />
       </div>
       
