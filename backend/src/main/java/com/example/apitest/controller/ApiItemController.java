@@ -19,6 +19,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Optional;
+import java.util.ArrayList;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 @RestController
 @RequestMapping("/api/items")
@@ -65,9 +68,26 @@ public class ApiItemController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiItem> getItem(@PathVariable Long id) {
+    public ResponseEntity<Map<String, Object>> getItem(@PathVariable Long id) {
         return itemRepository.findById(id)
-                .map(ResponseEntity::ok)
+                .map(item -> {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("id", item.getId());
+                    response.put("name", item.getName());
+                    response.put("method", item.getMethod());
+                    response.put("url", item.getUrl());
+                    response.put("description", item.getDescription());
+                    response.put("requestParams", item.getRequestParams());
+                    response.put("requestHeaders", item.getRequestHeaders());
+                    response.put("requestBody", item.getRequestBody());
+                    response.put("createdAt", item.getCreatedAt());
+                    response.put("updatedAt", item.getUpdatedAt());
+                    response.put("folderId", item.getFolderId());
+                    
+                    // requestParams 사용 - 별도 파라미터 처리 불필요
+                    
+                    return ResponseEntity.ok(response);
+                })
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -102,6 +122,8 @@ public class ApiItemController {
         
             ApiItem savedItem = itemRepository.save(item);
             
+            // 파라미터는 이제 requestParams JSON 필드에서 관리됨
+            
             // API 아이템 생성 로깅
             if (currentUser != null) {
                 String folderName = getFolderName(folderId);
@@ -123,6 +145,8 @@ public class ApiItemController {
             response.put("updatedAt", savedItem.getUpdatedAt());
             response.put("folderId", folderId);
             
+            // 파라미터는 이제 requestParams JSON 필드에서 관리됨
+            
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             // 실패 로깅
@@ -142,6 +166,13 @@ public class ApiItemController {
     public ResponseEntity<Map<String, Object>> updateItem(@PathVariable Long id, @RequestBody Map<String, Object> itemDetails,
                                                          HttpSession session, HttpServletRequest request) {
         try {
+            System.err.println("=== UPDATE ITEM REQUEST START ===");
+            System.err.println("Item ID: " + id);
+            System.err.println("Request body keys: " + itemDetails.keySet());
+            System.err.println("Full itemDetails: " + itemDetails);
+            System.err.println("Parameters field: " + itemDetails.get("parameters"));
+            System.err.println("Parameters class: " + (itemDetails.get("parameters") != null ? itemDetails.get("parameters").getClass() : "null"));
+            
             User currentUser = getCurrentUser(session);
         return itemRepository.findById(id)
             .map(item -> {
@@ -167,37 +198,47 @@ public class ApiItemController {
                     item.setRequestBody((String) itemDetails.get("requestBody"));
                 }
                 
+                // 먼저 아이템을 저장
+                ApiItem savedItem = itemRepository.save(item);
+                
+                // 파라미터는 이제 requestParams JSON 필드에서 관리됨
+                
+                // 파라미터 처리 완료 후 다시 조회하여 반환
+                item = itemRepository.findById(id).orElse(savedItem);
+                
                 // folderId 처리 추가
                 if (itemDetails.containsKey("folderId") && itemDetails.get("folderId") != null) {
                     Long folderId = ((Number) itemDetails.get("folderId")).longValue();
                     ApiFolder folder = folderRepository.findById(folderId).orElse(null);
                     if (folder != null) {
                         item.setFolder(folder);
+                        // folderId가 변경된 경우 다시 저장
+                        item = itemRepository.save(item);
                     }
                 }
                 
-                ApiItem savedItem = itemRepository.save(item);
-                
                 // API 아이템 수정 로깅
                 if (currentUser != null) {
-                    String folderName = getFolderName(savedItem.getFolderId());
-                    activityLoggingService.logItemUpdate(currentUser, savedItem.getName(), folderName,
+                    String folderName = getFolderName(item.getFolderId());
+                    activityLoggingService.logItemUpdate(currentUser, item.getName(), folderName,
                         request.getRequestURI(), request.getMethod());
                 }
                 
                 // 응답 Map 생성 (folderId 포함)
                 Map<String, Object> response = new HashMap<>();
-                response.put("id", savedItem.getId());
-                response.put("name", savedItem.getName());
-                response.put("method", savedItem.getMethod());
-                response.put("url", savedItem.getUrl());
-                response.put("description", savedItem.getDescription());
-                response.put("requestParams", savedItem.getRequestParams());
-                response.put("requestHeaders", savedItem.getRequestHeaders());
-                response.put("requestBody", savedItem.getRequestBody());
-                response.put("createdAt", savedItem.getCreatedAt());
-                response.put("updatedAt", savedItem.getUpdatedAt());
-                response.put("folderId", savedItem.getFolderId());
+                response.put("id", item.getId());
+                response.put("name", item.getName());
+                response.put("method", item.getMethod());
+                response.put("url", item.getUrl());
+                response.put("description", item.getDescription());
+                response.put("requestParams", item.getRequestParams());
+                response.put("requestHeaders", item.getRequestHeaders());
+                response.put("requestBody", item.getRequestBody());
+                response.put("createdAt", item.getCreatedAt());
+                response.put("updatedAt", item.getUpdatedAt());
+                response.put("folderId", item.getFolderId());
+                
+                // 파라미터는 이제 requestParams JSON 필드에서 관리됨
                 
                 return ResponseEntity.ok(response);
             })

@@ -25,7 +25,7 @@ public class ApiFolder {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
     
-    @OneToMany(mappedBy = "folder", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "folder", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private List<ApiItem> items = new ArrayList<>();
     
     @PrePersist

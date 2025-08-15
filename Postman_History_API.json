@@ -1,0 +1,233 @@
+{
+  "info": {
+    "_postman_id": "HISTORY_API_TESTS",
+    "name": "API History Management",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Collection for testing API item history management functionality."
+  },
+  "item": [
+    {
+      "name": "1. Login First (Required)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"email\": \"admin@test.com\",\n    \"password\": \"admin123\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/auth/login",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "auth", "login"]
+        },
+        "description": "Login first to get authentication session. Use admin credentials or create a user first."
+      },
+      "response": []
+    },
+    {
+      "name": "2. Get API Items",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/api/items",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "items"]
+        },
+        "description": "Get list of API items to find an item ID for testing."
+      },
+      "response": []
+    },
+    {
+      "name": "3. Get Item Detail (with parameters)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/api/items/1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "items", "1"]
+        },
+        "description": "Get detailed item info including parameters. Change '1' to actual item ID."
+      },
+      "response": []
+    },
+    {
+      "name": "4. Save History",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"historyName\": \"거래 상태 조회 v1\",\n    \"method\": \"GET\",\n    \"url\": \"https://api.example.com/transaction/status\",\n    \"description\": \"거래 상태를 조회하는 API\",\n    \"requestParams\": \"{\\\"userId\\\":\\\"12345\\\",\\\"transactionId\\\":\\\"TXN001\\\"}\",\n    \"requestHeaders\": \"{\\\"Authorization\\\":\\\"Bearer token\\\",\\\"Content-Type\\\":\\\"application/json\\\"}\",\n    \"requestBody\": \"\",\n    \"parameters\": [\n        {\n            \"key\": \"userId\",\n            \"value\": \"12345\",\n            \"description\": \"사용자 ID\",\n            \"required\": true\n        },\n        {\n            \"key\": \"transactionId\",\n            \"value\": \"TXN001\",\n            \"description\": \"거래 ID\",\n            \"required\": true\n        }\n    ]\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/history/items/1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "history", "items", "1"]
+        },
+        "description": "Save current API item state as history. Change '1' to actual item ID."
+      },
+      "response": []
+    },
+    {
+      "name": "5. Get History List",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/api/history/items/1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "history", "items", "1"]
+        },
+        "description": "Get list of saved histories for the item."
+      },
+      "response": []
+    },
+    {
+      "name": "6. Get History Detail",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/api/history/items/1/1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "history", "items", "1", "1"]
+        },
+        "description": "Get detailed snapshot of a specific history entry. First '1' is item ID, second '1' is history ID."
+      },
+      "response": []
+    },
+    {
+      "name": "7. Delete History",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/api/history/items/1/1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "history", "items", "1", "1"]
+        },
+        "description": "Delete a specific history entry."
+      },
+      "response": []
+    },
+    {
+      "name": "8. Test Register (if needed)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"email\": \"test@test.com\",\n    \"password\": \"test123\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/auth/register",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "auth", "register"]
+        },
+        "description": "Register a new user if you don't have login credentials."
+      },
+      "response": []
+    },
+    {
+      "name": "9. Create Test API Item",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"name\": \"Test API for History\",\n    \"method\": \"GET\",\n    \"url\": \"https://api.example.com/test\",\n    \"description\": \"Test API item for history testing\",\n    \"requestParams\": \"{}\",\n    \"requestHeaders\": \"{}\",\n    \"requestBody\": \"\",\n    \"folderId\": 1,\n    \"parameters\": [\n        {\n            \"key\": \"userId\",\n            \"value\": \"12345\",\n            \"description\": \"User ID parameter\",\n            \"required\": true\n        }\n    ]\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/items",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "items"]
+        },
+        "description": "Create a test API item if you need one for history testing."
+      },
+      "response": []
+    },
+    {
+      "name": "10. Update API Item (to create different state)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"name\": \"Updated Test API\",\n    \"method\": \"POST\",\n    \"url\": \"https://api.example.com/updated\",\n    \"description\": \"Updated API for testing different history states\",\n    \"requestParams\": \"{\\\"limit\\\":\\\"10\\\"}\",\n    \"requestHeaders\": \"{\\\"Authorization\\\":\\\"Bearer token\\\"}\",\n    \"requestBody\": \"{\\\"data\\\":\\\"test\\\"}\",\n    \"parameters\": [\n        {\n            \"key\": \"userId\",\n            \"value\": \"67890\",\n            \"description\": \"Updated User ID\",\n            \"required\": true\n        },\n        {\n            \"key\": \"category\",\n            \"value\": \"test\",\n            \"description\": \"Test category\",\n            \"required\": false\n        }\n    ]\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/items/1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "items", "1"]
+        },
+        "description": "Update API item to create a different state, then save as history."
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Automatically set cookies for session management"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    }
+  ]
+}

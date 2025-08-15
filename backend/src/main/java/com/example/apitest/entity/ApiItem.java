@@ -26,7 +26,7 @@ public class ApiItem {
     private String description;
     
     @Column(name = "request_params", columnDefinition = "TEXT")
-    private String requestParams; // JSON 문자열로 저장
+    private String requestParams; // JSON 문자열로 저장 (PARAMETERS_SNAPSHOT과 동일한 구조)
     
     @Column(name = "request_headers", columnDefinition = "TEXT")
     private String requestHeaders; // JSON 문자열로 저장
@@ -164,4 +164,5 @@ public class ApiItem {
     public Long getFolderId() {
         return folder != null ? folder.getId() : null;
     }
+    
 }
