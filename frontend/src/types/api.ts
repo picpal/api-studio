@@ -17,6 +17,8 @@ export interface BackendApiItem {
   requestParams?: string; // JSON string
   requestHeaders?: string; // JSON string
   requestBody?: string;
+  validationEnabled?: boolean; // 응답 검증 사용 여부
+  expectedValues?: string; // JSON 형태로 키-값 쌍 저장
   createdAt?: string;
   updatedAt?: string;
   folder?: BackendApiFolder;
@@ -34,6 +36,8 @@ export interface ApiItem {
   requestParams?: string | object; // JSON string or object
   requestHeaders?: string | object; // JSON string or object
   requestBody?: string;
+  validationEnabled?: boolean; // 응답 검증 사용 여부
+  expectedValues?: string; // JSON 형태로 키-값 쌍 저장
   folder?: string;
   parameters?: ApiParameterItem[]; // API 파라미터 배열
 }

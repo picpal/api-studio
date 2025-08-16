@@ -34,6 +34,12 @@ public class ApiItem {
     @Column(name = "request_body", columnDefinition = "TEXT")
     private String requestBody;
     
+    @Column(name = "validation_enabled")
+    private Boolean validationEnabled = false; // 응답 검증 사용 여부
+    
+    @Column(name = "expected_values", columnDefinition = "TEXT")
+    private String expectedValues; // JSON 형태로 키-값 쌍 저장 [{"key": "status", "value": "success"}]
+    
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     
@@ -163,6 +169,22 @@ public class ApiItem {
     @JsonProperty("folderId")
     public Long getFolderId() {
         return folder != null ? folder.getId() : null;
+    }
+    
+    public Boolean getValidationEnabled() {
+        return validationEnabled;
+    }
+    
+    public void setValidationEnabled(Boolean validationEnabled) {
+        this.validationEnabled = validationEnabled;
+    }
+    
+    public String getExpectedValues() {
+        return expectedValues;
+    }
+    
+    public void setExpectedValues(String expectedValues) {
+        this.expectedValues = expectedValues;
     }
     
 }

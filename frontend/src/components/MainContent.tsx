@@ -6,6 +6,7 @@ import axios from 'axios';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import Editor from '@monaco-editor/react';
+import { validateResponse } from '../utils/responseValidation';
 
 interface MainContentProps {
   baseUrls: BaseUrl[];
@@ -26,8 +27,8 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
   
   const [response, setResponse] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'params' | 'headers' | 'body' | 'curl'>('params');
-  const [responseTab, setResponseTab] = useState<'body' | 'headers'>('body');
+  const [activeTab, setActiveTab] = useState<'params' | 'headers' | 'body' | 'curl' | 'validation'>('params');
+  const [responseTab, setResponseTab] = useState<'body' | 'headers' | 'validation'>('body');
 
   const [paramsList, setParamsList] = useState<Array<{key: string, value: string, description: string, required: boolean, id: string}>>([
     { key: '', value: '', description: '', required: false, id: '1' }
@@ -49,8 +50,17 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
   const [historyList, setHistoryList] = useState<any[]>([]);
   const [selectedHistoryId, setSelectedHistoryId] = useState<string>('');
 
+  // Response Validation 관련 상태
+  const [validationEnabled, setValidationEnabled] = useState(false);
+  const [expectedValuesList, setExpectedValuesList] = useState<Array<{key: string, value: string, id: string}>>([
+    { key: '', value: '', id: '1' }
+  ]);
+  const [lastValidationResult, setLastValidationResult] = useState<any>(null);
+
   // 선택된 아이템이 변경될 때 폼을 로드
   useEffect(() => {
+    console.log('=== useEffect triggered ===');
+    console.log('selectedItem:', selectedItem);
     if (selectedItem) {
       
       // 저장된 params 파싱
@@ -85,6 +95,37 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
 
       if (selectedItem.requestBody) {
         savedBody = selectedItem.requestBody;
+      }
+
+      // Validation 관련 데이터 로드
+      console.log('Loading validation data for selectedItem:', {
+        validationEnabled: selectedItem.validationEnabled,
+        expectedValues: selectedItem.expectedValues
+      });
+      setValidationEnabled(selectedItem.validationEnabled || false);
+      
+      let savedExpectedValues = [];
+      try {
+        if (selectedItem.expectedValues) {
+          if (typeof selectedItem.expectedValues === 'string') {
+            savedExpectedValues = JSON.parse(selectedItem.expectedValues);
+          } else if (Array.isArray(selectedItem.expectedValues)) {
+            savedExpectedValues = selectedItem.expectedValues;
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to parse expectedValues:', e);
+        savedExpectedValues = [];
+      }
+
+      if (savedExpectedValues.length > 0) {
+        setExpectedValuesList(savedExpectedValues.map((item: any, index: number) => ({
+          key: item.key || '',
+          value: item.value || '',
+          id: (index + 1).toString()
+        })));
+      } else {
+        setExpectedValuesList([{ key: '', value: '', id: '1' }]);
       }
       
       // 요청 정보 로드
@@ -148,6 +189,7 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
       
       // 응답 초기화
       setResponse(null);
+      setLastValidationResult(null);
       setActiveTab('params');
       
       // 히스토리 목록 로드
@@ -155,6 +197,7 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
       setSelectedHistoryId('');
     }
   }, [selectedItem]);
+
 
   // Save API 기능 - 기본 저장 (히스토리 없이)
   const handleSaveApi = async () => {
@@ -169,6 +212,9 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
       // 파라미터 목록을 JSON 문자열로 변환 (빈 항목 제외)
       const filteredParams = paramsList.filter(p => p.key || p.value || p.description);
       
+      // Expected values 목록을 JSON 문자열로 변환 (빈 항목 제외)
+      const filteredExpectedValues = expectedValuesList.filter(ev => ev.key || ev.value);
+      
       const updateData = {
         name: selectedItem.name, // 이름은 변경하지 않음
         method: request.method,
@@ -176,10 +222,25 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
         description: apiDescription,
         requestParams: JSON.stringify(filteredParams), // 파라미터 배열을 JSON으로 저장
         requestHeaders: JSON.stringify(request.headers),
-        requestBody: request.body
+        requestBody: request.body,
+        validationEnabled: validationEnabled,
+        expectedValues: JSON.stringify(filteredExpectedValues) // expected values 배열을 JSON으로 저장
       };
 
       await itemApi.update(itemId, updateData);
+      
+      // 상위 컴포넌트에 업데이트된 데이터 알림
+      onUpdateSelectedItem({
+        ...selectedItem,
+        method: request.method as any,
+        url: request.url,
+        description: apiDescription,
+        requestParams: JSON.stringify(filteredParams),
+        requestHeaders: JSON.stringify(request.headers),
+        requestBody: request.body,
+        validationEnabled: validationEnabled,
+        expectedValues: JSON.stringify(filteredExpectedValues)
+      });
       
       // 히스토리 저장 팝업 표시
       setShowSaveModal(true);
@@ -231,17 +292,15 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
 
     try {
       const itemId = parseInt(selectedItem.id);
-      console.log('Loading history for item:', itemId); // 임시 디버그 로그
       const histories = await historyApi.getList(itemId);
-      console.log('Loaded histories:', histories); // 임시 디버그 로그
       setHistoryList(histories || []);
       
-      // 가장 최신 히스토리 자동 선택 (첫 번째 히스토리)
-      if (histories && histories.length > 0) {
-        setSelectedHistoryId(histories[0].id.toString());
-      } else {
-        setSelectedHistoryId('');
-      }
+      // 히스토리 자동 선택 비활성화 (메소드 변경 시 방해되지 않도록)
+      // if (histories && histories.length > 0) {
+      //   setSelectedHistoryId(histories[0].id.toString());
+      // } else {
+      //   setSelectedHistoryId('');
+      // }
     } catch (error: any) {
       console.error('Failed to load history list:', error);
       setHistoryList([]);
@@ -296,6 +355,37 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
           setHeadersList([{ key: '', value: '', id: '1' }]);
         } else {
           setHeadersList([...loadedHeaders, { key: '', value: '', id: (loadedHeaders.length + 1).toString() }]);
+        }
+        
+        // Validation 데이터 복원
+        console.log('Loading validation data from history snapshot:', {
+          validationEnabled: snapshot.validationEnabled,
+          expectedValues: snapshot.expectedValues
+        });
+        setValidationEnabled(snapshot.validationEnabled || false);
+        
+        let savedExpectedValues = [];
+        try {
+          if (snapshot.expectedValues) {
+            if (typeof snapshot.expectedValues === 'string') {
+              savedExpectedValues = JSON.parse(snapshot.expectedValues);
+            } else if (Array.isArray(snapshot.expectedValues)) {
+              savedExpectedValues = snapshot.expectedValues;
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to parse expectedValues from history:', e);
+          savedExpectedValues = [];
+        }
+        
+        if (savedExpectedValues.length > 0) {
+          setExpectedValuesList(savedExpectedValues.map((item: any, index: number) => ({
+            key: item.key || '',
+            value: item.value || '',
+            id: (index + 1).toString()
+          })));
+        } else {
+          setExpectedValuesList([{ key: '', value: '', id: '1' }]);
         }
       }
       
@@ -401,7 +491,23 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
     );
   };
 
-  // 파라미터와 바디 동기화를 위한 헬퍼 함수들
+  // paramsList를 JSON body로 변환하는 함수
+  const convertParamsListToBody = (): string => {
+    const validParams = paramsList.filter(p => p.key && p.value);
+    
+    if (validParams.length === 0) {
+      return '';
+    }
+    
+    const formData = validParams.reduce((acc, param) => {
+      acc[param.key] = param.value;
+      return acc;
+    }, {} as { [key: string]: string });
+    
+    return JSON.stringify(formData, null, 2);
+  };
+
+  // 파라미터와 바디 동기화를 위한 헬퍼 함수들 (기존 호환성을 위해 유지)
   const convertParamsToFormData = (params: { [key: string]: string }): string => {
     const validParams = Object.entries(params).filter(([key, value]) => key && value);
     if (validParams.length === 0) return '';
@@ -416,37 +522,140 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
 
 
 
-  // HTTP Method 변경 시 body 동기화
+  // HTTP Method 변경 시 params와 body 동기화
   const handleMethodChange = (method: string) => {
-    // selectedItem의 method도 업데이트
-    onUpdateSelectedItem({ method: method as any });
+    const previousMethod = request.method;
     
-    // POST, PUT, PATCH일 때는 params를 body로 동기화
-    if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
-      const formData = convertParamsToFormData(request.params);
+    // selectedItem의 method 업데이트는 Save시에만 하도록 변경
+    // onUpdateSelectedItem({ method: method as any });
+    
+    // 이전 메소드가 GET/DELETE이고 새 메소드가 POST/PUT/PATCH인 경우
+    // params를 body로 이동
+    if (['GET', 'DELETE'].includes(previousMethod) && ['POST', 'PUT', 'PATCH'].includes(method)) {
+      const bodyData = convertParamsListToBody();
+      
       const newHeaders = {...request.headers};
-      if (formData) {
+      
+      if (bodyData) {
         newHeaders['Content-Type'] = 'application/json';
-        setRequest({
-          ...request, 
-          method: method as any,
-          body: formData, 
-          headers: newHeaders
-        });
-      } else {
-        setRequest({
-          ...request, 
-          method: method as any,
-          body: ''
-        });
       }
-    }
-    // GET, DELETE일 때는 body를 비움
-    else {
+      
+      // headersList도 업데이트
+      const hasContentType = headersList.some(h => h.key.toLowerCase() === 'content-type');
+      if (!hasContentType && bodyData) {
+        const newHeadersList = [...headersList];
+        // 빈 행이 있으면 그 행에 Content-Type 추가, 없으면 새로 추가
+        const emptyIndex = newHeadersList.findIndex(h => !h.key && !h.value);
+        if (emptyIndex >= 0) {
+          newHeadersList[emptyIndex] = { key: 'Content-Type', value: 'application/json', id: newHeadersList[emptyIndex].id };
+          newHeadersList.push({ key: '', value: '', id: (Date.now() + newHeadersList.length).toString() });
+        } else {
+          newHeadersList.push({ key: 'Content-Type', value: 'application/json', id: Date.now().toString() });
+          newHeadersList.push({ key: '', value: '', id: (Date.now() + 1).toString() });
+        }
+        setHeadersList(newHeadersList);
+      }
+      
       setRequest({
         ...request, 
         method: method as any,
-        body: ''
+        body: bodyData, 
+        headers: newHeaders
+      });
+      
+      
+      // body 탭으로 자동 전환 (약간의 지연 후)
+      if (bodyData) {
+        setTimeout(() => {
+          setActiveTab('body');
+        }, 10);
+      }
+    }
+    // 이전 메소드가 POST/PUT/PATCH이고 새 메소드가 GET/DELETE인 경우
+    // body에서 params로 이동
+    else if (['POST', 'PUT', 'PATCH'].includes(previousMethod) && ['GET', 'DELETE'].includes(method)) {
+      try {
+        // body가 JSON 형태인지 확인하고 params로 변환
+        let newParams = {};
+        let newParamsList = [{ key: '', value: '', description: '', required: false, id: Date.now().toString() }];
+        
+        if (request.body) {
+          const parsedBody = JSON.parse(request.body);
+          if (typeof parsedBody === 'object' && parsedBody !== null) {
+            newParams = parsedBody;
+            
+            // paramsList도 업데이트 (description 없이 key,value만)
+            const paramsArray = Object.entries(parsedBody).map(([key, value], index) => ({
+              key,
+              value: String(value),
+              description: '', // body에서 params로 이동할 때는 description 없음
+              required: false,
+              id: (Date.now() + index).toString()
+            }));
+            
+            if (paramsArray.length > 0) {
+              newParamsList = [...paramsArray, { key: '', value: '', description: '', required: false, id: (Date.now() + paramsArray.length).toString() }];
+            }
+          }
+        }
+        
+        // Content-Type 헤더 제거
+        const newHeaders = {...request.headers};
+        delete newHeaders['Content-Type'];
+        delete newHeaders['content-type']; // 소문자 버전도 제거
+        
+        // headersList에서도 Content-Type 제거
+        const filteredHeadersList = headersList.filter(h => 
+          h.key.toLowerCase() !== 'content-type'
+        );
+        
+        // 빈 행이 없으면 추가
+        if (!filteredHeadersList.some(h => !h.key && !h.value)) {
+          filteredHeadersList.push({ key: '', value: '', id: Date.now().toString() });
+        }
+        
+        setHeadersList(filteredHeadersList);
+        setParamsList(newParamsList);
+        setRequest({
+          ...request, 
+          method: method as any,
+          params: newParams,
+          headers: newHeaders,
+          body: ''
+        });
+        
+        // params 탭으로 자동 전환
+        setActiveTab('params');
+      } catch (e) {
+        // JSON 파싱 실패 시 기본 동작
+        const newHeaders = {...request.headers};
+        delete newHeaders['Content-Type'];
+        delete newHeaders['content-type'];
+        
+        // headersList에서도 Content-Type 제거
+        const filteredHeadersList = headersList.filter(h => 
+          h.key.toLowerCase() !== 'content-type'
+        );
+        
+        if (!filteredHeadersList.some(h => !h.key && !h.value)) {
+          filteredHeadersList.push({ key: '', value: '', id: Date.now().toString() });
+        }
+        
+        setHeadersList(filteredHeadersList);
+        setRequest({
+          ...request, 
+          method: method as any,
+          headers: newHeaders,
+          body: ''
+        });
+        setActiveTab('params');
+      }
+    }
+    // 같은 카테고리 내에서 변경 (GET<->DELETE, POST<->PUT<->PATCH)
+    else {
+      setRequest({
+        ...request, 
+        method: method as any
       });
     }
   };
@@ -529,14 +738,52 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
       const result = await axios(axiosConfig);
       const endTime = Date.now();
 
-      setResponse({
+      const responseData = {
         status: result.status,
         statusText: result.statusText,
         headers: result.headers as any,
         data: result.data,
         time: endTime - startTime,
         size: JSON.stringify(result.data).length + ' bytes'
-      });
+      };
+
+      setResponse(responseData);
+
+      // Validation 수행 (활성화된 경우)
+      if (validationEnabled && expectedValuesList.length > 0) {
+        try {
+          const filteredExpectedValues = expectedValuesList.filter(ev => ev.key.trim() && ev.value.trim());
+          if (filteredExpectedValues.length > 0) {
+            console.log('🔍 Validation Debug:');
+            console.log('Response data:', result.data);
+            console.log('Expected values:', filteredExpectedValues);
+            
+            const validationResult = validateResponse(result.data, filteredExpectedValues);
+            console.log('Validation result:', validationResult);
+            
+            setLastValidationResult(validationResult);
+            
+            // validation 탭으로 자동 전환 (검증 실패 시)
+            if (!validationResult.passed) {
+              setResponseTab('validation');
+            }
+          }
+        } catch (error) {
+          console.error('Validation error:', error);
+          setLastValidationResult({
+            passed: false,
+            results: [{
+              key: 'validation',
+              expectedValue: 'N/A',
+              actualValue: 'N/A',
+              passed: false,
+              error: error instanceof Error ? error.message : 'Validation error'
+            }]
+          });
+        }
+      } else {
+        setLastValidationResult(null);
+      }
     } catch (error: any) {
       const endTime = Date.now();
       setResponse({
@@ -547,6 +794,9 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
         time: endTime - startTime,
         size: '0 bytes'
       });
+      
+      // 에러 시 validation 결과 초기화
+      setLastValidationResult(null);
     }
     
     setLoading(false);
@@ -733,6 +983,7 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
     setParamsList([{ key: '', value: '', description: '', required: false, id: '1' }]);
     setHeadersList([{ key: '', value: '', id: '1' }]);
     setResponse(null);
+    setLastValidationResult(null);
     setActiveTab('params');
   };
 
@@ -932,7 +1183,7 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
           <div className="bg-gray-50 border-b border-gray-200">
             <div className="flex justify-between items-center h-9">
               <div className="flex">
-                {(['params', 'headers', 'body', 'curl'] as const).map((tab) => (
+                {(['params', 'headers', 'body', 'curl', 'validation'] as const).map((tab) => (
                   <button
                     key={tab}
                     className={`px-3 py-1.5 text-xs font-medium border-b-2 max-h ${
@@ -942,7 +1193,7 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
                     } transition-colors`}
                     onClick={() => setActiveTab(tab)}
                   >
-                    {tab === 'curl' ? 'cURL' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    {tab === 'curl' ? 'cURL' : tab === 'validation' ? 'Response Validation' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                   </button>
                 ))}
               </div>
@@ -1208,7 +1459,7 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
                       height="300px"
                       language={getMonacoLanguage(request.body)}
                       value={request.body}
-                      onChange={(value) => setRequest({...request, body: value || ''})}
+                      onChange={(value) => setRequest(prev => ({...prev, body: value || ''}))}
                       theme="light"
                       options={{
                         minimap: { enabled: false },
@@ -1258,6 +1509,109 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
                 </pre>
               </div>
             )}
+
+            {activeTab === 'validation' && (
+              <div className="flex flex-col">
+                {/* 사용법 안내 */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                  <div className="text-sm font-medium text-blue-800 mb-2">📋 Response Validation 사용법</div>
+                  <ul className="text-xs text-blue-700 space-y-1">
+                    <li>• <strong>성공 응답(200-299)에 대해서만</strong> 유효성 검증을 수행합니다</li>
+                    <li>• Key에는 JSON 경로를 입력하세요 (예: <code className="bg-blue-100 px-1 rounded">id</code>, <code className="bg-blue-100 px-1 rounded">data.user.name</code>, <code className="bg-blue-100 px-1 rounded">items.0.title</code>)</li>
+                    <li>• 배열 접근은 인덱스 번호를 사용하세요 (예: <code className="bg-blue-100 px-1 rounded">0.id</code>는 첫 번째 요소의 id)</li>
+                    <li>• 4xx, 5xx 에러 응답은 자동으로 실패 처리되므로 별도 검증하지 않습니다</li>
+                  </ul>
+                </div>
+
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="validationEnabled"
+                      checked={validationEnabled}
+                      onChange={(e) => setValidationEnabled(e.target.checked)}
+                      className="mr-2"
+                    />
+                    <label htmlFor="validationEnabled" className="text-sm font-medium text-gray-700">
+                      Enable Response Validation
+                    </label>
+                  </div>
+                  {validationEnabled && (
+                    <div className="text-xs text-gray-500">
+                      API 응답에서 지정한 키-값 쌍이 일치하는지 검증합니다
+                    </div>
+                  )}
+                </div>
+
+                {validationEnabled && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">Expected Values</h4>
+                    <div className="grid grid-cols-12 gap-2 mb-3 text-xs font-medium text-gray-600">
+                      <div className="col-span-5">Key (JSON path)</div>
+                      <div className="col-span-6">Expected Value</div>
+                      <div className="col-span-1 text-center">Del</div>
+                    </div>
+                    
+                    {expectedValuesList.map((expectedValue, index) => (
+                      <div key={expectedValue.id} className="grid grid-cols-12 gap-2 mb-2">
+                        <input
+                          type="text"
+                          placeholder="e.g., status, data.code, result.success"
+                          value={expectedValue.key}
+                          onChange={(e) => {
+                            const updated = [...expectedValuesList];
+                            updated[index].key = e.target.value;
+                            setExpectedValuesList(updated);
+                          }}
+                          className="col-span-5 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Expected value"
+                          value={expectedValue.value}
+                          onChange={(e) => {
+                            const updated = [...expectedValuesList];
+                            updated[index].value = e.target.value;
+                            setExpectedValuesList(updated);
+                          }}
+                          className="col-span-6 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <button
+                          onClick={() => {
+                            if (expectedValuesList.length > 1) {
+                              setExpectedValuesList(expectedValuesList.filter((_, i) => i !== index));
+                            }
+                          }}
+                          disabled={expectedValuesList.length === 1}
+                          className="col-span-1 text-center text-red-600 hover:text-red-800 disabled:text-gray-400 disabled:cursor-not-allowed text-sm"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                    
+                    <button
+                      onClick={() => {
+                        const newId = Math.max(...expectedValuesList.map(ev => parseInt(ev.id))) + 1;
+                        setExpectedValuesList([...expectedValuesList, { key: '', value: '', id: newId.toString() }]);
+                      }}
+                      className="text-sm text-blue-600 hover:text-blue-800 mt-2"
+                    >
+                      + Add Expected Value
+                    </button>
+
+                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                      <div className="text-sm font-medium text-yellow-800 mb-1">사용법:</div>
+                      <div className="text-xs text-yellow-700">
+                        • Key에는 JSON 경로를 입력하세요 (예: "status", "data.code", "result.items.0.name")<br/>
+                        • 중첩된 객체는 점(.)으로 구분하고, 배열 인덱스는 숫자로 표현하세요<br/>
+                        • Expected Value에는 예상되는 값을 정확히 입력하세요
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -1292,7 +1646,7 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
 
               <div className="bg-gray-50 border-b border-gray-200">
                 <div className="flex h-9 items-center">
-                  {(['body', 'headers'] as const).map((tab) => (
+                  {(['body', 'headers', 'validation'] as const).map((tab) => (
                     <button
                       key={tab}
                       className={`px-3 py-1.5 text-xs font-medium border-b-2 ${
@@ -1302,7 +1656,7 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
                       } transition-colors`}
                       onClick={() => setResponseTab(tab)}
                     >
-                      {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                      {tab === 'validation' ? 'Validation' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                     </button>
                   ))}
                 </div>
@@ -1326,6 +1680,105 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {responseTab === 'validation' && (
+                  <div className="h-full max-h-[450px] overflow-auto w-full">
+                    {validationEnabled ? (
+                      lastValidationResult ? (
+                        <div className="space-y-4">
+                          {/* 전체 결과 요약 */}
+                          <div className={`p-4 rounded-lg border ${
+                            lastValidationResult.passed 
+                              ? 'bg-green-50 border-green-200' 
+                              : 'bg-red-50 border-red-200'
+                          }`}>
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className={`text-lg ${lastValidationResult.passed ? 'text-green-600' : 'text-red-600'}`}>
+                                {lastValidationResult.passed ? '✅' : '❌'}
+                              </span>
+                              <h3 className={`text-md font-semibold ${lastValidationResult.passed ? 'text-green-800' : 'text-red-800'}`}>
+                                Validation {lastValidationResult.passed ? 'Passed' : 'Failed'}
+                              </h3>
+                            </div>
+                            <p className="text-sm text-gray-700">
+                              {lastValidationResult.results.filter((r: any) => r.passed).length} / {lastValidationResult.results.length} tests passed
+                            </p>
+                          </div>
+
+                          {/* 개별 테스트 결과 */}
+                          <div className="space-y-3">
+                            <h4 className="text-sm font-semibold text-gray-700">Test Results:</h4>
+                            {lastValidationResult.results.map((result: any, index: number) => (
+                              <div key={index} className={`p-3 rounded border text-sm ${
+                                result.passed 
+                                  ? 'bg-green-100 border-green-300' 
+                                  : 'bg-red-100 border-red-300'
+                              }`}>
+                                <div className="flex items-start justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className={`${result.passed ? 'text-green-700' : 'text-red-700'}`}>
+                                      {result.passed ? '✅' : '❌'}
+                                    </span>
+                                    <span className="font-medium font-mono">{result.key}</span>
+                                  </div>
+                                  <span className={`text-xs px-2 py-1 rounded ${
+                                    result.passed 
+                                      ? 'bg-green-200 text-green-800' 
+                                      : 'bg-red-200 text-red-800'
+                                  }`}>
+                                    {result.passed ? 'PASS' : 'FAIL'}
+                                  </span>
+                                </div>
+                                
+                                <div className="space-y-1 text-xs text-gray-600">
+                                  <div>
+                                    <span className="font-medium">Expected:</span> 
+                                    <span className="font-mono ml-1">{
+                                      typeof result.expectedValue === 'string' 
+                                        ? `"${result.expectedValue}"` 
+                                        : JSON.stringify(result.expectedValue)
+                                    }</span>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">Actual:</span> 
+                                    <span className="font-mono ml-1">{
+                                      typeof result.actualValue === 'undefined' 
+                                        ? 'undefined'
+                                        : typeof result.actualValue === 'string' 
+                                        ? `"${result.actualValue}"`
+                                        : JSON.stringify(result.actualValue)
+                                    }</span>
+                                  </div>
+                                  {result.error && (
+                                    <div className="text-red-600 mt-1">
+                                      <span className="font-medium">Error:</span> {result.error}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center h-32 text-gray-500">
+                          <div className="text-center">
+                            <div className="text-2xl mb-2">🔍</div>
+                            <div className="text-sm">No validation results yet</div>
+                            <div className="text-xs text-gray-400 mt-1">Send a request to see validation results</div>
+                          </div>
+                        </div>
+                      )
+                    ) : (
+                      <div className="flex items-center justify-center h-32 text-gray-500">
+                        <div className="text-center">
+                          <div className="text-2xl mb-2">⚙️</div>
+                          <div className="text-sm">Response validation is disabled</div>
+                          <div className="text-xs text-gray-400 mt-1">Enable it in the "Response Validation" tab to see validation results</div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

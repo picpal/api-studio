@@ -21,6 +21,11 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/api\/external/, ''),
         secure: true,
       },
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
   build: {

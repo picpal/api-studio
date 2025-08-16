@@ -108,6 +108,8 @@ public class ApiItemHistoryController {
                 apiItem.getRequestHeaders(),
                 apiItem.getRequestBody(),
                 parametersJson,
+                apiItem.getValidationEnabled(),
+                apiItem.getExpectedValues(),
                 currentUser
             );
             
@@ -218,6 +220,8 @@ public class ApiItemHistoryController {
             snapshot.put("requestParams", history.getRequestParamsSnapshot());
             snapshot.put("requestHeaders", history.getRequestHeadersSnapshot());
             snapshot.put("requestBody", history.getRequestBodySnapshot());
+            snapshot.put("validationEnabled", history.getValidationEnabledSnapshot());
+            snapshot.put("expectedValues", history.getExpectedValuesSnapshot());
             
             // 파라미터 JSON 파싱
             try {

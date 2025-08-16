@@ -68,37 +68,30 @@ public class ProxyController {
             ResponseEntity<String> response = restTemplate.exchange(
                 URI.create(targetUrl), method, entity, String.class);
 
-            // CORS 헤더 추가한 응답 반환
+            // 응답 헤더에서 CORS 관련 헤더 제거 후 우리가 설정
             HttpHeaders responseHeaders = new HttpHeaders();
-            responseHeaders.putAll(response.getHeaders());
-            responseHeaders.set("Access-Control-Allow-Origin", "http://localhost:3001");
-            responseHeaders.set("Access-Control-Allow-Credentials", "true");
+            response.getHeaders().forEach((key, value) -> {
+                if (!key.toLowerCase().startsWith("access-control-")) {
+                    responseHeaders.put(key, value);
+                }
+            });
+            
+            // CORS 헤더는 @CrossOrigin 어노테이션이 처리하므로 제거
 
             return new ResponseEntity<>(response.getBody(), responseHeaders, response.getStatusCode());
 
         } catch (HttpClientErrorException | HttpServerErrorException e) {
-            HttpHeaders responseHeaders = new HttpHeaders();
-            responseHeaders.set("Access-Control-Allow-Origin", "http://localhost:3001");
-            responseHeaders.set("Access-Control-Allow-Credentials", "true");
-            
-            return new ResponseEntity<>(e.getResponseBodyAsString(), responseHeaders, e.getStatusCode());
+            // CORS 헤더는 @CrossOrigin 어노테이션이 처리하므로 별도 설정 불필요
+            return new ResponseEntity<>(e.getResponseBodyAsString(), HttpStatus.valueOf(e.getStatusCode().value()));
         } catch (Exception e) {
-            HttpHeaders responseHeaders = new HttpHeaders();
-            responseHeaders.set("Access-Control-Allow-Origin", "http://localhost:3001");
-            responseHeaders.set("Access-Control-Allow-Credentials", "true");
-            
-            return new ResponseEntity<>("Proxy error: " + e.getMessage(), responseHeaders, HttpStatus.INTERNAL_SERVER_ERROR);
+            // CORS 헤더는 @CrossOrigin 어노테이션이 처리하므로 별도 설정 불필요
+            return new ResponseEntity<>("Proxy error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     @RequestMapping(value = "/**", method = RequestMethod.OPTIONS)
     public ResponseEntity<?> handleOptions() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Access-Control-Allow-Origin", "http://localhost:3001");
-        headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-        headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
-        headers.set("Access-Control-Allow-Credentials", "true");
-        
-        return new ResponseEntity<>(headers, HttpStatus.OK);
+        // CORS 헤더는 @CrossOrigin 어노테이션이 처리하므로 별도 설정 불필요
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 }

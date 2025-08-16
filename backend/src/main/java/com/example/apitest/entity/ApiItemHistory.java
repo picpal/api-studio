@@ -47,6 +47,12 @@ public class ApiItemHistory {
     @Column(name = "parameters_snapshot", columnDefinition = "TEXT")
     private String parametersSnapshot; // JSON string으로 저장
     
+    @Column(name = "validation_enabled_snapshot")
+    private Boolean validationEnabledSnapshot;
+    
+    @Column(name = "expected_values_snapshot", columnDefinition = "TEXT")
+    private String expectedValuesSnapshot;
+    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_user_id", nullable = false)
     @JsonIgnore
@@ -74,6 +80,7 @@ public class ApiItemHistory {
                          String methodSnapshot, String urlSnapshot, String descriptionSnapshot,
                          String requestParamsSnapshot, String requestHeadersSnapshot, 
                          String requestBodySnapshot, String parametersSnapshot,
+                         Boolean validationEnabledSnapshot, String expectedValuesSnapshot,
                          User createdByUser) {
         this.historyName = historyName;
         this.apiItem = apiItem;
@@ -85,6 +92,8 @@ public class ApiItemHistory {
         this.requestHeadersSnapshot = requestHeadersSnapshot;
         this.requestBodySnapshot = requestBodySnapshot;
         this.parametersSnapshot = parametersSnapshot;
+        this.validationEnabledSnapshot = validationEnabledSnapshot;
+        this.expectedValuesSnapshot = expectedValuesSnapshot;
         this.createdByUser = createdByUser;
         this.createdByUserEmail = createdByUser.getEmail();
     }
@@ -219,5 +228,21 @@ public class ApiItemHistory {
     
     public void setSavedAt(LocalDateTime savedAt) {
         this.savedAt = savedAt;
+    }
+    
+    public Boolean getValidationEnabledSnapshot() {
+        return validationEnabledSnapshot;
+    }
+    
+    public void setValidationEnabledSnapshot(Boolean validationEnabledSnapshot) {
+        this.validationEnabledSnapshot = validationEnabledSnapshot;
+    }
+    
+    public String getExpectedValuesSnapshot() {
+        return expectedValuesSnapshot;
+    }
+    
+    public void setExpectedValuesSnapshot(String expectedValuesSnapshot) {
+        this.expectedValuesSnapshot = expectedValuesSnapshot;
     }
 }

@@ -3,6 +3,7 @@ import Header from './Header';
 import Sidebar from './sidebar/SidebarRefactored';
 import MainContent from './MainContent';
 import AdminPage from './AdminPage';
+import TestAutomationPage from './TestAutomationPage';
 import { BaseUrl, ApiItem } from '../types/api';
 
 interface LayoutProps {
@@ -19,6 +20,7 @@ const Layout: React.FC<LayoutProps> = () => {
 
   const [selectedItem, setSelectedItem] = useState<ApiItem | null>(null);
   const [showAdminPage, setShowAdminPage] = useState(false);
+  const [currentPage, setCurrentPage] = useState<'api-testing' | 'test-automation'>('api-testing');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     // 데스크톱에서는 열린 상태, 모바일에서는 닫힌 상태로 시작
     return window.innerWidth < 768;
@@ -64,65 +66,85 @@ const Layout: React.FC<LayoutProps> = () => {
     }
   };
 
+  const handleNavigate = (page: 'api-testing' | 'test-automation') => {
+    setCurrentPage(page);
+  };
+
   return (
     <div className="h-screen bg-white flex flex-col">
       <Header 
         onOpenAdmin={() => setShowAdminPage(true)}
         onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
         sidebarCollapsed={sidebarCollapsed}
+        currentPage={currentPage}
+        onNavigate={handleNavigate}
       />
       <div className="flex flex-1 overflow-hidden relative">
-        {/* Desktop Sidebar */}
-        <div className={`hidden md:block flex-shrink-0 border-r border-gray-400 transition-all duration-300 ${sidebarCollapsed ? 'w-12' : 'w-80'}`}>
-          <Sidebar
-            baseUrls={baseUrls}
-            onAddBaseUrl={handleAddBaseUrl}
-            onUpdateBaseUrl={handleUpdateBaseUrl}
-            onDeleteBaseUrl={handleDeleteBaseUrl}
-            onSelectItem={handleSelectItem}
-            onResetForm={handleResetForm}
-            selectedItem={selectedItem}
-            collapsed={sidebarCollapsed}
-            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-          />
-        </div>
+        {/* Sidebar - Only show for API Testing page */}
+        {currentPage === 'api-testing' && (
+          <>
+            {/* Desktop Sidebar */}
+            <div className={`hidden md:block flex-shrink-0 border-r border-gray-400 transition-all duration-300 ${sidebarCollapsed ? 'w-12' : 'w-80'}`}>
+              <Sidebar
+                baseUrls={baseUrls}
+                onAddBaseUrl={handleAddBaseUrl}
+                onUpdateBaseUrl={handleUpdateBaseUrl}
+                onDeleteBaseUrl={handleDeleteBaseUrl}
+                onSelectItem={handleSelectItem}
+                onResetForm={handleResetForm}
+                selectedItem={selectedItem}
+                collapsed={sidebarCollapsed}
+                onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+              />
+            </div>
 
-        {/* Mobile Sidebar Overlay */}
-        <div className={`md:hidden fixed inset-y-0 left-0 z-30 transform transition-transform duration-300 ease-in-out ${
-          sidebarCollapsed ? '-translate-x-full' : 'translate-x-0'
-        }`} style={{ top: '64px' }}>
-          <div className="w-80 h-full border-r border-gray-400 bg-white shadow-lg">
-            <Sidebar
-              baseUrls={baseUrls}
-              onAddBaseUrl={handleAddBaseUrl}
-              onUpdateBaseUrl={handleUpdateBaseUrl}
-              onDeleteBaseUrl={handleDeleteBaseUrl}
-              onSelectItem={handleSelectItem}
-              onResetForm={handleResetForm}
-              selectedItem={selectedItem}
-              collapsed={false}
-              onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-            />
-          </div>
-        </div>
+            {/* Mobile Sidebar Overlay */}
+            <div className={`md:hidden fixed inset-y-0 left-0 z-30 transform transition-transform duration-300 ease-in-out ${
+              sidebarCollapsed ? '-translate-x-full' : 'translate-x-0'
+            }`} style={{ top: '64px' }}>
+              <div className="w-80 h-full border-r border-gray-400 bg-white shadow-lg">
+                <Sidebar
+                  baseUrls={baseUrls}
+                  onAddBaseUrl={handleAddBaseUrl}
+                  onUpdateBaseUrl={handleUpdateBaseUrl}
+                  onDeleteBaseUrl={handleDeleteBaseUrl}
+                  onSelectItem={handleSelectItem}
+                  onResetForm={handleResetForm}
+                  selectedItem={selectedItem}
+                  collapsed={false}
+                  onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+                />
+              </div>
+            </div>
 
-        {/* Mobile Backdrop */}
-        {!sidebarCollapsed && (
-          <div 
-            className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-20"
-            style={{ top: '64px' }}
-            onClick={() => setSidebarCollapsed(true)}
-          />
+            {/* Mobile Backdrop */}
+            {!sidebarCollapsed && (
+              <div 
+                className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-20"
+                style={{ top: '64px' }}
+                onClick={() => setSidebarCollapsed(true)}
+              />
+            )}
+          </>
         )}
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-y-auto md:ml-0">
-          <MainContent
-            baseUrls={baseUrls}
-            selectedItem={selectedItem}
-            onResetForm={handleResetForm}
-            onUpdateSelectedItem={handleUpdateSelectedItem}
-          />
+          {currentPage === 'api-testing' ? (
+            <MainContent
+              baseUrls={baseUrls}
+              selectedItem={selectedItem}
+              onResetForm={handleResetForm}
+              onUpdateSelectedItem={handleUpdateSelectedItem}
+            />
+          ) : (
+            <TestAutomationPage
+              baseUrls={baseUrls}
+              selectedItem={selectedItem}
+              onResetForm={handleResetForm}
+              onUpdateSelectedItem={handleUpdateSelectedItem}
+            />
+          )}
         </div>
       </div>
 

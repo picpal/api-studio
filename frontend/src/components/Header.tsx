@@ -6,21 +6,51 @@ interface HeaderProps {
   onOpenAdmin?: () => void;
   onToggleSidebar?: () => void;
   sidebarCollapsed?: boolean;
+  currentPage?: 'api-testing' | 'test-automation';
+  onNavigate?: (page: 'api-testing' | 'test-automation') => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onOpenAdmin, onToggleSidebar, sidebarCollapsed }) => {
+const Header: React.FC<HeaderProps> = ({ onOpenAdmin, onToggleSidebar, sidebarCollapsed, currentPage = 'api-testing', onNavigate }) => {
   const { user, logout } = useAuth();
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   return (
     <header className="w-full bg-white border-b border-gray-200 px-3 md:px-6 py-2 md:py-4">
       <div className="flex items-center justify-between">
-        {/* Desktop Logo and Title */}
-        <div className="hidden md:flex items-center gap-3">
-          <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white text-sm font-bold">
-            📘
+        {/* Desktop Logo, Title and Navigation */}
+        <div className="hidden md:flex items-center gap-6">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white text-sm font-bold">
+              📘
+            </div>
+            <h1 className="text-xl font-semibold text-gray-800 m-0">Verification Page</h1>
           </div>
-          <h1 className="text-xl font-semibold text-gray-800 m-0">Verification Page</h1>
+          
+          {/* Navigation Menu */}
+          {onNavigate && (
+            <nav className="flex items-center gap-1">
+              <button
+                onClick={() => onNavigate('api-testing')}
+                className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  currentPage === 'api-testing'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+                }`}
+              >
+                API Testing
+              </button>
+              <button
+                onClick={() => onNavigate('test-automation')}
+                className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  currentPage === 'test-automation'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+                }`}
+              >
+                Test Automation
+              </button>
+            </nav>
+          )}
         </div>
         
         {/* Mobile Logo and Menu */}
@@ -41,11 +71,6 @@ const Header: React.FC<HeaderProps> = ({ onOpenAdmin, onToggleSidebar, sidebarCo
         </div>
         
         <div className="flex items-center gap-2 md:gap-4">
-          {/* Desktop Email */}
-          <span className="hidden md:block text-sm text-gray-600">
-            {user?.email}
-          </span>
-          
           {/* Desktop Buttons */}
           <button
             onClick={() => setIsPasswordModalOpen(true)}
@@ -72,19 +97,22 @@ const Header: React.FC<HeaderProps> = ({ onOpenAdmin, onToggleSidebar, sidebarCo
           {/* Desktop Logout Button */}
           <button
             onClick={logout}
-            className="hidden md:block px-3 py-1.5 text-sm text-red-600 hover:text-red-800 hover:bg-red-50 rounded border border-red-300 transition-colors"
+            className="hidden md:block p-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+            title="로그아웃"
           >
-            로그아웃
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
           </button>
           
-          {/* Mobile Logout Button (X only) */}
+          {/* Mobile Logout Button */}
           <button
             onClick={logout}
             className="md:hidden p-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
             title="로그아웃"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
           </button>
         </div>

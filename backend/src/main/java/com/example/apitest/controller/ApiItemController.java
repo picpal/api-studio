@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 import java.util.Optional;
 import java.util.ArrayList;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -63,8 +64,25 @@ public class ApiItemController {
     }
 
     @GetMapping
-    public List<ApiItem> getAllItems() {
-        return itemRepository.findAll();
+    public List<Map<String, Object>> getAllItems() {
+        List<ApiItem> items = itemRepository.findAll();
+        return items.stream().map(item -> {
+            Map<String, Object> itemMap = new HashMap<>();
+            itemMap.put("id", item.getId());
+            itemMap.put("name", item.getName());
+            itemMap.put("method", item.getMethod());
+            itemMap.put("url", item.getUrl());
+            itemMap.put("description", item.getDescription());
+            itemMap.put("requestParams", item.getRequestParams());
+            itemMap.put("requestHeaders", item.getRequestHeaders());
+            itemMap.put("requestBody", item.getRequestBody());
+            itemMap.put("createdAt", item.getCreatedAt());
+            itemMap.put("updatedAt", item.getUpdatedAt());
+            itemMap.put("folderId", item.getFolderId());
+            itemMap.put("validationEnabled", item.getValidationEnabled());
+            itemMap.put("expectedValues", item.getExpectedValues());
+            return itemMap;
+        }).collect(Collectors.toList());
     }
 
     @GetMapping("/{id}")
@@ -83,6 +101,8 @@ public class ApiItemController {
                     response.put("createdAt", item.getCreatedAt());
                     response.put("updatedAt", item.getUpdatedAt());
                     response.put("folderId", item.getFolderId());
+                    response.put("validationEnabled", item.getValidationEnabled());
+                    response.put("expectedValues", item.getExpectedValues());
                     
                     // requestParams 사용 - 별도 파라미터 처리 불필요
                     
@@ -92,8 +112,25 @@ public class ApiItemController {
     }
 
     @GetMapping("/folder/{folderId}")
-    public List<ApiItem> getItemsByFolder(@PathVariable Long folderId) {
-        return itemRepository.findByFolderId(folderId);
+    public List<Map<String, Object>> getItemsByFolder(@PathVariable Long folderId) {
+        List<ApiItem> items = itemRepository.findByFolderId(folderId);
+        return items.stream().map(item -> {
+            Map<String, Object> itemMap = new HashMap<>();
+            itemMap.put("id", item.getId());
+            itemMap.put("name", item.getName());
+            itemMap.put("method", item.getMethod());
+            itemMap.put("url", item.getUrl());
+            itemMap.put("description", item.getDescription());
+            itemMap.put("requestParams", item.getRequestParams());
+            itemMap.put("requestHeaders", item.getRequestHeaders());
+            itemMap.put("requestBody", item.getRequestBody());
+            itemMap.put("createdAt", item.getCreatedAt());
+            itemMap.put("updatedAt", item.getUpdatedAt());
+            itemMap.put("folderId", item.getFolderId());
+            itemMap.put("validationEnabled", item.getValidationEnabled());
+            itemMap.put("expectedValues", item.getExpectedValues());
+            return itemMap;
+        }).collect(Collectors.toList());
     }
 
     @PostMapping
@@ -109,6 +146,14 @@ public class ApiItemController {
         item.setRequestParams((String) itemData.get("requestParams"));
         item.setRequestHeaders((String) itemData.get("requestHeaders"));
         item.setRequestBody((String) itemData.get("requestBody"));
+        
+        // Validation 필드 처리
+        if (itemData.containsKey("validationEnabled")) {
+            item.setValidationEnabled((Boolean) itemData.get("validationEnabled"));
+        }
+        if (itemData.containsKey("expectedValues")) {
+            item.setExpectedValues((String) itemData.get("expectedValues"));
+        }
         
         // 폴더 연결 처리
         Long folderId = null;
@@ -144,6 +189,8 @@ public class ApiItemController {
             response.put("createdAt", savedItem.getCreatedAt());
             response.put("updatedAt", savedItem.getUpdatedAt());
             response.put("folderId", folderId);
+            response.put("validationEnabled", savedItem.getValidationEnabled());
+            response.put("expectedValues", savedItem.getExpectedValues());
             
             // 파라미터는 이제 requestParams JSON 필드에서 관리됨
             
@@ -197,6 +244,12 @@ public class ApiItemController {
                 if (itemDetails.containsKey("requestBody")) {
                     item.setRequestBody((String) itemDetails.get("requestBody"));
                 }
+                if (itemDetails.containsKey("validationEnabled")) {
+                    item.setValidationEnabled((Boolean) itemDetails.get("validationEnabled"));
+                }
+                if (itemDetails.containsKey("expectedValues")) {
+                    item.setExpectedValues((String) itemDetails.get("expectedValues"));
+                }
                 
                 // 먼저 아이템을 저장
                 ApiItem savedItem = itemRepository.save(item);
@@ -237,6 +290,8 @@ public class ApiItemController {
                 response.put("createdAt", item.getCreatedAt());
                 response.put("updatedAt", item.getUpdatedAt());
                 response.put("folderId", item.getFolderId());
+                response.put("validationEnabled", item.getValidationEnabled());
+                response.put("expectedValues", item.getExpectedValues());
                 
                 // 파라미터는 이제 requestParams JSON 필드에서 관리됨
                 

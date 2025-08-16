@@ -454,11 +454,20 @@ const AdminPage: React.FC = () => {
                       onClick={() => {
                         const userSelect = document.getElementById('userId') as HTMLSelectElement;
                         const permissionSelect = document.getElementById('permission') as HTMLSelectElement;
-                        if (userSelect.value && permissionSelect.value) {
-                          grantFolderPermission(parseInt(userSelect.value), permissionSelect.value);
-                          userSelect.value = '';
-                          permissionSelect.value = '';
+                        
+                        if (!userSelect.value) {
+                          alert('사용자를 선택해주세요.');
+                          return;
                         }
+                        
+                        if (!permissionSelect.value) {
+                          alert('권한을 선택해주세요.');
+                          return;
+                        }
+                        
+                        grantFolderPermission(parseInt(userSelect.value), permissionSelect.value);
+                        userSelect.value = '';
+                        permissionSelect.value = '';
                       }}
                       className="mt-2 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
                     >

@@ -22,6 +22,8 @@ export const convertBackendToFrontendItem = (backendItem: BackendApiItem): ApiIt
   requestParams: backendItem.requestParams,
   requestHeaders: backendItem.requestHeaders,
   requestBody: backendItem.requestBody,
+  validationEnabled: backendItem.validationEnabled,
+  expectedValues: backendItem.expectedValues,
   folder: backendItem.folderId?.toString(),
   parameters: backendItem.parameters // 파라미터 배열 추가
 });

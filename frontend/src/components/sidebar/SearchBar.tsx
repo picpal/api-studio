@@ -46,7 +46,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, onExp
           title="Expand All Folders"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
           </svg>
         </button>
         <button
@@ -55,7 +55,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, onExp
           title="Collapse All Folders"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8V4m0 0l4 4m-4-4l-4 4m-6 4v12m0 0l-4-4m4 4l4-4" />
           </svg>
         </button>
       </div>
