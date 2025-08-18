@@ -39,6 +39,7 @@ export interface ApiItem {
   validationEnabled?: boolean; // 응답 검증 사용 여부
   expectedValues?: string; // JSON 형태로 키-값 쌍 저장
   folder?: string;
+  folderName?: string; // 폴더명 정보
   parameters?: ApiParameterItem[]; // API 파라미터 배열
 }
 

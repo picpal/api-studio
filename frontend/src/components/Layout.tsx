@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './sidebar/SidebarRefactored';
+import ScenarioSidebar from './scenario/ScenarioSidebar';
 import MainContent from './MainContent';
 import AdminPage from './AdminPage';
 import TestAutomationPage from './TestAutomationPage';
+import ScenarioManagementPage from './ScenarioManagementPage';
 import { BaseUrl, ApiItem } from '../types/api';
 
 interface LayoutProps {
@@ -11,20 +14,75 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  
   const [baseUrls, setBaseUrls] = useState<BaseUrl[]>([
     { id: '1', name: 'Development', url: 'https://dev-api.blue.com' },
     { id: '2', name: 'Staging', url: 'https://staging-api.blue.com' },
     { id: '3', name: 'Production', url: 'https://api.blue.com' },
-    { id: '4', name: 'Local', url: 'http://localhost:8080' }
+    { id: '4', name: 'Local', url: import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8080' }
   ]);
 
   const [selectedItem, setSelectedItem] = useState<ApiItem | null>(null);
+  const [selectedScenario, setSelectedScenario] = useState<any>(null);
   const [showAdminPage, setShowAdminPage] = useState(false);
-  const [currentPage, setCurrentPage] = useState<'api-testing' | 'test-automation'>('api-testing');
+  const [currentPage, setCurrentPage] = useState<'api-testing' | 'test-automation' | 'scenario-management'>('api-testing');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     // 데스크톱에서는 열린 상태, 모바일에서는 닫힌 상태로 시작
     return window.innerWidth < 768;
   });
+
+  // URL 기반으로 현재 페이지 결정
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.startsWith('/scenario-management')) {
+      setCurrentPage('scenario-management');
+      // 시나리오 ID가 URL에 있으면 해당 시나리오 선택
+      const match = path.match(/\/scenario-management\/(\d+)/);
+      if (match) {
+        const scenarioId = parseInt(match[1]);
+        // 시나리오 정보를 가져와서 설정
+        fetchScenarioById(scenarioId);
+      } else {
+        setSelectedScenario(null);
+      }
+    } else if (path.startsWith('/test-automation')) {
+      setCurrentPage('test-automation');
+    } else {
+      setCurrentPage('api-testing');
+    }
+  }, [location.pathname]);
+
+  const fetchScenarioById = async (scenarioId: number) => {
+    console.log('Fetching scenario by ID:', scenarioId);
+    try {
+      // 모든 폴더를 가져와서 해당 시나리오 찾기
+      const response = await fetch('http://localhost:8080/api/scenarios/folders', {
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const folders = await response.json();
+        console.log('Folders loaded:', folders);
+        for (const folder of folders) {
+          const scenario = folder.scenarios?.find((s: any) => s.id === scenarioId);
+          if (scenario) {
+            console.log('Found scenario:', scenario);
+            setSelectedScenario({
+              ...scenario,
+              id: scenarioId,
+              stepCount: folder.scenarios?.length || 0,
+              createdAt: new Date(scenario.createdAt),
+              updatedAt: new Date(scenario.updatedAt)
+            });
+            break;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching scenario:', error);
+    }
+  };
 
   const handleAddBaseUrl = (newBaseUrl: Omit<BaseUrl, 'id'>) => {
     const id = (baseUrls.length + 1).toString();
@@ -41,18 +99,26 @@ const Layout: React.FC<LayoutProps> = () => {
     setBaseUrls(baseUrls.filter(url => url.id !== id));
   };
 
-  const handleSelectItem = async (item: ApiItem, folderId: string) => {
+  const handleSelectItem = async (item: ApiItem, folderId: string, folderName?: string) => {
     try {
       // 개별 아이템 상세 정보 (파라미터 포함) 조회
       const { itemApi, convertBackendToFrontendItem } = await import('../services/api');
       const detailedItem = await itemApi.getById(parseInt(item.id));
       const convertedItem = convertBackendToFrontendItem(detailedItem);
       
-      setSelectedItem({ ...convertedItem, folder: folderId });
+      setSelectedItem({ 
+        ...convertedItem, 
+        folder: folderId,
+        folderName: folderName 
+      });
     } catch (error) {
       console.error('Failed to fetch item details:', error);
       // 에러 시 기본 아이템 정보만 사용
-      setSelectedItem({ ...item, folder: folderId });
+      setSelectedItem({ 
+        ...item, 
+        folder: folderId,
+        folderName: folderName 
+      });
     }
   };
 
@@ -66,8 +132,41 @@ const Layout: React.FC<LayoutProps> = () => {
     }
   };
 
-  const handleNavigate = (page: 'api-testing' | 'test-automation') => {
+  const handleFolderUpdate = (folderId: string, folderName: string) => {
+    // 선택된 아이템이 해당 폴더에 속해 있으면 폴더 정보 업데이트
+    if (selectedItem && selectedItem.folder === folderId) {
+      setSelectedItem({ 
+        ...selectedItem, 
+        folderName: folderName  // 폴더명 정보 추가/업데이트
+      });
+    }
+  };
+
+  const handleItemUpdate = (itemId: string, itemName: string) => {
+    // 선택된 아이템이 해당 아이템이면 이름 정보 업데이트
+    if (selectedItem && selectedItem.id === itemId) {
+      setSelectedItem({ 
+        ...selectedItem, 
+        name: itemName  // 아이템명 정보 업데이트
+      });
+    }
+  };
+
+  const handleNavigate = (page: 'api-testing' | 'test-automation' | 'scenario-management') => {
     setCurrentPage(page);
+    // URL 업데이트
+    if (page === 'api-testing') {
+      navigate('/');
+    } else if (page === 'test-automation') {
+      navigate('/test-automation');
+    } else if (page === 'scenario-management') {
+      navigate('/scenario-management');
+    }
+  };
+
+  const handleSelectScenario = (scenario: any) => {
+    setSelectedScenario(scenario);
+    navigate(`/scenario-management/${scenario.id}`);
   };
 
   return (
@@ -95,6 +194,8 @@ const Layout: React.FC<LayoutProps> = () => {
                 selectedItem={selectedItem}
                 collapsed={sidebarCollapsed}
                 onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+                onFolderUpdate={handleFolderUpdate}
+                onItemUpdate={handleItemUpdate}
               />
             </div>
 
@@ -113,11 +214,48 @@ const Layout: React.FC<LayoutProps> = () => {
                   selectedItem={selectedItem}
                   collapsed={false}
                   onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+                  onFolderUpdate={handleFolderUpdate}
+                  onItemUpdate={handleItemUpdate}
                 />
               </div>
             </div>
 
             {/* Mobile Backdrop */}
+            {!sidebarCollapsed && (
+              <div 
+                className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-20"
+                style={{ top: '64px' }}
+                onClick={() => setSidebarCollapsed(true)}
+              />
+            )}
+          </>
+        )}
+
+        {/* Scenario Sidebar - Only show for Scenario Management page */}
+        {currentPage === 'scenario-management' && (
+          <>
+            {/* Desktop Scenario Sidebar */}
+            <div className={`hidden md:block flex-shrink-0 border-r border-gray-200 transition-all duration-300 ${sidebarCollapsed ? 'w-12' : 'w-80'}`}>
+              <ScenarioSidebar
+                collapsed={sidebarCollapsed}
+                onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+                onSelectScenario={handleSelectScenario}
+                selectedScenario={selectedScenario}
+              />
+            </div>
+
+            {/* Mobile Scenario Sidebar */}
+            <div className={`md:hidden fixed inset-y-0 left-0 z-30 transition-transform duration-300 ease-in-out ${
+              sidebarCollapsed ? '-translate-x-full' : 'translate-x-0'
+            }`} style={{ top: '64px' }}>
+              <ScenarioSidebar
+                collapsed={false}
+                onSelectScenario={handleSelectScenario}
+                selectedScenario={selectedScenario}
+              />
+            </div>
+
+            {/* Mobile Overlay */}
             {!sidebarCollapsed && (
               <div 
                 className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-20"
@@ -137,12 +275,16 @@ const Layout: React.FC<LayoutProps> = () => {
               onResetForm={handleResetForm}
               onUpdateSelectedItem={handleUpdateSelectedItem}
             />
-          ) : (
+          ) : currentPage === 'test-automation' ? (
             <TestAutomationPage
               baseUrls={baseUrls}
               selectedItem={selectedItem}
               onResetForm={handleResetForm}
               onUpdateSelectedItem={handleUpdateSelectedItem}
+            />
+          ) : (
+            <ScenarioManagementPage 
+              selectedScenario={selectedScenario}
             />
           )}
         </div>

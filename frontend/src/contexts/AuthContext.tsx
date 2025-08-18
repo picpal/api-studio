@@ -11,7 +11,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: () => void;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   checkAuth: () => Promise<void>;
 }
@@ -46,8 +46,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const login = () => {
-    checkAuth();
+  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const data = await authApi.login(email, password);
+      setUser(data.user);
+      return { success: true };
+    } catch (error: any) {
+      console.error('Login failed:', error);
+      const errorMessage = error.response?.data?.error || 'Login failed';
+      return { success: false, error: errorMessage };
+    }
   };
 
   const logout = async () => {
@@ -62,6 +70,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     checkAuth();
+
+    // 401 에러 발생 시 자동 로그아웃 처리
+    const handleAuthError = () => {
+      console.log('Authentication error detected, logging out...');
+      setUser(null);
+    };
+
+    window.addEventListener('auth-error', handleAuthError);
+
+    return () => {
+      window.removeEventListener('auth-error', handleAuthError);
+    };
   }, []);
 
   const value: AuthContextType = {

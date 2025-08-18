@@ -1,11 +1,13 @@
 import React, {useState} from 'react';
 import {authApi} from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 interface LoginProps {
-    onLoginSuccess: () => void;
+    onLoginSuccess?: () => void;
 }
 
 const Login: React.FC<LoginProps> = ({onLoginSuccess}) => {
+    const { login } = useAuth();
     const [isSignUp, setIsSignUp] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -39,8 +41,12 @@ const Login: React.FC<LoginProps> = ({onLoginSuccess}) => {
                 setPassword('');
                 setConfirmPassword('');
             } else {
-                await authApi.login(email, password);
-                onLoginSuccess();
+                const result = await login(email, password);
+                if (result.success) {
+                    onLoginSuccess?.();
+                } else {
+                    setError(result.error || '로그인에 실패했습니다.');
+                }
             }
         } catch (error: any) {
             setError(error.response?.data?.error || '오류가 발생했습니다.');

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { BaseUrl, ApiItem } from '../types/api';
 import { validateResponse, ValidationResult } from '../utils/responseValidation';
+import { testHistoryApi } from '../services/api';
+import { API_CONFIG } from '../config/api';
 import axios from 'axios';
 
 interface TestAutomationPageProps {
@@ -22,8 +24,10 @@ interface TestExecution {
   timestamp: Date;
   responseBody?: string;
   responseHeaders?: Record<string, string>;
+  responseData?: any;
   requestBody?: string;
   requestHeaders?: Record<string, string>;
+  requestParams?: any;
   validationResult?: ValidationResult;
   validationEnabled?: boolean;
 }
@@ -36,6 +40,9 @@ interface TestBatchResult {
   totalTime: number;
   executions: TestExecution[];
   createdAt: Date;
+  savedId?: number; // DB에 저장된 ID
+  name?: string; // 저장된 이름
+  createdBy?: string; // 생성자
 }
 
 const TestAutomationPage: React.FC<TestAutomationPageProps> = ({ 
@@ -51,7 +58,13 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
   const [selectedBatch, setSelectedBatch] = useState<TestBatchResult | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedExecution, setSelectedExecution] = useState<TestExecution | null>(null);
-  const [apiSectionCollapsed, setApiSectionCollapsed] = useState(false);
+  // 모바일에서는 API 섹션을 기본적으로 펼친 상태로 시작
+  const [apiSectionCollapsed, setApiSectionCollapsed] = useState(() => {
+    // 서버사이드 렌더링 시 window 객체가 없을 수 있으므로 체크
+    if (typeof window === 'undefined') return false;
+    // 데스크탑에서는 기본적으로 펼침, 모바일에서도 펼침으로 시작
+    return false;
+  });
   const [showReportModal, setShowReportModal] = useState(false);
 
   // 폴더와 API 목록
@@ -61,14 +74,45 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
 
   useEffect(() => {
     loadFoldersAndApis();
+    loadTestHistory();
   }, []);
+
+  // 테스트 히스토리 로드
+  const loadTestHistory = async () => {
+    try {
+      const histories = await testHistoryApi.getList();
+      // 백엔드에서 받은 히스토리를 프론트엔드 형식으로 변환
+      const convertedHistories = histories.map(history => ({
+        id: `saved-${history.id}`,
+        totalTests: history.totalTests,
+        successCount: history.successCount,
+        failureCount: history.failureCount,
+        totalTime: history.totalTime,
+        executions: JSON.parse(history.executionResults || '[]'),
+        createdAt: new Date(history.createdAt),
+        savedId: history.id,
+        name: history.name,
+        createdBy: history.createdBy
+      }));
+      setBatchHistory(convertedHistories);
+    } catch (error: any) {
+      // 인증 관련 에러는 조용히 처리 (로그인하지 않은 상태일 수 있음)
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        console.warn('Authentication required to load test history. User needs to login first.');
+        setBatchHistory([]); // 빈 배열로 설정
+      } else {
+        console.error('Failed to load test history:', error);
+        setBatchHistory([]); // 빈 배열로 설정
+      }
+    }
+  };
 
   const loadFoldersAndApis = async () => {
     try {
       // 실제 API 호출
       const [foldersResponse, apisResponse] = await Promise.all([
-        fetch('http://localhost:8080/api/folders', { credentials: 'include' }),
-        fetch('http://localhost:8080/api/items', { credentials: 'include' })
+        fetch(`${API_CONFIG.API_URL}/folders`, { credentials: 'include' }),
+        fetch(`${API_CONFIG.API_URL}/items`, { credentials: 'include' })
       ]);
 
       if (foldersResponse.ok && apisResponse.ok) {
@@ -80,44 +124,6 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
       }
     } catch (error) {
       console.error('Failed to load folders and APIs:', error);
-      
-      // 실패 시 임시 데이터
-      const mockFolders = [
-        { id: 1, name: 'User APIs', description: 'User management APIs' },
-        { id: 2, name: 'Product APIs', description: 'Product management APIs' }
-      ];
-      
-      const mockApis: ApiItem[] = [
-        {
-          id: '1',
-          name: 'Get User Info',
-          method: 'GET',
-          url: 'https://api.example.com/users/1',
-          description: 'Get user information',
-          requestParams: '[]',
-          requestHeaders: '{}',
-          requestBody: '',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          folderId: 1
-        },
-        {
-          id: '2',
-          name: 'Create User',
-          method: 'POST',
-          url: 'https://api.example.com/users',
-          description: 'Create new user',
-          requestParams: '[]',
-          requestHeaders: '{"Content-Type": "application/json"}',
-          requestBody: '{"name": "test", "email": "test@example.com"}',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          folderId: 1
-        }
-      ];
-      
-      setFolders(mockFolders);
-      setApiList(mockApis);
     }
   };
 
@@ -133,7 +139,7 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
 
   const handleSelectAll = () => {
     const currentList = selectedFolder 
-      ? apiList.filter(api => api.folderId === selectedFolder)
+      ? apiList.filter(api => (api as any).folderId === selectedFolder)
       : apiList;
       
     const currentIds = new Set(currentList.map(api => api.id));
@@ -191,10 +197,18 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
         // 요청 정보 저장
         execution.requestBody = api.requestBody || '';
         try {
-          execution.requestHeaders = api.requestHeaders ? JSON.parse(api.requestHeaders) : {};
+          execution.requestHeaders = api.requestHeaders ? (typeof api.requestHeaders === 'string' ? JSON.parse(api.requestHeaders) : api.requestHeaders) : {};
         } catch (error) {
           console.error('Failed to parse request headers:', error);
           execution.requestHeaders = {};
+        }
+        
+        // 요청 파라미터 저장
+        try {
+          execution.requestParams = api.requestParams ? (typeof api.requestParams === 'string' ? JSON.parse(api.requestParams) : api.requestParams) : [];
+        } catch (error) {
+          console.error('Failed to parse request params:', error);
+          execution.requestParams = [];
         }
         
         // 실제 API 호출
@@ -270,6 +284,16 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
         execution.responseHeaders = response.responseHeaders;
         execution.validationResult = validationResult;
         
+        // 응답 데이터 저장 (JSON 파싱 시도)
+        try {
+          if (response.responseBody) {
+            execution.responseData = JSON.parse(response.responseBody);
+          }
+        } catch (error) {
+          // JSON이 아닌 경우 원본 문자열로 저장
+          execution.responseData = response.responseBody;
+        }
+        
         if (finalStatus === 'success') {
           successCount++;
         } else {
@@ -284,10 +308,21 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
         execution.statusCode = 500;
         execution.responseBody = '';
         execution.responseHeaders = {};
+        execution.responseData = null;
         
-        // 에러가 발생해도 validation 설정은 보존
+        // 에러가 발생해도 validation 설정과 요청 정보는 보존
         execution.validationEnabled = api.validationEnabled;
         execution.validationResult = undefined;
+        
+        // 요청 정보도 저장 (에러 시에도 요청 내용은 기록)
+        try {
+          execution.requestParams = api.requestParams ? (typeof api.requestParams === 'string' ? JSON.parse(api.requestParams) : api.requestParams) : [];
+          execution.requestHeaders = api.requestHeaders ? (typeof api.requestHeaders === 'string' ? JSON.parse(api.requestHeaders) : api.requestHeaders) : {};
+        } catch (parseError) {
+          execution.requestParams = [];
+          execution.requestHeaders = {};
+        }
+        execution.requestBody = api.requestBody || '';
         
         failureCount++;
       }
@@ -308,7 +343,31 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
       createdAt: new Date()
     };
 
+    // DB에 저장
+    try {
+      const savedHistory = await testHistoryApi.save({
+        totalTests: selectedApiList.length,
+        successCount,
+        failureCount,
+        totalTime,
+        executionResults: JSON.stringify(executions)
+      });
+
+      // 저장된 ID를 포함한 결과로 업데이트
+      batchResult.id = `saved-${savedHistory.id}`;
+      batchResult.savedId = savedHistory.id;
+      batchResult.name = savedHistory.name;
+      batchResult.createdBy = savedHistory.createdBy;
+
+      console.log('Test history saved successfully:', savedHistory);
+    } catch (error) {
+      console.error('Failed to save test history:', error);
+      // 저장 실패해도 메모리에는 보관
+    }
+
     setBatchHistory([batchResult, ...batchHistory]);
+    // 방금 실행된 테스트를 Test History에서 자동 선택
+    setSelectedBatch(batchResult);
     setIsRunning(false);
   };
 
@@ -322,9 +381,9 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
       // API 아이템에서 정보 추출
       const method = api.method;
       const url = api.url;
-      const requestHeaders = api.requestHeaders ? JSON.parse(api.requestHeaders) : {};
+      const requestHeaders = api.requestHeaders ? (typeof api.requestHeaders === 'string' ? JSON.parse(api.requestHeaders) : api.requestHeaders) : {};
       const requestBody = api.requestBody || '';
-      const requestParams = api.requestParams ? JSON.parse(api.requestParams) : [];
+      const requestParams = api.requestParams ? (typeof api.requestParams === 'string' ? JSON.parse(api.requestParams) : api.requestParams) : [];
 
       // MainContent와 동일하게 파라미터를 객체로 변환
       const paramsObject: Record<string, string> = {};
@@ -532,6 +591,31 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
     setShowReportModal(false);
   };
 
+  // 히스토리 선택 핸들러
+  const handleSelectHistory = async (batch: TestBatchResult) => {
+    setSelectedBatch(batch);
+    
+    // 저장된 히스토리인 경우 백엔드에서 상세 데이터 조회
+    if (batch.savedId) {
+      try {
+        const historyDetail = await testHistoryApi.getDetail(batch.savedId);
+        const executions = JSON.parse(historyDetail.executionResults || '[]');
+        
+        // Current Execution에 선택된 히스토리의 실행 결과 표시
+        setCurrentExecution(executions);
+        
+        console.log('Loaded history detail:', historyDetail);
+      } catch (error) {
+        console.error('Failed to load history detail:', error);
+        // 실패 시 메모리에 있는 데이터 사용
+        setCurrentExecution(batch.executions || []);
+      }
+    } else {
+      // 메모리에만 있는 히스토리 (아직 저장되지 않은)
+      setCurrentExecution(batch.executions || []);
+    }
+  };
+
   const exportReport = () => {
     const reportData = generateReportData();
     if (!reportData) return;
@@ -540,7 +624,7 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Test Automation Report</title>
+          <title>Test Report</title>
           <style>
             body { font-family: Arial, sans-serif; margin: 20px; }
             .summary { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
@@ -552,7 +636,7 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
           </style>
         </head>
         <body>
-          <h1>Test Automation Report</h1>
+          <h1>Test Report</h1>
           <div class="summary">
             <h2>Summary</h2>
             <div class="stats">
@@ -580,6 +664,35 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
               <h3>${execution.apiName} (${execution.status.toUpperCase()})</h3>
               <p><strong>Method:</strong> ${execution.method} | <strong>URL:</strong> ${execution.url}</p>
               <p><strong>Status Code:</strong> ${execution.statusCode || 'N/A'} | <strong>Response Time:</strong> ${execution.responseTime || 'N/A'}ms</p>
+              
+              ${execution.requestParams ? `
+                <div style="margin: 10px 0;">
+                  <h4 style="margin: 5px 0; font-size: 14px; color: #4b5563;">Request Parameters:</h4>
+                  <pre style="background: #f3f4f6; padding: 8px; border-radius: 4px; font-size: 12px; max-height: 100px; overflow-y: auto;">${typeof execution.requestParams === 'string' ? execution.requestParams : JSON.stringify(execution.requestParams, null, 2)}</pre>
+                </div>
+              ` : ''}
+              
+              ${execution.requestHeaders && Object.keys(execution.requestHeaders).length > 0 ? `
+                <div style="margin: 10px 0;">
+                  <h4 style="margin: 5px 0; font-size: 14px; color: #4b5563;">Request Headers:</h4>
+                  <pre style="background: #f3f4f6; padding: 8px; border-radius: 4px; font-size: 12px; max-height: 100px; overflow-y: auto;">${JSON.stringify(execution.requestHeaders, null, 2)}</pre>
+                </div>
+              ` : ''}
+              
+              ${execution.requestBody ? `
+                <div style="margin: 10px 0;">
+                  <h4 style="margin: 5px 0; font-size: 14px; color: #4b5563;">Request Body:</h4>
+                  <pre style="background: #f3f4f6; padding: 8px; border-radius: 4px; font-size: 12px; max-height: 100px; overflow-y: auto;">${execution.requestBody}</pre>
+                </div>
+              ` : ''}
+              
+              ${execution.responseData ? `
+                <div style="margin: 10px 0;">
+                  <h4 style="margin: 5px 0; font-size: 14px; color: #4b5563;">Response Data:</h4>
+                  <pre style="background: #dbeafe; padding: 8px; border-radius: 4px; font-size: 12px; max-height: 100px; overflow-y: auto;">${typeof execution.responseData === 'string' ? execution.responseData : JSON.stringify(execution.responseData, null, 2)}</pre>
+                </div>
+              ` : ''}
+              
               ${execution.validationEnabled && execution.validationResult ? `
                 <p><strong>Validation:</strong> ${execution.validationResult.passed ? 'PASSED' : 'FAILED'}</p>
               ` : ''}
@@ -603,71 +716,98 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
 
   // 폴더별 필터링된 API 목록
   const filteredApiList = selectedFolder 
-    ? apiList.filter(api => api.folderId === selectedFolder)
+    ? apiList.filter(api => (api as any).folderId === selectedFolder)
     : apiList;
 
   return (
-    <div className="h-screen bg-gray-100">
+    <div className="lg:h-full bg-gray-100 flex flex-col">
       {/* 데스크톱: 기존 가로 분할, 태블릿: 세로 분할 */}
-      <div className="h-full flex flex-col lg:flex-row">
+      <div className="lg:flex-1 flex flex-col lg:flex-row lg:overflow-hidden">
         {/* 좌측/상단: 폴더 및 API 목록 */}
-        <div className="w-full lg:w-80 bg-white border-r lg:border-r border-b lg:border-b-0 border-gray-200 flex flex-col lg:h-full max-h-96 lg:max-h-none">
+        <div className="w-full lg:w-64 bg-white border-r lg:border-r border-b lg:border-b-0 border-gray-200 flex flex-col lg:h-full lg:max-h-none">
         {/* 폴더 목록 */}
-        <div className="border-b p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold">API Selection</h3>
-              {apiSectionCollapsed && selectedApis.size > 0 && (
-                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
-                  {selectedApis.size} selected
-                </span>
-              )}
+        <div className={`border-b lg:flex-shrink-0 ${apiSectionCollapsed ? '' : 'lg:h-2/5 lg:overflow-y-auto'}`}>
+          <div className="p-4">
+            <div className="flex items-center justify-between min-h-[2rem]">
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-semibold">API Selection</h3>
+                {apiSectionCollapsed && selectedApis.size > 0 && (
+                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
+                    {selectedApis.size} selected
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {/* 데스크톱에서만 collapse 버튼 표시 */}
+                <button
+                  onClick={() => setApiSectionCollapsed(!apiSectionCollapsed)}
+                  className="hidden lg:block p-1 text-gray-500 hover:text-gray-700 rounded"
+                  title={apiSectionCollapsed ? "Expand API Selection" : "Collapse API Selection"}
+                >
+                  <svg className={`w-5 h-5 transition-transform ${apiSectionCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                  </svg>
+                </button>
+              </div>
             </div>
-            <button
-              onClick={() => setApiSectionCollapsed(!apiSectionCollapsed)}
-              className="lg:hidden p-1 text-gray-500 hover:text-gray-700 rounded"
-              title={apiSectionCollapsed ? "Expand API Selection" : "Collapse API Selection"}
-            >
-              <svg className={`w-5 h-5 transition-transform ${apiSectionCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-              </svg>
-            </button>
           </div>
           {!apiSectionCollapsed && (
-            <>
+            <div className="px-4 pb-4">
               <div className="space-y-1">
-                <button
-                  onClick={() => setSelectedFolder(null)}
-                  className={`w-full text-left p-2 rounded text-sm ${
-                    selectedFolder === null ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
-                  }`}
-                >
-                  All APIs ({apiList.length})
-                </button>
-                {folders.map(folder => (
-                  <button
-                    key={folder.id}
-                    onClick={() => setSelectedFolder(folder.id)}
-                    className={`w-full text-left p-2 rounded text-sm ${
-                      selectedFolder === folder.id ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
-                    }`}
-                  >
-                    {folder.name} ({apiList.filter(api => api.folderId === folder.id).length})
-                  </button>
-                ))}
+            <button
+              onClick={() => {
+                setSelectedFolder(null);
+                setSelectedApis(new Set()); // 폴더 변경 시 선택된 API 목록 초기화
+                // 모바일/태블릿에서 All APIs 선택 시 API 목록이 보이도록 자동으로 펼치기
+                const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
+                if (!isDesktop) {
+                  setApiSectionCollapsed(false);
+                }
+              }}
+              className={`w-full text-left p-2 rounded text-sm flex items-center gap-2 ${
+                selectedFolder === null ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+              }`}
+            >
+              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+              All APIs ({apiList.length})
+            </button>
+            {folders.map(folder => (
+              <button
+                key={folder.id}
+                onClick={() => {
+                  setSelectedFolder(folder.id);
+                  setSelectedApis(new Set()); // 폴더 변경 시 선택된 API 목록 초기화
+                  // 모바일/태블릿에서 폴더 선택 시 API 목록이 보이도록 자동으로 펼치기
+                  const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
+                  if (!isDesktop) {
+                    setApiSectionCollapsed(false);
+                  }
+                }}
+                className={`w-full text-left p-2 rounded text-sm flex items-center gap-2 ${
+                  selectedFolder === folder.id ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+                }`}
+              >
+                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                </svg>
+                {folder.name} ({apiList.filter(api => (api as any).folderId === folder.id).length})
+              </button>
+            ))}
               </div>
-            </>
+            </div>
           )}
         </div>
 
-        {/* API 목록 */}
-        {!apiSectionCollapsed && (
-          <div className="flex-1 p-4 overflow-y-auto">
+        {/* API 목록 - 데스크톱에서만 폴더와 같은 영역에 표시 */}
+        <div className={`hidden lg:flex lg:flex-col p-4 overflow-y-auto ${apiSectionCollapsed ? 'lg:h-full' : 'lg:h-3/5'}`}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-md font-semibold">APIs</h3>
+              {/* 데스크톱에서만 Select All 버튼 표시 (모바일은 상단에 위치) */}
               <button
                 onClick={handleSelectAll}
-                className="text-xs text-blue-600 hover:text-blue-800"
+                className="hidden lg:block text-xs text-blue-600 hover:text-blue-800"
               >
                 {selectedApis.size === filteredApiList.length ? 'Deselect All' : 'Select All'}
               </button>
@@ -702,18 +842,63 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
                 </label>
               ))}
             </div>
-          </div>
-        )}
+        </div>
+      </div>
+
+      {/* 모바일/태블릿 전용 API 목록 - API Selection과 Test Automation 사이에 위치 */}
+      <div className="lg:hidden bg-white border-b border-gray-200 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-md font-semibold">APIs</h3>
+          {/* 모바일 Select All 버튼 */}
+          {filteredApiList.length > 0 && (
+            <button
+              onClick={handleSelectAll}
+              className="text-xs px-2 py-1 text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded"
+            >
+              {selectedApis.size === filteredApiList.length ? 'Deselect All' : 'Select All'}
+            </button>
+          )}
+        </div>
+        
+        <div className="space-y-2 max-h-60 overflow-y-auto">
+          {filteredApiList.map(api => (
+            <label key={api.id} className="flex items-start p-2 border rounded hover:bg-gray-50 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedApis.has(api.id)}
+                onChange={(e) => handleApiSelection(api.id, e.target.checked)}
+                className="mt-1 mr-2"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`px-1.5 py-0.5 text-xs font-medium rounded ${
+                    api.method === 'GET' ? 'bg-green-100 text-green-800' :
+                    api.method === 'POST' ? 'bg-blue-100 text-blue-800' :
+                    api.method === 'PUT' ? 'bg-orange-100 text-orange-800' :
+                    api.method === 'DELETE' ? 'bg-red-100 text-red-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {api.method}
+                  </span>
+                  <span className="text-sm font-medium truncate">{api.name}</span>
+                </div>
+                {api.description && (
+                  <div className="text-xs text-gray-400 truncate mt-1">{api.description}</div>
+                )}
+              </div>
+            </label>
+          ))}
+        </div>
       </div>
 
         {/* 우측/하단: 실행 영역과 결과 */}
-        <div className="flex-1 flex flex-col lg:flex-row">
+        <div className="lg:flex-1 flex flex-col lg:flex-row lg:min-h-0">
           {/* 실행 컨트롤 */}
-          <div className="w-full lg:flex-1 flex flex-col">
+          <div className="w-full lg:flex-1 flex flex-col lg:min-h-0">
             {/* API 선택 및 실행 */}
-            <div className="bg-white border-b p-4">
+            <div className="bg-white border-b p-4 lg:flex-shrink-0">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <h2 className="text-lg font-semibold">Test Automation</h2>
+                <h2 className="text-lg font-semibold">Current Execution</h2>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={executeBatch}
@@ -727,10 +912,9 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
             </div>
 
             {/* 실행 결과 영역 */}
-            <div className="bg-white p-4 flex-1 flex flex-col min-h-0">
-              <h3 className="text-md font-semibold mb-3">Current Execution</h3>
+            <div className="bg-white p-4 lg:flex-1 flex flex-col lg:min-h-0">
               {currentExecution.length > 0 ? (
-                <div className="space-y-2 flex-1 overflow-y-auto min-h-0">
+                <div className="space-y-2 lg:flex-1 lg:overflow-y-auto lg:min-h-0 max-h-96 lg:max-h-none overflow-y-auto">
                   {currentExecution.map(execution => (
                     <div 
                       key={execution.id} 
@@ -796,26 +980,34 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
           </div>
 
           {/* 테스트 히스토리 */}
-          <div className="w-full lg:w-80 border-t lg:border-t-0 lg:border-l bg-white p-4">
-            <h3 className="text-md font-semibold mb-3">Test History</h3>
+          <div className="w-full lg:w-64 border-t lg:border-t-0 lg:border-l bg-white flex flex-col lg:min-h-0">
+            <div className="p-4 border-b lg:flex-shrink-0">
+              <h3 className="text-md py-2 font-semibold">Test History</h3>
+            </div>
             {batchHistory.length > 0 ? (
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {batchHistory.map(batch => (
+              <div className="lg:flex-1 lg:overflow-y-auto p-4 lg:min-h-0 max-h-96 lg:max-h-none overflow-y-auto">
+                <div className="space-y-2">
+                  {batchHistory.map(batch => (
                   <div
                     key={batch.id}
                     className={`p-3 border rounded cursor-pointer hover:bg-gray-50 ${
                       selectedBatch?.id === batch.id ? 'border-blue-500 bg-blue-50' : ''
                     }`}
-                    onClick={() => setSelectedBatch(batch)}
+                    onClick={() => handleSelectHistory(batch)}
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div className="text-sm font-medium">
-                        Batch #{batch.id.split('-')[1]?.slice(-4)}
+                        {batch.name || `Batch #${batch.id.split('-')[1]?.slice(-4)}`}
                       </div>
                       <div className="text-xs text-gray-500">
                         {batch.createdAt.toLocaleTimeString()}
                       </div>
                     </div>
+                    {batch.createdBy && (
+                      <div className="text-xs text-gray-400 mb-1">
+                        by {batch.createdBy}
+                      </div>
+                    )}
                     <div className="text-sm space-y-1">
                       <div>Tests: {batch.totalTests}</div>
                       <div className="flex justify-between">
@@ -830,60 +1022,13 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
                       </div>
                     </div>
                   </div>
-                ))}
+                  ))}
+                </div>
               </div>
             ) : (
-              <div className="text-center text-gray-500 py-8 text-sm">
-                No test history yet
-              </div>
-            )}
-            
-            {/* 선택된 배치의 상세 실행 결과 */}
-            {selectedBatch && (
-              <div className="mt-4 border-t pt-4">
-                <h4 className="text-sm font-semibold mb-2">Execution Details</h4>
-                <div className="space-y-1 max-h-60 overflow-y-auto">
-                  {selectedBatch.executions.map(execution => (
-                    <div
-                      key={execution.id}
-                      className="p-2 text-xs border rounded hover:bg-gray-50 cursor-pointer"
-                      onClick={() => handleShowExecutionDetail(execution)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1">
-                          <span>{getStatusIcon(execution.status)}</span>
-                          <span className="font-medium truncate">{execution.apiName}</span>
-                        </div>
-                        <div className="text-right">
-                          <div className="flex items-center gap-2 justify-end mb-1">
-                            <div className={`text-xs px-2 py-1 rounded font-medium ${getStatusColor(execution.status)} bg-gray-50`}>
-                              {execution.status.toUpperCase()}
-                            </div>
-                            {execution.validationEnabled && (
-                              <div className="text-xs px-2 py-1 rounded border">
-                                {execution.validationResult ? (
-                                  <span className={execution.validationResult.passed ? 'text-green-600 bg-green-50 border-green-200' : 'text-red-600 bg-red-50 border-red-200'}>
-                                    {execution.validationResult.passed ? '✅' : '❌'}
-                                  </span>
-                                ) : (
-                                  <span className="text-gray-500 bg-gray-50 border-gray-200">⏳</span>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                          {execution.responseTime && (
-                            <div className="text-gray-500 text-xs">{execution.responseTime}ms</div>
-                          )}
-                          {execution.statusCode && (
-                            <div className="text-gray-600 text-xs">{execution.statusCode}</div>
-                          )}
-                        </div>
-                      </div>
-                      {execution.error && (
-                        <div className="text-red-500 truncate mt-1">{execution.error}</div>
-                      )}
-                    </div>
-                  ))}
+              <div className="lg:flex-1 flex items-center justify-center p-4">
+                <div className="text-center text-gray-500 text-sm">
+                  No test history yet
                 </div>
               </div>
             )}
@@ -1110,7 +1255,7 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
             {/* 모달 헤더 */}
             <div className="flex items-center justify-between p-6 border-b">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">Test Automation Report</h2>
+                <h2 className="text-xl font-bold text-gray-900">Test Report</h2>
                 <p className="text-sm text-gray-500">Generated on {new Date().toLocaleString()}</p>
               </div>
               <div className="flex items-center gap-2">
@@ -1248,7 +1393,52 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
                                 )}
                               </div>
                             </div>
-                            <p className="text-sm text-gray-600">{execution.method} • {execution.url}</p>
+                            <p className="text-sm text-gray-600 mb-3">{execution.method} • {execution.url}</p>
+                            
+                            {/* 요청 파라미터 */}
+                            {execution.requestParams && (
+                              <div className="mb-3">
+                                <h5 className="text-xs font-medium text-gray-700 mb-1">Request Parameters:</h5>
+                                <div className="bg-gray-50 p-2 rounded text-xs font-mono text-gray-600 max-h-20 overflow-y-auto">
+                                  {typeof execution.requestParams === 'string' 
+                                    ? execution.requestParams 
+                                    : JSON.stringify(execution.requestParams, null, 2)}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* 요청 헤더 */}
+                            {execution.requestHeaders && Object.keys(execution.requestHeaders).length > 0 && (
+                              <div className="mb-3">
+                                <h5 className="text-xs font-medium text-gray-700 mb-1">Request Headers:</h5>
+                                <div className="bg-gray-50 p-2 rounded text-xs font-mono text-gray-600 max-h-20 overflow-y-auto">
+                                  {JSON.stringify(execution.requestHeaders, null, 2)}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* 요청 바디 */}
+                            {execution.requestBody && (
+                              <div className="mb-3">
+                                <h5 className="text-xs font-medium text-gray-700 mb-1">Request Body:</h5>
+                                <div className="bg-gray-50 p-2 rounded text-xs font-mono text-gray-600 max-h-20 overflow-y-auto">
+                                  {execution.requestBody}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* 응답 데이터 */}
+                            {execution.responseData && (
+                              <div className="mb-3">
+                                <h5 className="text-xs font-medium text-gray-700 mb-1">Response Data:</h5>
+                                <div className="bg-blue-50 p-2 rounded text-xs font-mono text-gray-600 max-h-20 overflow-y-auto">
+                                  {typeof execution.responseData === 'string' 
+                                    ? execution.responseData 
+                                    : JSON.stringify(execution.responseData, null, 2)}
+                                </div>
+                              </div>
+                            )}
+                            
                             <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
                               <span>Response Time: {execution.responseTime || 'N/A'}ms</span>
                               {execution.validationEnabled && (

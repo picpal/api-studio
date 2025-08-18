@@ -224,7 +224,8 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
         requestHeaders: JSON.stringify(request.headers),
         requestBody: request.body,
         validationEnabled: validationEnabled,
-        expectedValues: JSON.stringify(filteredExpectedValues) // expected values 배열을 JSON으로 저장
+        expectedValues: JSON.stringify(filteredExpectedValues), // expected values 배열을 JSON으로 저장
+        folderId: selectedItem.folder ? parseInt(selectedItem.folder) : undefined // 폴더 ID 포함
       };
 
       await itemApi.update(itemId, updateData);
@@ -239,7 +240,9 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
         requestHeaders: JSON.stringify(request.headers),
         requestBody: request.body,
         validationEnabled: validationEnabled,
-        expectedValues: JSON.stringify(filteredExpectedValues)
+        expectedValues: JSON.stringify(filteredExpectedValues),
+        folder: selectedItem.folder, // 폴더 ID 유지
+        folderName: selectedItem.folderName // 폴더명 유지
       });
       
       // 히스토리 저장 팝업 표시
@@ -725,6 +728,7 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
         url: fullUrl,
         params: request.params,
         headers: request.headers,
+        withCredentials: true, // 세션 쿠키 전송을 위해 추가
       };
 
       if (request.method !== 'GET' && request.body) {
@@ -1020,9 +1024,11 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
       <div className="bg-white border-b border-gray-200 p-4">
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-4">
-            <h2 className="text-lg font-semibold text-gray-800">
-              {selectedItem ? selectedItem.name : 'No API Selected'}
-            </h2>
+            <div className="flex flex-col">
+              <h2 className="text-lg font-semibold text-gray-800">
+                {selectedItem ? selectedItem.name : 'No API Selected'}
+              </h2>
+            </div>
             {selectedItem && !isEditingDescription && (
               <button 
                 onClick={handleEditDescription}
@@ -1512,19 +1518,8 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
 
             {activeTab === 'validation' && (
               <div className="flex flex-col">
-                {/* 사용법 안내 */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                  <div className="text-sm font-medium text-blue-800 mb-2">📋 Response Validation 사용법</div>
-                  <ul className="text-xs text-blue-700 space-y-1">
-                    <li>• <strong>성공 응답(200-299)에 대해서만</strong> 유효성 검증을 수행합니다</li>
-                    <li>• Key에는 JSON 경로를 입력하세요 (예: <code className="bg-blue-100 px-1 rounded">id</code>, <code className="bg-blue-100 px-1 rounded">data.user.name</code>, <code className="bg-blue-100 px-1 rounded">items.0.title</code>)</li>
-                    <li>• 배열 접근은 인덱스 번호를 사용하세요 (예: <code className="bg-blue-100 px-1 rounded">0.id</code>는 첫 번째 요소의 id)</li>
-                    <li>• 4xx, 5xx 에러 응답은 자동으로 실패 처리되므로 별도 검증하지 않습니다</li>
-                  </ul>
-                </div>
-
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="flex items-center">
+                <div className="mb-4">
+                  <div className="flex items-center mb-2">
                     <input
                       type="checkbox"
                       id="validationEnabled"
@@ -1536,11 +1531,9 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
                       Enable Response Validation
                     </label>
                   </div>
-                  {validationEnabled && (
-                    <div className="text-xs text-gray-500">
-                      API 응답에서 지정한 키-값 쌍이 일치하는지 검증합니다
-                    </div>
-                  )}
+                  <p className="text-xs text-gray-500 ml-6">
+                    API 응답에서 지정한 키-값 쌍이 일치하는지 검증합니다
+                  </p>
                 </div>
 
                 {validationEnabled && (
@@ -1603,9 +1596,11 @@ const MainContent: React.FC<MainContentProps> = ({ baseUrls, selectedItem, onRes
                     <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
                       <div className="text-sm font-medium text-yellow-800 mb-1">사용법:</div>
                       <div className="text-xs text-yellow-700">
+                        • <strong>성공 응답(200-299)에 대해서만</strong> 유효성 검증을 수행합니다<br/>
                         • Key에는 JSON 경로를 입력하세요 (예: "status", "data.code", "result.items.0.name")<br/>
                         • 중첩된 객체는 점(.)으로 구분하고, 배열 인덱스는 숫자로 표현하세요<br/>
-                        • Expected Value에는 예상되는 값을 정확히 입력하세요
+                        • Expected Value에는 예상되는 값을 정확히 입력하세요<br/>
+                        • 4xx, 5xx 에러 응답은 자동으로 실패 처리되므로 별도 검증하지 않습니다
                       </div>
                     </div>
                   </div>

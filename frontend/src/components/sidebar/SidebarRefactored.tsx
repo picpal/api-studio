@@ -33,11 +33,13 @@ interface SidebarProps {
   onAddBaseUrl: (baseUrl: Omit<BaseUrl, 'id'>) => void;
   onUpdateBaseUrl: (id: string, updatedBaseUrl: Omit<BaseUrl, 'id'>) => void;
   onDeleteBaseUrl: (id: string) => void;
-  onSelectItem?: (item: any, folderId: string) => void;
+  onSelectItem?: (item: any, folderId: string, folderName?: string) => void;
   onResetForm?: () => void;
   selectedItem?: ApiItem | null;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  onFolderUpdate?: (folderId: string, folderName: string) => void;
+  onItemUpdate?: (itemId: string, itemName: string) => void;
 }
 
 const SidebarRefactored: React.FC<SidebarProps> = ({ 
@@ -49,7 +51,9 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
   onResetForm, 
   selectedItem,
   collapsed = false,
-  onToggleCollapse
+  onToggleCollapse,
+  onFolderUpdate,
+  onItemUpdate
 }) => {
   const {
     folders,
@@ -236,7 +240,9 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
     setSelectedItemId(item.id);
     setSelectedFolderId(folderId);
     if (onSelectItem) {
-      onSelectItem(item, folderId);
+      // 폴더명을 찾아서 전달
+      const folder = folders.find(f => f.id === folderId);
+      onSelectItem(item, folderId, folder?.name);
     }
   };
 
@@ -298,6 +304,11 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
       setShowRenameModal(false);
       setRenameFolderName('');
       setRenamingFolder(null);
+      
+      // Layout 컴포넌트에 폴더 업데이트 알림
+      if (onFolderUpdate) {
+        onFolderUpdate(folderId, renameFolderName.trim());
+      }
     } catch (error) {
       // 에러는 useSidebar에서 처리됨
     }
@@ -340,6 +351,11 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
       setShowRenameItemModal(false);
       setRenameItemName('');
       setRenamingItem(null);
+      
+      // Layout 컴포넌트에 아이템 업데이트 알림
+      if (onItemUpdate) {
+        onItemUpdate(itemId, renameItemName.trim());
+      }
     } catch (error) {
       // 에러는 useSidebar에서 처리됨
     }
