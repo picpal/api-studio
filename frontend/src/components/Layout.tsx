@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './sidebar/SidebarRefactored';
-import ScenarioSidebar from './scenario/ScenarioSidebar';
+import PipelineSidebar from './pipeline/PipelineSidebar';
 import MainContent from './MainContent';
 import AdminPage from './AdminPage';
 import TestAutomationPage from './TestAutomationPage';
-import ScenarioManagementPage from './ScenarioManagementPage';
+import PipelineManagementPage from './PipelineManagementPage';
 import { BaseUrl, ApiItem } from '../types/api';
 
 interface LayoutProps {
@@ -25,9 +25,9 @@ const Layout: React.FC<LayoutProps> = () => {
   ]);
 
   const [selectedItem, setSelectedItem] = useState<ApiItem | null>(null);
-  const [selectedScenario, setSelectedScenario] = useState<any>(null);
+  const [selectedPipeline, setSelectedPipeline] = useState<any>(null);
   const [showAdminPage, setShowAdminPage] = useState(false);
-  const [currentPage, setCurrentPage] = useState<'api-testing' | 'test-automation' | 'scenario-management'>('api-testing');
+  const [currentPage, setCurrentPage] = useState<'api-testing' | 'test-automation' | 'pipeline-management'>('api-testing');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     // 데스크톱에서는 열린 상태, 모바일에서는 닫힌 상태로 시작
     return window.innerWidth < 768;
@@ -36,16 +36,16 @@ const Layout: React.FC<LayoutProps> = () => {
   // URL 기반으로 현재 페이지 결정
   useEffect(() => {
     const path = location.pathname;
-    if (path.startsWith('/scenario-management')) {
-      setCurrentPage('scenario-management');
-      // 시나리오 ID가 URL에 있으면 해당 시나리오 선택
-      const match = path.match(/\/scenario-management\/(\d+)/);
+    if (path.startsWith('/pipeline-management')) {
+      setCurrentPage('pipeline-management');
+      // 파이프라인 ID가 URL에 있으면 해당 파이프라인 선택
+      const match = path.match(/\/pipeline-management\/(\d+)/);
       if (match) {
-        const scenarioId = parseInt(match[1]);
-        // 시나리오 정보를 가져와서 설정
-        fetchScenarioById(scenarioId);
+        const pipelineId = parseInt(match[1]);
+        // 파이프라인 정보를 가져와서 설정
+        fetchPipelineById(pipelineId);
       } else {
-        setSelectedScenario(null);
+        setSelectedPipeline(null);
       }
     } else if (path.startsWith('/test-automation')) {
       setCurrentPage('test-automation');
@@ -54,33 +54,33 @@ const Layout: React.FC<LayoutProps> = () => {
     }
   }, [location.pathname]);
 
-  const fetchScenarioById = async (scenarioId: number) => {
-    console.log('Fetching scenario by ID:', scenarioId);
+  const fetchPipelineById = async (pipelineId: number) => {
+    console.log('Fetching pipeline by ID:', pipelineId);
     try {
-      // 모든 폴더를 가져와서 해당 시나리오 찾기
-      const response = await fetch('http://localhost:8080/api/scenarios/folders', {
+      // 모든 폴더를 가져와서 해당 파이프라인 찾기
+      const response = await fetch('http://localhost:8080/api/pipelines/folders', {
         credentials: 'include'
       });
       if (response.ok) {
         const folders = await response.json();
         console.log('Folders loaded:', folders);
         for (const folder of folders) {
-          const scenario = folder.scenarios?.find((s: any) => s.id === scenarioId);
-          if (scenario) {
-            console.log('Found scenario:', scenario);
-            setSelectedScenario({
-              ...scenario,
-              id: scenarioId,
-              stepCount: folder.scenarios?.length || 0,
-              createdAt: new Date(scenario.createdAt),
-              updatedAt: new Date(scenario.updatedAt)
+          const pipeline = folder.pipelines?.find((p: any) => p.id === pipelineId);
+          if (pipeline) {
+            console.log('Found pipeline:', pipeline);
+            setSelectedPipeline({
+              ...pipeline,
+              id: pipelineId,
+              stepCount: folder.pipelines?.length || 0,
+              createdAt: new Date(pipeline.createdAt),
+              updatedAt: new Date(pipeline.updatedAt)
             });
             break;
           }
         }
       }
     } catch (error) {
-      console.error('Error fetching scenario:', error);
+      console.error('Error fetching pipeline:', error);
     }
   };
 
@@ -152,21 +152,21 @@ const Layout: React.FC<LayoutProps> = () => {
     }
   };
 
-  const handleNavigate = (page: 'api-testing' | 'test-automation' | 'scenario-management') => {
+  const handleNavigate = (page: 'api-testing' | 'test-automation' | 'pipeline-management') => {
     setCurrentPage(page);
     // URL 업데이트
     if (page === 'api-testing') {
       navigate('/');
     } else if (page === 'test-automation') {
       navigate('/test-automation');
-    } else if (page === 'scenario-management') {
-      navigate('/scenario-management');
+    } else if (page === 'pipeline-management') {
+      navigate('/pipeline-management');
     }
   };
 
-  const handleSelectScenario = (scenario: any) => {
-    setSelectedScenario(scenario);
-    navigate(`/scenario-management/${scenario.id}`);
+  const handleSelectPipeline = (pipeline: any) => {
+    setSelectedPipeline(pipeline);
+    navigate(`/pipeline-management/${pipeline.id}`);
   };
 
   return (
@@ -231,27 +231,27 @@ const Layout: React.FC<LayoutProps> = () => {
           </>
         )}
 
-        {/* Scenario Sidebar - Only show for Scenario Management page */}
-        {currentPage === 'scenario-management' && (
+        {/* Pipeline Sidebar - Only show for Pipeline Management page */}
+        {currentPage === 'pipeline-management' && (
           <>
-            {/* Desktop Scenario Sidebar */}
+            {/* Desktop Pipeline Sidebar */}
             <div className={`hidden md:block flex-shrink-0 border-r border-gray-200 transition-all duration-300 ${sidebarCollapsed ? 'w-12' : 'w-80'}`}>
-              <ScenarioSidebar
+              <PipelineSidebar
                 collapsed={sidebarCollapsed}
                 onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-                onSelectScenario={handleSelectScenario}
-                selectedScenario={selectedScenario}
+                onSelectPipeline={handleSelectPipeline}
+                selectedPipeline={selectedPipeline}
               />
             </div>
 
-            {/* Mobile Scenario Sidebar */}
+            {/* Mobile Pipeline Sidebar */}
             <div className={`md:hidden fixed inset-y-0 left-0 z-30 transition-transform duration-300 ease-in-out ${
               sidebarCollapsed ? '-translate-x-full' : 'translate-x-0'
             }`} style={{ top: '64px' }}>
-              <ScenarioSidebar
+              <PipelineSidebar
                 collapsed={false}
-                onSelectScenario={handleSelectScenario}
-                selectedScenario={selectedScenario}
+                onSelectPipeline={handleSelectPipeline}
+                selectedPipeline={selectedPipeline}
               />
             </div>
 
@@ -283,8 +283,8 @@ const Layout: React.FC<LayoutProps> = () => {
               onUpdateSelectedItem={handleUpdateSelectedItem}
             />
           ) : (
-            <ScenarioManagementPage 
-              selectedScenario={selectedScenario}
+            <PipelineManagementPage 
+              selectedPipeline={selectedPipeline}
             />
           )}
         </div>

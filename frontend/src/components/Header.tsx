@@ -6,8 +6,8 @@ interface HeaderProps {
   onOpenAdmin?: () => void;
   onToggleSidebar?: () => void;
   sidebarCollapsed?: boolean;
-  currentPage?: 'api-testing' | 'test-automation' | 'scenario-management';
-  onNavigate?: (page: 'api-testing' | 'test-automation' | 'scenario-management') => void;
+  currentPage?: 'api-testing' | 'test-automation' | 'pipeline-management';
+  onNavigate?: (page: 'api-testing' | 'test-automation' | 'pipeline-management') => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ onOpenAdmin, onToggleSidebar, sidebarCollapsed, currentPage = 'api-testing', onNavigate }) => {
@@ -47,9 +47,9 @@ const Header: React.FC<HeaderProps> = ({ onOpenAdmin, onToggleSidebar, sidebarCo
                 Test&Report
               </button>
               <button
-                onClick={() => onNavigate('scenario-management')}
+                onClick={() => onNavigate('pipeline-management')}
                 className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                  currentPage === 'scenario-management'
+                  currentPage === 'pipeline-management'
                     ? 'bg-blue-100 text-blue-700'
                     : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
                 }`}

@@ -1,31 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { scenarioApi, ScenarioFolder, Scenario } from '../../services/scenarioApi';
+import { pipelineApi, PipelineFolder, Pipeline } from '../../services/pipelineApi';
 
-// Remove duplicate interface definitions - using imported types
-
-interface ScenarioSidebarProps {
+interface PipelineSidebarProps {
   collapsed?: boolean;
   onToggleCollapse?: () => void;
-  onSelectScenario?: (scenario: Scenario) => void;
-  selectedScenario?: Scenario | null;
+  onSelectPipeline?: (pipeline: Pipeline) => void;
+  selectedPipeline?: Pipeline | null;
 }
 
-const ScenarioSidebar: React.FC<ScenarioSidebarProps> = ({
+const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
   collapsed = false,
   onToggleCollapse,
-  onSelectScenario,
-  selectedScenario
+  onSelectPipeline,
+  selectedPipeline
 }) => {
-  const [folders, setFolders] = useState<ScenarioFolder[]>([]);
+  const [folders, setFolders] = useState<PipelineFolder[]>([]);
   const [expandedFolders, setExpandedFolders] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
-  const [showNewScenarioModal, setShowNewScenarioModal] = useState(false);
-  const [newScenarioName, setNewScenarioName] = useState('');
-  const [newScenarioDescription, setNewScenarioDescription] = useState('');
-  const [selectedFolderForScenario, setSelectedFolderForScenario] = useState<number | null>(null);
+  const [showNewPipelineModal, setShowNewPipelineModal] = useState(false);
+  const [newPipelineName, setNewPipelineName] = useState('');
+  const [newPipelineDescription, setNewPipelineDescription] = useState('');
+  const [selectedFolderForPipeline, setSelectedFolderForPipeline] = useState<number | null>(null);
   const [contextMenu, setContextMenu] = useState<{
     show: boolean;
     x: number;
@@ -44,18 +42,18 @@ const ScenarioSidebar: React.FC<ScenarioSidebarProps> = ({
   useEffect(() => {
     let isMounted = true;
     const fetchFolders = async () => {
-      console.log('ScenarioSidebar: Starting to fetch folders...');
+      console.log('PipelineSidebar: Starting to fetch folders...');
       try {
-        const foldersData = await scenarioApi.getFolders();
-        console.log('ScenarioSidebar: Fetched folders data:', foldersData);
+        const foldersData = await pipelineApi.getFolders();
+        console.log('PipelineSidebar: Fetched folders data:', foldersData);
         if (isMounted) {
           setFolders(foldersData);
           // 기본적으로 모든 폴더 확장
           setExpandedFolders(new Set(foldersData.map(f => f.id)));
-          console.log('ScenarioSidebar: Set folders and expanded state');
+          console.log('PipelineSidebar: Set folders and expanded state');
         }
       } catch (error) {
-        console.error('ScenarioSidebar: Failed to load folders:', error);
+        console.error('PipelineSidebar: Failed to load folders:', error);
         if (isMounted) {
           setFolders([]);
         }
@@ -91,7 +89,7 @@ const ScenarioSidebar: React.FC<ScenarioSidebarProps> = ({
     if (newFolderName.trim() && !isCreatingFolder) {
       setIsCreatingFolder(true);
       try {
-        const newFolder = await scenarioApi.createFolder({
+        const newFolder = await pipelineApi.createFolder({
           name: newFolderName.trim(),
           description: ''
         });
@@ -131,53 +129,53 @@ const ScenarioSidebar: React.FC<ScenarioSidebarProps> = ({
     });
   };
 
-  const handleAddScenario = () => {
-    setSelectedFolderForScenario(contextMenu.folderId);
-    setShowNewScenarioModal(true);
+  const handleAddPipeline = () => {
+    setSelectedFolderForPipeline(contextMenu.folderId);
+    setShowNewPipelineModal(true);
     handleContextMenuClose();
   };
 
-  const handleCreateScenario = async () => {
-    if (newScenarioName.trim() && selectedFolderForScenario) {
+  const handleCreatePipeline = async () => {
+    if (newPipelineName.trim() && selectedFolderForPipeline) {
       try {
-        const newScenario = await scenarioApi.createScenario({
-          name: newScenarioName.trim(),
-          description: newScenarioDescription.trim(),
-          folderId: selectedFolderForScenario
+        const newPipeline = await pipelineApi.createPipeline({
+          name: newPipelineName.trim(),
+          description: newPipelineDescription.trim(),
+          folderId: selectedFolderForPipeline
         });
         
-        // 폴더 목록에서 해당 폴더를 찾아 시나리오 추가
+        // 폴더 목록에서 해당 폴더를 찾아 파이프라인 추가
         setFolders(prevFolders => 
           prevFolders.map(folder => 
-            folder.id === selectedFolderForScenario 
-              ? { ...folder, scenarios: [...folder.scenarios, newScenario] }
+            folder.id === selectedFolderForPipeline 
+              ? { ...folder, pipelines: [...folder.pipelines, newPipeline] }
               : folder
           )
         );
         
         // 모달 닫기 및 입력값 초기화
-        setNewScenarioName('');
-        setNewScenarioDescription('');
-        setSelectedFolderForScenario(null);
-        setShowNewScenarioModal(false);
+        setNewPipelineName('');
+        setNewPipelineDescription('');
+        setSelectedFolderForPipeline(null);
+        setShowNewPipelineModal(false);
       } catch (error) {
-        console.error('Failed to create scenario:', error);
-        alert('시나리오 생성에 실패했습니다.');
+        console.error('Failed to create pipeline:', error);
+        alert('파이프라인 생성에 실패했습니다.');
       }
     }
   };
 
-  const handleCancelCreateScenario = () => {
-    setNewScenarioName('');
-    setNewScenarioDescription('');
-    setSelectedFolderForScenario(null);
-    setShowNewScenarioModal(false);
+  const handleCancelCreatePipeline = () => {
+    setNewPipelineName('');
+    setNewPipelineDescription('');
+    setSelectedFolderForPipeline(null);
+    setShowNewPipelineModal(false);
   };
 
   const handleRemoveFolder = async () => {
     if (contextMenu.folderId && confirm(`"${contextMenu.folderName}" 폴더를 삭제하시겠습니까?`)) {
       try {
-        await scenarioApi.deleteFolder(contextMenu.folderId);
+        await pipelineApi.deleteFolder(contextMenu.folderId);
         setFolders(folders.filter(f => f.id !== contextMenu.folderId));
         setExpandedFolders(prev => {
           const newExpanded = new Set(prev);
@@ -211,14 +209,14 @@ const ScenarioSidebar: React.FC<ScenarioSidebarProps> = ({
 
   const filteredFolders = folders.map(folder => ({
     ...folder,
-    scenarios: folder.scenarios.filter(scenario =>
-      scenario.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      scenario.description.toLowerCase().includes(searchTerm.toLowerCase())
+    pipelines: folder.pipelines.filter(pipeline =>
+      pipeline.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      pipeline.description.toLowerCase().includes(searchTerm.toLowerCase())
     )
   })).filter(folder => 
     searchTerm === '' || 
     folder.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    folder.scenarios.length > 0
+    folder.pipelines.length > 0
   );
 
   if (collapsed) {
@@ -272,7 +270,7 @@ const ScenarioSidebar: React.FC<ScenarioSidebarProps> = ({
           <div className="relative flex-1">
             <input
               type="text"
-              placeholder="Search Text :)"
+              placeholder="Search Pipelines..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full px-3 py-2 pl-9 pr-8 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
@@ -321,7 +319,7 @@ const ScenarioSidebar: React.FC<ScenarioSidebarProps> = ({
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4">
 
-        {/* Folders and Scenarios */}
+        {/* Folders and Pipelines */}
         <div className="space-y-2">
           {filteredFolders.map(folder => (
             <div key={folder.id} className="space-y-1">
@@ -345,18 +343,18 @@ const ScenarioSidebar: React.FC<ScenarioSidebarProps> = ({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                 </svg>
                 <span>{folder.name}</span>
-                <span className="ml-auto text-xs text-gray-500">({folder.scenarios.length})</span>
+                <span className="ml-auto text-xs text-gray-500">({folder.pipelines.length})</span>
               </button>
 
-              {/* Scenarios */}
+              {/* Pipelines */}
               {expandedFolders.has(folder.id) && (
                 <div className="ml-6 space-y-1">
-                  {folder.scenarios.map(scenario => (
+                  {folder.pipelines.map(pipeline => (
                     <button
-                      key={scenario.id}
-                      onClick={() => onSelectScenario?.(scenario)}
+                      key={pipeline.id}
+                      onClick={() => onSelectPipeline?.(pipeline)}
                       className={`w-full text-left p-2 rounded text-sm transition-colors ${
-                        selectedScenario?.id === scenario.id
+                        selectedPipeline?.id === pipeline.id
                           ? 'bg-blue-100 text-blue-700 border border-blue-200'
                           : 'hover:bg-gray-100 text-gray-700'
                       }`}
@@ -365,11 +363,11 @@ const ScenarioSidebar: React.FC<ScenarioSidebarProps> = ({
                         <svg className="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                         </svg>
-                        <span className="font-medium">{scenario.name}</span>
+                        <span className="font-medium">{pipeline.name}</span>
                         <span className="ml-auto text-xs text-gray-500">단계</span>
                       </div>
                       <div className="text-xs text-gray-500 truncate">
-                        {scenario.description}
+                        {pipeline.description}
                       </div>
                     </button>
                   ))}
@@ -381,7 +379,7 @@ const ScenarioSidebar: React.FC<ScenarioSidebarProps> = ({
 
         {filteredFolders.length === 0 && (
           <div className="text-center text-gray-500 text-sm py-8">
-            {searchTerm ? '검색 결과가 없습니다.' : '시나리오가 없습니다.'}
+            {searchTerm ? '검색 결과가 없습니다.' : '파이프라인이 없습니다.'}
           </div>
         )}
       </div>
@@ -434,44 +432,44 @@ const ScenarioSidebar: React.FC<ScenarioSidebarProps> = ({
         </div>
       )}
 
-      {/* New Scenario Modal */}
-      {showNewScenarioModal && (
+      {/* New Pipeline Modal */}
+      {showNewPipelineModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-md">
             <div className="p-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold">새 시나리오 생성</h3>
+              <h3 className="text-lg font-semibold">새 파이프라인 생성</h3>
             </div>
             <div className="p-4 space-y-4">
               <div>
-                <label htmlFor="scenarioName" className="block text-sm font-medium text-gray-700 mb-2">
-                  시나리오 이름 *
+                <label htmlFor="pipelineName" className="block text-sm font-medium text-gray-700 mb-2">
+                  파이프라인 이름 *
                 </label>
                 <input
                   type="text"
-                  id="scenarioName"
-                  value={newScenarioName}
-                  onChange={(e) => setNewScenarioName(e.target.value)}
+                  id="pipelineName"
+                  value={newPipelineName}
+                  onChange={(e) => setNewPipelineName(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && e.ctrlKey) {
-                      handleCreateScenario();
+                      handleCreatePipeline();
                     } else if (e.key === 'Escape') {
-                      handleCancelCreateScenario();
+                      handleCancelCreatePipeline();
                     }
                   }}
-                  placeholder="시나리오 이름을 입력하세요..."
+                  placeholder="파이프라인 이름을 입력하세요..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   autoFocus
                 />
               </div>
               <div>
-                <label htmlFor="scenarioDescription" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="pipelineDescription" className="block text-sm font-medium text-gray-700 mb-2">
                   설명
                 </label>
                 <textarea
-                  id="scenarioDescription"
-                  value={newScenarioDescription}
-                  onChange={(e) => setNewScenarioDescription(e.target.value)}
-                  placeholder="시나리오 설명을 입력하세요..."
+                  id="pipelineDescription"
+                  value={newPipelineDescription}
+                  onChange={(e) => setNewPipelineDescription(e.target.value)}
+                  placeholder="파이프라인 설명을 입력하세요..."
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                 />
@@ -482,14 +480,14 @@ const ScenarioSidebar: React.FC<ScenarioSidebarProps> = ({
             </div>
             <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
               <button
-                onClick={handleCancelCreateScenario}
+                onClick={handleCancelCreatePipeline}
                 className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
               >
                 취소
               </button>
               <button
-                onClick={handleCreateScenario}
-                disabled={!newScenarioName.trim()}
+                onClick={handleCreatePipeline}
+                disabled={!newPipelineName.trim()}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 생성
@@ -510,13 +508,13 @@ const ScenarioSidebar: React.FC<ScenarioSidebarProps> = ({
           onClick={(e) => e.stopPropagation()}
         >
           <button
-            onClick={handleAddScenario}
+            onClick={handleAddPipeline}
             className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
-            시나리오 추가
+            파이프라인 추가
           </button>
           <button
             onClick={handleRemoveFolder}
@@ -533,4 +531,4 @@ const ScenarioSidebar: React.FC<ScenarioSidebarProps> = ({
   );
 };
 
-export default ScenarioSidebar;
+export default PipelineSidebar;

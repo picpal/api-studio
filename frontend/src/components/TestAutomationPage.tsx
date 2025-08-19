@@ -1103,7 +1103,9 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
                   <div className="bg-gray-50 p-3 rounded">
                     <div className="text-xs text-gray-500">Timestamp</div>
                     <div className="text-sm font-medium">
-                      {selectedExecution.timestamp.toLocaleTimeString()}
+                      {selectedExecution.timestamp instanceof Date 
+                        ? selectedExecution.timestamp.toLocaleTimeString()
+                        : new Date(selectedExecution.timestamp).toLocaleTimeString()}
                     </div>
                   </div>
                 </div>

@@ -1,16 +1,16 @@
 import { API_CONFIG } from '../config/api';
 
-interface ScenarioFolder {
+interface PipelineFolder {
   id: number;
   name: string;
   description?: string;
-  scenarios: Scenario[];
+  pipelines: Pipeline[];
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
-interface Scenario {
+interface Pipeline {
   id: number;
   name: string;
   description: string;
@@ -25,44 +25,44 @@ interface CreateFolderRequest {
   description?: string;
 }
 
-interface CreateScenarioRequest {
+interface CreatePipelineRequest {
   name: string;
   description: string;
   folderId: number;
 }
 
-const BASE_URL = `${API_CONFIG.API_URL}/scenarios`;
+const BASE_URL = `${API_CONFIG.API_URL}/pipelines`;
 
-export const scenarioApi = {
+export const pipelineApi = {
   // Folder operations
-  async getFolders(): Promise<ScenarioFolder[]> {
-    console.log('scenarioApi.getFolders: Making request to', `${BASE_URL}/folders`);
+  async getFolders(): Promise<PipelineFolder[]> {
+    console.log('pipelineApi.getFolders: Making request to', `${BASE_URL}/folders`);
     const response = await fetch(`${BASE_URL}/folders`, {
       credentials: 'include'
     });
-    console.log('scenarioApi.getFolders: Response status:', response.status);
-    console.log('scenarioApi.getFolders: Response ok:', response.ok);
+    console.log('pipelineApi.getFolders: Response status:', response.status);
+    console.log('pipelineApi.getFolders: Response ok:', response.ok);
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('scenarioApi.getFolders: Error response:', errorText);
+      console.error('pipelineApi.getFolders: Error response:', errorText);
       throw new Error('Failed to fetch folders');
     }
     const folders = await response.json();
-    console.log('scenarioApi.getFolders: Raw folders from server:', folders);
+    console.log('pipelineApi.getFolders: Raw folders from server:', folders);
     
     const processedFolders = folders.map((folder: any) => ({
       ...folder,
       createdAt: new Date(folder.createdAt),
       updatedAt: new Date(folder.updatedAt),
-      scenarios: folder.scenarios || []
+      pipelines: folder.pipelines || []
     }));
     
-    console.log('scenarioApi.getFolders: Processed folders:', processedFolders);
+    console.log('pipelineApi.getFolders: Processed folders:', processedFolders);
     return processedFolders;
   },
 
-  async createFolder(folderData: CreateFolderRequest): Promise<ScenarioFolder> {
+  async createFolder(folderData: CreateFolderRequest): Promise<PipelineFolder> {
     const response = await fetch(`${BASE_URL}/folders`, {
       method: 'POST',
       headers: {
@@ -81,11 +81,11 @@ export const scenarioApi = {
       ...folder,
       createdAt: new Date(folder.createdAt),
       updatedAt: new Date(folder.updatedAt),
-      scenarios: []
+      pipelines: []
     };
   },
 
-  async updateFolder(id: number, folderData: CreateFolderRequest): Promise<ScenarioFolder> {
+  async updateFolder(id: number, folderData: CreateFolderRequest): Promise<PipelineFolder> {
     const response = await fetch(`${BASE_URL}/folders/${id}`, {
       method: 'PUT',
       headers: {
@@ -104,7 +104,7 @@ export const scenarioApi = {
       ...folder,
       createdAt: new Date(folder.createdAt),
       updatedAt: new Date(folder.updatedAt),
-      scenarios: folder.scenarios || []
+      pipelines: folder.pipelines || []
     };
   },
 
@@ -119,91 +119,91 @@ export const scenarioApi = {
     }
   },
 
-  // Scenario operations
-  async getScenarios(): Promise<Scenario[]> {
+  // Pipeline operations
+  async getPipelines(): Promise<Pipeline[]> {
     const response = await fetch(BASE_URL, {
       credentials: 'include'
     });
     if (!response.ok) {
-      throw new Error('Failed to fetch scenarios');
+      throw new Error('Failed to fetch pipelines');
     }
-    const scenarios = await response.json();
-    return scenarios.map((scenario: any) => ({
-      ...scenario,
-      createdAt: new Date(scenario.createdAt),
-      updatedAt: new Date(scenario.updatedAt)
+    const pipelines = await response.json();
+    return pipelines.map((pipeline: any) => ({
+      ...pipeline,
+      createdAt: new Date(pipeline.createdAt),
+      updatedAt: new Date(pipeline.updatedAt)
     }));
   },
 
-  async getScenariosByFolder(folderId: number): Promise<Scenario[]> {
+  async getPipelinesByFolder(folderId: number): Promise<Pipeline[]> {
     const response = await fetch(`${BASE_URL}/folder/${folderId}`, {
       credentials: 'include'
     });
     if (!response.ok) {
-      throw new Error('Failed to fetch scenarios by folder');
+      throw new Error('Failed to fetch pipelines by folder');
     }
-    const scenarios = await response.json();
-    return scenarios.map((scenario: any) => ({
-      ...scenario,
-      createdAt: new Date(scenario.createdAt),
-      updatedAt: new Date(scenario.updatedAt)
+    const pipelines = await response.json();
+    return pipelines.map((pipeline: any) => ({
+      ...pipeline,
+      createdAt: new Date(pipeline.createdAt),
+      updatedAt: new Date(pipeline.updatedAt)
     }));
   },
 
-  async createScenario(scenarioData: CreateScenarioRequest): Promise<Scenario> {
+  async createPipeline(pipelineData: CreatePipelineRequest): Promise<Pipeline> {
     const response = await fetch(BASE_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       credentials: 'include',
-      body: JSON.stringify(scenarioData),
+      body: JSON.stringify(pipelineData),
     });
     
     if (!response.ok) {
-      throw new Error('Failed to create scenario');
+      throw new Error('Failed to create pipeline');
     }
     
-    const scenario = await response.json();
+    const pipeline = await response.json();
     return {
-      ...scenario,
-      createdAt: new Date(scenario.createdAt),
-      updatedAt: new Date(scenario.updatedAt)
+      ...pipeline,
+      createdAt: new Date(pipeline.createdAt),
+      updatedAt: new Date(pipeline.updatedAt)
     };
   },
 
-  async updateScenario(id: string, scenarioData: Partial<CreateScenarioRequest>): Promise<Scenario> {
+  async updatePipeline(id: string, pipelineData: Partial<CreatePipelineRequest>): Promise<Pipeline> {
     const response = await fetch(`${BASE_URL}/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
       credentials: 'include',
-      body: JSON.stringify(scenarioData),
+      body: JSON.stringify(pipelineData),
     });
     
     if (!response.ok) {
-      throw new Error('Failed to update scenario');
+      throw new Error('Failed to update pipeline');
     }
     
-    const scenario = await response.json();
+    const pipeline = await response.json();
     return {
-      ...scenario,
-      createdAt: new Date(scenario.createdAt),
-      updatedAt: new Date(scenario.updatedAt)
+      ...pipeline,
+      createdAt: new Date(pipeline.createdAt),
+      updatedAt: new Date(pipeline.updatedAt)
     };
   },
 
-  async deleteScenario(id: string): Promise<void> {
+  async deletePipeline(id: string): Promise<void> {
     const response = await fetch(`${BASE_URL}/${id}`, {
       method: 'DELETE',
       credentials: 'include',
     });
     
     if (!response.ok) {
-      throw new Error('Failed to delete scenario');
+      throw new Error('Failed to delete pipeline');
     }
   }
 };
 
-export type { ScenarioFolder, Scenario, CreateFolderRequest, CreateScenarioRequest };
+export type { PipelineFolder, Pipeline, CreateFolderRequest, CreatePipelineRequest };

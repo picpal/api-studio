@@ -484,7 +484,7 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
 
   if (collapsed) {
     return (
-      <div className="w-12 h-screen border-r border-gray-200 bg-white flex flex-col items-center py-3">
+      <div className="w-12 h-full border-r border-gray-200 bg-white flex flex-col items-center py-3">
         {/* Toggle Button - Collapsed State */}
         <div className="mb-3">
           <button 
@@ -512,7 +512,7 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
         </div>
         
         {/* Collapsed folder indicators */}
-        <div className="flex flex-col gap-1 items-center">
+        <div className="flex flex-col gap-1 items-center pb-4">
           {filteredFolders.slice(0, 5).map(folder => (
             <div 
               key={folder.id}
@@ -635,7 +635,7 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
   }
 
   return (
-    <div className="w-80 h-screen border-r border-gray-200 bg-white flex flex-col">
+    <div className="w-80 h-full border-r border-gray-200 bg-white flex flex-col overflow-hidden">
       {/* Header with Create Folder Button and Toggle */}
       <div className="px-4 py-3 border-b border-gray-100">
         <div className="flex items-center justify-between">
@@ -671,7 +671,7 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
       </div>
       
       {/* Folders List */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0 pb-4">
         {loading ? (
           <div className="p-4 text-center text-gray-500">
             <div className="text-2xl mb-2">⏳</div>
