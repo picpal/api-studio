@@ -1,13 +1,13 @@
 package com.example.apitest.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
-@Table(name = "scenario_folders")
-public class ScenarioFolder {
+@Table(name = "pipelines")
+public class Pipeline {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -18,10 +18,17 @@ public class ScenarioFolder {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "folder_id")
-    @JsonIgnore
-    private List<Scenario> scenarios;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "folder_id", insertable = false, updatable = false)
+    @JsonIgnoreProperties("pipelines")
+    private PipelineFolder folder;
+
+    @Column(name = "folder_id")
+    private Long folderId;
+
+    @OneToMany(mappedBy = "pipeline", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("stepOrder ASC")
+    private List<PipelineStep> steps;
 
     @Column(name = "is_active")
     private Boolean isActive = true;
@@ -44,11 +51,12 @@ public class ScenarioFolder {
     }
 
     // Constructors
-    public ScenarioFolder() {}
+    public Pipeline() {}
 
-    public ScenarioFolder(String name, String description) {
+    public Pipeline(String name, String description, PipelineFolder folder) {
         this.name = name;
         this.description = description;
+        this.folder = folder;
     }
 
     // Getters and Setters
@@ -76,12 +84,28 @@ public class ScenarioFolder {
         this.description = description;
     }
 
-    public List<Scenario> getScenarios() {
-        return scenarios;
+    public PipelineFolder getFolder() {
+        return folder;
     }
 
-    public void setScenarios(List<Scenario> scenarios) {
-        this.scenarios = scenarios;
+    public void setFolder(PipelineFolder folder) {
+        this.folder = folder;
+    }
+
+    public Long getFolderId() {
+        return folderId;
+    }
+
+    public void setFolderId(Long folderId) {
+        this.folderId = folderId;
+    }
+
+    public List<PipelineStep> getSteps() {
+        return steps;
+    }
+
+    public void setSteps(List<PipelineStep> steps) {
+        this.steps = steps;
     }
 
     public Boolean getIsActive() {

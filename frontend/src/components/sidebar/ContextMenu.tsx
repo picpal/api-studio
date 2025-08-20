@@ -85,7 +85,10 @@ export const ItemContextMenu: React.FC<ItemContextMenuProps> = ({
       </button>
       <hr className="my-1 border-gray-200" />
       <button
-        onClick={onDelete}
+        onClick={() => {
+          console.log('🗑️ ItemContextMenu Delete button clicked!');
+          onDelete();
+        }}
         className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
       >
         🗑️ Delete

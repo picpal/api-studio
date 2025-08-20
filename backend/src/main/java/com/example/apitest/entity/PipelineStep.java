@@ -4,15 +4,15 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "scenario_steps")
-public class ScenarioStep {
+@Table(name = "pipeline_steps")
+public class PipelineStep {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "scenario_id", nullable = false)
-    private Scenario scenario;
+    @JoinColumn(name = "pipeline_id", nullable = false)
+    private Pipeline pipeline;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "api_item_id", nullable = false)
@@ -64,10 +64,10 @@ public class ScenarioStep {
     }
 
     // Constructors
-    public ScenarioStep() {}
+    public PipelineStep() {}
 
-    public ScenarioStep(Scenario scenario, ApiItem apiItem, Integer stepOrder) {
-        this.scenario = scenario;
+    public PipelineStep(Pipeline pipeline, ApiItem apiItem, Integer stepOrder) {
+        this.pipeline = pipeline;
         this.apiItem = apiItem;
         this.stepOrder = stepOrder;
     }
@@ -81,12 +81,12 @@ public class ScenarioStep {
         this.id = id;
     }
 
-    public Scenario getScenario() {
-        return scenario;
+    public Pipeline getPipeline() {
+        return pipeline;
     }
 
-    public void setScenario(Scenario scenario) {
-        this.scenario = scenario;
+    public void setPipeline(Pipeline pipeline) {
+        this.pipeline = pipeline;
     }
 
     public ApiItem getApiItem() {

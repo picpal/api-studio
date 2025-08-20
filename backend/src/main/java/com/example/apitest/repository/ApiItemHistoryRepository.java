@@ -12,22 +12,20 @@ import java.util.List;
 @Repository
 public interface ApiItemHistoryRepository extends JpaRepository<ApiItemHistory, Long> {
     
-    // 특정 API 아이템의 히스토리 조회 (최신순, 최대 10개)
-    @Query("SELECT h FROM ApiItemHistory h WHERE h.apiItem.id = :apiItemId ORDER BY h.savedAt DESC")
-    List<ApiItemHistory> findByApiItemIdOrderBySavedAtDesc(@Param("apiItemId") Long apiItemId);
+    // 특정 API 아이템의 히스토리 조회 (최신순)
+    List<ApiItemHistory> findByApiItemIdOrderBySavedAtDesc(Long apiItemId);
     
     // 특정 API 아이템의 히스토리 개수 조회
-    @Query("SELECT COUNT(h) FROM ApiItemHistory h WHERE h.apiItem.id = :apiItemId")
-    long countByApiItemId(@Param("apiItemId") Long apiItemId);
+    long countByApiItemId(Long apiItemId);
     
     // 특정 API 아이템의 오래된 히스토리 삭제 (10개 초과시)
     @Modifying
-    @Query("DELETE FROM ApiItemHistory h WHERE h.apiItem.id = :apiItemId AND h.id NOT IN " +
-           "(SELECT h2.id FROM ApiItemHistory h2 WHERE h2.apiItem.id = :apiItemId ORDER BY h2.savedAt DESC LIMIT 10)")
+    @Query("DELETE FROM ApiItemHistory h WHERE h.apiItemId = :apiItemId AND h.id NOT IN " +
+           "(SELECT h2.id FROM ApiItemHistory h2 WHERE h2.apiItemId = :apiItemId ORDER BY h2.savedAt DESC LIMIT 10)")
     void deleteOldHistories(@Param("apiItemId") Long apiItemId);
     
     // API 아이템 삭제시 관련 히스토리도 모두 삭제
     @Modifying
-    @Query("DELETE FROM ApiItemHistory h WHERE h.apiItem.id = :apiItemId")
+    @Query("DELETE FROM ApiItemHistory h WHERE h.apiItemId = :apiItemId")
     void deleteByApiItemId(@Param("apiItemId") Long apiItemId);
 }

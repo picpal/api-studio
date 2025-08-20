@@ -6,6 +6,7 @@ import com.example.apitest.entity.User;
 import com.example.apitest.entity.UserActivity;
 import com.example.apitest.repository.ApiItemRepository;
 import com.example.apitest.repository.ApiFolderRepository;
+import com.example.apitest.repository.ApiItemHistoryRepository;
 import com.example.apitest.service.ActivityLoggingService;
 import com.example.apitest.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -34,6 +35,9 @@ public class ApiItemController {
     
     @Autowired
     private ApiFolderRepository folderRepository;
+    
+    @Autowired
+    private ApiItemHistoryRepository historyRepository;
     
     @Autowired
     private ActivityLoggingService activityLoggingService;
@@ -113,7 +117,7 @@ public class ApiItemController {
 
     @GetMapping("/folder/{folderId}")
     public List<Map<String, Object>> getItemsByFolder(@PathVariable Long folderId) {
-        List<ApiItem> items = itemRepository.findByFolderId(folderId);
+        List<ApiItem> items = itemRepository.findByFolderIdOrderByCreatedAtAsc(folderId);
         return items.stream().map(item -> {
             Map<String, Object> itemMap = new HashMap<>();
             itemMap.put("id", item.getId());
@@ -311,6 +315,7 @@ public class ApiItemController {
     }
 
     @DeleteMapping("/{id}")
+    @Transactional(rollbackFor = Exception.class)
     public ResponseEntity<?> deleteItem(@PathVariable Long id, HttpSession session, HttpServletRequest request) {
         try {
             User currentUser = getCurrentUser(session);
@@ -319,7 +324,12 @@ public class ApiItemController {
                 .map(item -> {
                     String itemName = item.getName();
                     String folderName = getFolderName(item.getFolderId());
-                    itemRepository.delete(item);
+                    
+                    // 관련된 히스토리들을 먼저 삭제
+                    historyRepository.deleteByApiItemId(id);
+                    
+                    // 아이템 삭제
+                    itemRepository.deleteById(id);
                     
                     // API 아이템 삭제 로깅
                     if (currentUser != null) {

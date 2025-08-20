@@ -10,6 +10,6 @@ import java.util.List;
 
 @Repository
 public interface ApiItemRepository extends JpaRepository<ApiItem, Long> {
-    @Query("SELECT i FROM ApiItem i WHERE i.folder.id = :folderId")
-    List<ApiItem> findByFolderId(@Param("folderId") Long folderId);
+    @Query("SELECT i FROM ApiItem i WHERE i.folder.id = :folderId ORDER BY i.createdAt ASC")
+    List<ApiItem> findByFolderIdOrderByCreatedAtAsc(@Param("folderId") Long folderId);
 }

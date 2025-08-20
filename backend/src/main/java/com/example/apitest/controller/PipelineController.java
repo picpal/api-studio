@@ -1,12 +1,12 @@
 package com.example.apitest.controller;
 
-import com.example.apitest.entity.Scenario;
-import com.example.apitest.entity.ScenarioFolder;
-import com.example.apitest.entity.ScenarioStep;
+import com.example.apitest.entity.Pipeline;
+import com.example.apitest.entity.PipelineFolder;
+import com.example.apitest.entity.PipelineStep;
 import com.example.apitest.entity.ApiItem;
-import com.example.apitest.repository.ScenarioFolderRepository;
-import com.example.apitest.repository.ScenarioRepository;
-import com.example.apitest.repository.ScenarioStepRepository;
+import com.example.apitest.repository.PipelineFolderRepository;
+import com.example.apitest.repository.PipelineRepository;
+import com.example.apitest.repository.PipelineStepRepository;
 import com.example.apitest.repository.ApiItemRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -16,27 +16,27 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/scenarios")
+@RequestMapping("/api/pipelines")
 @CrossOrigin(origins = "*")
-public class ScenarioController {
+public class PipelineController {
 
     @Autowired
-    private ScenarioFolderRepository scenarioFolderRepository;
+    private PipelineFolderRepository pipelineFolderRepository;
 
     @Autowired
-    private ScenarioRepository scenarioRepository;
+    private PipelineRepository pipelineRepository;
 
     @Autowired
-    private ScenarioStepRepository scenarioStepRepository;
+    private PipelineStepRepository pipelineStepRepository;
 
     @Autowired
     private ApiItemRepository apiItemRepository;
 
     // Folder Operations
     @GetMapping("/folders")
-    public ResponseEntity<List<ScenarioFolder>> getAllFolders() {
-        System.out.println("ScenarioController.getAllFolders() called!");
-        List<ScenarioFolder> folders = scenarioFolderRepository.findAll().stream()
+    public ResponseEntity<List<PipelineFolder>> getAllFolders() {
+        System.out.println("PipelineController.getAllFolders() called!");
+        List<PipelineFolder> folders = pipelineFolderRepository.findAll().stream()
             .filter(folder -> folder.getIsActive() != null && folder.getIsActive())
             .collect(java.util.stream.Collectors.toList());
         System.out.println("Found " + folders.size() + " folders in database");
@@ -45,19 +45,19 @@ public class ScenarioController {
     }
 
     @PostMapping("/folders")
-    public ResponseEntity<ScenarioFolder> createFolder(@RequestBody ScenarioFolder folder) {
-        ScenarioFolder savedFolder = scenarioFolderRepository.save(folder);
+    public ResponseEntity<PipelineFolder> createFolder(@RequestBody PipelineFolder folder) {
+        PipelineFolder savedFolder = pipelineFolderRepository.save(folder);
         return ResponseEntity.ok(savedFolder);
     }
 
     @PutMapping("/folders/{id}")
-    public ResponseEntity<ScenarioFolder> updateFolder(@PathVariable Long id, @RequestBody ScenarioFolder folder) {
-        Optional<ScenarioFolder> existingFolder = scenarioFolderRepository.findById(id);
+    public ResponseEntity<PipelineFolder> updateFolder(@PathVariable Long id, @RequestBody PipelineFolder folder) {
+        Optional<PipelineFolder> existingFolder = pipelineFolderRepository.findById(id);
         if (existingFolder.isPresent()) {
-            ScenarioFolder updatedFolder = existingFolder.get();
+            PipelineFolder updatedFolder = existingFolder.get();
             updatedFolder.setName(folder.getName());
             updatedFolder.setDescription(folder.getDescription());
-            ScenarioFolder savedFolder = scenarioFolderRepository.save(updatedFolder);
+            PipelineFolder savedFolder = pipelineFolderRepository.save(updatedFolder);
             return ResponseEntity.ok(savedFolder);
         }
         return ResponseEntity.notFound().build();
@@ -65,56 +65,56 @@ public class ScenarioController {
 
     @DeleteMapping("/folders/{id}")
     public ResponseEntity<Void> deleteFolder(@PathVariable Long id) {
-        Optional<ScenarioFolder> folder = scenarioFolderRepository.findById(id);
+        Optional<PipelineFolder> folder = pipelineFolderRepository.findById(id);
         if (folder.isPresent()) {
-            ScenarioFolder folderToDelete = folder.get();
+            PipelineFolder folderToDelete = folder.get();
             folderToDelete.setIsActive(false);
-            scenarioFolderRepository.save(folderToDelete);
+            pipelineFolderRepository.save(folderToDelete);
             return ResponseEntity.ok().build();
         }
         return ResponseEntity.notFound().build();
     }
 
-    // Scenario Operations
+    // Pipeline Operations
     // @TODO 사용하는곳이 없는데 왜 있을까?
     @GetMapping
-    public ResponseEntity<List<Scenario>> getAllScenarios() {
-        List<Scenario> scenarios = scenarioRepository.findAllActiveScenarios();
-        return ResponseEntity.ok(scenarios);
+    public ResponseEntity<List<Pipeline>> getAllPipelines() {
+        List<Pipeline> pipelines = pipelineRepository.findByIsActiveTrueOrderByCreatedAtAsc();
+        return ResponseEntity.ok(pipelines);
     }
 
     @GetMapping("/folder/{folderId}")
-    public ResponseEntity<List<Scenario>> getScenariosByFolder(@PathVariable Long folderId) {
-        List<Scenario> scenarios = scenarioRepository.findByFolderId(folderId);
-        return ResponseEntity.ok(scenarios);
+    public ResponseEntity<List<Pipeline>> getPipelinesByFolder(@PathVariable Long folderId) {
+        List<Pipeline> pipelines = pipelineRepository.findByIsActiveTrueAndFolderIdOrderByCreatedAtAsc(folderId);
+        return ResponseEntity.ok(pipelines);
     }
 
     // @TODO 여기도 사용하는 부분이 없는데 왜 선언된걸까
     @PostMapping
-    public ResponseEntity<Scenario> createScenario(@RequestBody CreateScenarioRequest request) {
-        Optional<ScenarioFolder> folder = scenarioFolderRepository.findById(request.getFolderId());
+    public ResponseEntity<Pipeline> createPipeline(@RequestBody CreatePipelineRequest request) {
+        Optional<PipelineFolder> folder = pipelineFolderRepository.findById(request.getFolderId());
         if (!folder.isPresent()) {
             return ResponseEntity.badRequest().build();
         }
         
-        Scenario scenario = new Scenario();
-        scenario.setName(request.getName());
-        scenario.setDescription(request.getDescription());
-        scenario.setFolderId(request.getFolderId());
-        scenario.setIsActive(true);
+        Pipeline pipeline = new Pipeline();
+        pipeline.setName(request.getName());
+        pipeline.setDescription(request.getDescription());
+        pipeline.setFolderId(request.getFolderId());
+        pipeline.setIsActive(true);
         
-        Scenario savedScenario = scenarioRepository.save(scenario);
-        return ResponseEntity.ok(savedScenario);
+        Pipeline savedPipeline = pipelineRepository.save(pipeline);
+        return ResponseEntity.ok(savedPipeline);
     }
 
     // Request DTO class
-    public static class CreateScenarioRequest {
+    public static class CreatePipelineRequest {
         private String name;
         private String description;
         private Long folderId;
 
         // Constructors
-        public CreateScenarioRequest() {}
+        public CreatePipelineRequest() {}
 
         // Getters and Setters
         public String getName() { return name; }
@@ -128,42 +128,42 @@ public class ScenarioController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Scenario> updateScenario(@PathVariable Long id, @RequestBody Scenario scenario) {
-        Optional<Scenario> existingScenario = scenarioRepository.findById(id);
-        if (existingScenario.isPresent()) {
-            Scenario updatedScenario = existingScenario.get();
-            updatedScenario.setName(scenario.getName());
-            updatedScenario.setDescription(scenario.getDescription());
-            updatedScenario.setFolder(scenario.getFolder());
-            Scenario savedScenario = scenarioRepository.save(updatedScenario);
-            return ResponseEntity.ok(savedScenario);
+    public ResponseEntity<Pipeline> updatePipeline(@PathVariable Long id, @RequestBody Pipeline pipeline) {
+        Optional<Pipeline> existingPipeline = pipelineRepository.findById(id);
+        if (existingPipeline.isPresent()) {
+            Pipeline updatedPipeline = existingPipeline.get();
+            updatedPipeline.setName(pipeline.getName());
+            updatedPipeline.setDescription(pipeline.getDescription());
+            updatedPipeline.setFolder(pipeline.getFolder());
+            Pipeline savedPipeline = pipelineRepository.save(updatedPipeline);
+            return ResponseEntity.ok(savedPipeline);
         }
         return ResponseEntity.notFound().build();
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteScenario(@PathVariable Long id) {
-        Optional<Scenario> scenario = scenarioRepository.findById(id);
-        if (scenario.isPresent()) {
-            Scenario scenarioToDelete = scenario.get();
-            scenarioToDelete.setIsActive(false);
-            scenarioRepository.save(scenarioToDelete);
+    public ResponseEntity<Void> deletePipeline(@PathVariable Long id) {
+        Optional<Pipeline> pipeline = pipelineRepository.findById(id);
+        if (pipeline.isPresent()) {
+            Pipeline pipelineToDelete = pipeline.get();
+            pipelineToDelete.setIsActive(false);
+            pipelineRepository.save(pipelineToDelete);
             return ResponseEntity.ok().build();
         }
         return ResponseEntity.notFound().build();
     }
 
     // Step Operations
-    @GetMapping("/{scenarioId}/steps")
-    public ResponseEntity<List<ScenarioStep>> getStepsByScenario(@PathVariable Long scenarioId) {
-        List<ScenarioStep> steps = scenarioStepRepository.findByScenarioIdOrderByStepOrder(scenarioId);
+    @GetMapping("/{pipelineId}/steps")
+    public ResponseEntity<List<PipelineStep>> getStepsByPipeline(@PathVariable Long pipelineId) {
+        List<PipelineStep> steps = pipelineStepRepository.findByIsActiveTrueAndPipelineIdOrderByStepOrderAsc(pipelineId);
         return ResponseEntity.ok(steps);
     }
 
-    @PostMapping("/{scenarioId}/steps")
-    public ResponseEntity<ScenarioStep> addStep(@PathVariable Long scenarioId, @RequestBody CreateStepRequest request) {
-        Optional<Scenario> scenario = scenarioRepository.findById(scenarioId);
-        if (!scenario.isPresent()) {
+    @PostMapping("/{pipelineId}/steps")
+    public ResponseEntity<PipelineStep> addStep(@PathVariable Long pipelineId, @RequestBody CreateStepRequest request) {
+        Optional<Pipeline> pipeline = pipelineRepository.findById(pipelineId);
+        if (!pipeline.isPresent()) {
             return ResponseEntity.badRequest().build();
         }
 
@@ -173,45 +173,45 @@ public class ScenarioController {
         }
 
         // Get the next step order
-        List<ScenarioStep> existingSteps = scenarioStepRepository.findByScenarioIdOrderByStepOrder(scenarioId);
+        List<PipelineStep> existingSteps = pipelineStepRepository.findByIsActiveTrueAndPipelineIdOrderByStepOrderAsc(pipelineId);
         int nextOrder = existingSteps.size() + 1;
 
-        ScenarioStep step = new ScenarioStep();
-        step.setScenario(scenario.get());
+        PipelineStep step = new PipelineStep();
+        step.setPipeline(pipeline.get());
         step.setApiItem(apiItem.get());
         step.setStepOrder(nextOrder);
         step.setStepName(request.getStepName());
         step.setDescription(request.getDescription());
         step.setIsActive(true);
 
-        ScenarioStep savedStep = scenarioStepRepository.save(step);
+        PipelineStep savedStep = pipelineStepRepository.save(step);
         return ResponseEntity.ok(savedStep);
     }
 
     @DeleteMapping("/steps/{stepId}")
     public ResponseEntity<Void> deleteStep(@PathVariable Long stepId) {
-        Optional<ScenarioStep> step = scenarioStepRepository.findById(stepId);
+        Optional<PipelineStep> step = pipelineStepRepository.findById(stepId);
         if (step.isPresent()) {
-            ScenarioStep stepToDelete = step.get();
+            PipelineStep stepToDelete = step.get();
             stepToDelete.setIsActive(false);
-            scenarioStepRepository.save(stepToDelete);
+            pipelineStepRepository.save(stepToDelete);
             return ResponseEntity.ok().build();
         }
         return ResponseEntity.notFound().build();
     }
 
     @PutMapping("/steps/{stepId}/order")
-    public ResponseEntity<List<ScenarioStep>> updateStepOrder(@PathVariable Long stepId, @RequestBody UpdateStepOrderRequest request) {
-        Optional<ScenarioStep> stepOptional = scenarioStepRepository.findById(stepId);
+    public ResponseEntity<List<PipelineStep>> updateStepOrder(@PathVariable Long stepId, @RequestBody UpdateStepOrderRequest request) {
+        Optional<PipelineStep> stepOptional = pipelineStepRepository.findById(stepId);
         if (!stepOptional.isPresent()) {
             return ResponseEntity.notFound().build();
         }
 
-        ScenarioStep step = stepOptional.get();
-        Long scenarioId = step.getScenario().getId();
+        PipelineStep step = stepOptional.get();
+        Long pipelineId = step.getPipeline().getId();
         
-        // Get all steps for this scenario
-        List<ScenarioStep> steps = scenarioStepRepository.findByScenarioIdOrderByStepOrder(scenarioId);
+        // Get all steps for this pipeline
+        List<PipelineStep> steps = pipelineStepRepository.findByIsActiveTrueAndPipelineIdOrderByStepOrderAsc(pipelineId);
         
         // Update the order
         int oldOrder = step.getStepOrder();
@@ -222,7 +222,7 @@ public class ScenarioController {
         }
         
         // Reorder steps
-        for (ScenarioStep s : steps) {
+        for (PipelineStep s : steps) {
             if (s.getId().equals(stepId)) {
                 s.setStepOrder(newOrder);
             } else if (oldOrder < newOrder && s.getStepOrder() > oldOrder && s.getStepOrder() <= newOrder) {
@@ -232,7 +232,7 @@ public class ScenarioController {
             }
         }
         
-        List<ScenarioStep> updatedSteps = scenarioStepRepository.saveAll(steps);
+        List<PipelineStep> updatedSteps = pipelineStepRepository.saveAll(steps);
         return ResponseEntity.ok(updatedSteps);
     }
 

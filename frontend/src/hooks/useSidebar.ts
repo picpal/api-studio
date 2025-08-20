@@ -133,9 +133,26 @@ export const useSidebar = () => {
   // 폴더 삭제
   const deleteFolder = async (folderId: string) => {
     try {
+      // 삭제할 폴더와 하위 항목 확인
+      const folderToDelete = folders.find(f => f.id === folderId);
+      if (!folderToDelete) {
+        setError('삭제할 폴더를 찾을 수 없습니다.');
+        return;
+      }
+
+      // 하위 항목이 있으면 확인 메시지 표시
+      if (folderToDelete.items && folderToDelete.items.length > 0) {
+        const confirmed = window.confirm(
+          `"${folderToDelete.name}" 폴더에 ${folderToDelete.items.length}개의 API 항목이 있습니다.\n폴더와 모든 하위 항목을 삭제하시겠습니까?`
+        );
+        if (!confirmed) {
+          return; // 사용자가 취소한 경우
+        }
+      }
+
       await folderApi.delete(parseInt(folderId));
       
-      setFolders(folders.filter(f => f.id !== folderId));
+      setFolders(prev => prev.filter(f => f.id !== folderId));
       if (selectedFolderId === folderId) {
         setSelectedFolderId(null);
         setSelectedItemId(null);
@@ -209,9 +226,17 @@ export const useSidebar = () => {
 
   // 아이템 삭제
   const deleteItem = async (folderId: string, itemId: string) => {
+    console.log('🛠️ deleteItem function called with:', {
+      folderId,
+      itemId
+    });
+    
     try {
+      console.log('🛠️ Making API call to delete item with ID:', parseInt(itemId));
       await itemApi.delete(parseInt(itemId));
+      console.log('🛠️ API delete call successful!');
       
+      console.log('🛠️ Updating folders state...');
       setFolders(prev => prev.map(folder => 
         folder.id === folderId 
           ? { ...folder, items: folder.items.filter(item => item.id !== itemId) }
@@ -219,10 +244,13 @@ export const useSidebar = () => {
       ));
       
       if (selectedItemId === itemId) {
+        console.log('🛠️ Clearing selected item ID');
         setSelectedItemId(null);
       }
+      console.log('🛠️ deleteItem completed successfully!');
     } catch (error) {
-      console.error('아이템 삭제 중 오류:', error);
+      console.error('❌ 아이템 삭제 중 오류:', error);
+      console.error('❌ Error details:', error.response?.data);
       setError('아이템을 삭제하는 중 오류가 발생했습니다.');
     }
   };

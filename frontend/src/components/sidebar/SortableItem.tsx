@@ -40,7 +40,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
     <div 
       ref={setNodeRef}
       style={style}
-      className={`ml-8 mx-3 mb-1 px-2.5 py-1.5 flex items-center justify-between cursor-pointer hover:bg-gray-50 group rounded-md transition-colors ${
+      className={`ml-8 mx-3 mb-1 px-2.5 py-1.5 flex items-center cursor-pointer hover:bg-gray-50 group rounded-md transition-colors ${
         isSelected ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'text-gray-600 hover:border hover:border-gray-200'
       }`}
       onClick={() => onSelectItem(item, folderId)}
@@ -59,15 +59,6 @@ const SortableItem: React.FC<SortableItemProps> = ({
         </span>
         <span className="text-xs truncate">{item.name}</span>
       </div>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onDeleteItem(folderId, item.id);
-        }}
-        className="ml-2 text-xs text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity w-4 h-4 flex items-center justify-center"
-      >
-        ×
-      </button>
     </div>
   );
 };

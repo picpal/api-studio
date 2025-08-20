@@ -1,10 +1,13 @@
 package com.example.apitest.controller;
 
 import com.example.apitest.entity.ApiFolder;
+import com.example.apitest.entity.ApiItem;
 import com.example.apitest.entity.User;
 import com.example.apitest.entity.UserActivity;
 import com.example.apitest.entity.FolderPermission;
 import com.example.apitest.repository.ApiFolderRepository;
+import com.example.apitest.repository.ApiItemRepository;
+import com.example.apitest.repository.ApiItemHistoryRepository;
 import com.example.apitest.repository.FolderPermissionRepository;
 import com.example.apitest.service.ActivityLoggingService;
 import com.example.apitest.service.AuthService;
@@ -12,6 +15,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,6 +28,12 @@ public class ApiFolderController {
 
     @Autowired
     private ApiFolderRepository folderRepository;
+    
+    @Autowired
+    private ApiItemRepository itemRepository;
+    
+    @Autowired
+    private ApiItemHistoryRepository historyRepository;
     
     @Autowired
     private FolderPermissionRepository folderPermissionRepository;
@@ -214,6 +224,7 @@ public class ApiFolderController {
     }
 
     @DeleteMapping("/{id}")
+    @Transactional
     public ResponseEntity<?> deleteFolder(@PathVariable Long id, HttpSession session, HttpServletRequest request) {
         try {
             User currentUser = getCurrentUser(session);
@@ -235,6 +246,20 @@ public class ApiFolderController {
             }
             
             String folderName = folder.getName();
+            
+            // 1. 폴더에 속한 모든 API 아이템들을 먼저 삭제
+            List<ApiItem> items = itemRepository.findByFolderIdOrderByCreatedAtAsc(id);
+            for (ApiItem item : items) {
+                // 각 아이템의 히스토리를 먼저 삭제
+                historyRepository.deleteByApiItemId(item.getId());
+                // 아이템 삭제
+                itemRepository.deleteById(item.getId());
+            }
+            
+            // 2. 폴더 권한들을 삭제
+            folderPermissionRepository.deleteByFolderId(id);
+            
+            // 3. 폴더 삭제
             folderRepository.delete(folder);
             
             // 폴더 삭제 로깅
