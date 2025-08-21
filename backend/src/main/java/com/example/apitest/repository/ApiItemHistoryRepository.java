@@ -27,5 +27,5 @@ public interface ApiItemHistoryRepository extends JpaRepository<ApiItemHistory, 
     // API 아이템 삭제시 관련 히스토리도 모두 삭제
     @Modifying
     @Query("DELETE FROM ApiItemHistory h WHERE h.apiItemId = :apiItemId")
-    void deleteByApiItemId(@Param("apiItemId") Long apiItemId);
+    int deleteByApiItemId(@Param("apiItemId") Long apiItemId);
 }

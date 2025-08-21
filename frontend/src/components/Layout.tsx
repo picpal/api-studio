@@ -4,8 +4,8 @@ import Header from './Header';
 import Sidebar from './sidebar/SidebarRefactored';
 import PipelineSidebar from './pipeline/PipelineSidebar';
 import MainContent from './MainContent';
-import AdminPage from './AdminPage';
-import TestAutomationPage from './TestAutomationPage';
+import AdminPage from '../pages/AdminPage';
+import TestAutomationPage from '../pages/TestAutomationPage';
 import PipelineManagementPage from './PipelineManagementPage';
 import { BaseUrl, ApiItem } from '../types/api';
 
@@ -21,7 +21,7 @@ const Layout: React.FC<LayoutProps> = () => {
     { id: '1', name: 'Development', url: 'https://dev-api.blue.com' },
     { id: '2', name: 'Staging', url: 'https://staging-api.blue.com' },
     { id: '3', name: 'Production', url: 'https://api.blue.com' },
-    { id: '4', name: 'Local', url: import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8080' }
+    { id: '4', name: 'Local', url: 'http://localhost:8080' }
   ]);
 
   const [selectedItem, setSelectedItem] = useState<ApiItem | null>(null);

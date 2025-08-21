@@ -27,12 +27,12 @@ interface ScenarioStep {
   apiItem: ApiItem;
 }
 
-interface ScenarioManagementPageProps {
-  selectedScenario?: Scenario | null;
+interface PipelineManagementPageProps {
+  selectedPipeline?: Scenario | null;
 }
 
-const ScenarioManagementPage: React.FC<ScenarioManagementPageProps> = ({ 
-  selectedScenario
+const PipelineManagementPage: React.FC<PipelineManagementPageProps> = ({ 
+  selectedPipeline
 }) => {
   const navigate = useNavigate();
   const [steps, setSteps] = useState<ScenarioStep[]>([]);
@@ -43,12 +43,12 @@ const ScenarioManagementPage: React.FC<ScenarioManagementPageProps> = ({
   const [stepDescription, setStepDescription] = useState('');
   const [apiSearchTerm, setApiSearchTerm] = useState('');
 
-  // Load steps when scenario is selected
+  // Load steps when pipeline is selected
   useEffect(() => {
-    if (selectedScenario) {
-      fetchSteps(selectedScenario.id);
+    if (selectedPipeline) {
+      fetchSteps(selectedPipeline.id);
     }
-  }, [selectedScenario]);
+  }, [selectedPipeline]);
 
   // Load API items for step creation
   useEffect(() => {
@@ -88,17 +88,17 @@ const ScenarioManagementPage: React.FC<ScenarioManagementPageProps> = ({
   };
 
   const addStep = async () => {
-    if (!selectedScenario || !selectedApiItem || !stepName.trim()) return;
+    if (!selectedPipeline || !selectedApiItem || !stepName.trim()) return;
 
     console.log('Adding step with data:', {
-      scenarioId: selectedScenario.id,
+      pipelineId: selectedPipeline.id,
       apiItemId: selectedApiItem,
       stepName: stepName.trim(),
       description: stepDescription.trim()
     });
 
     try {
-      const response = await fetch(`http://localhost:8080/api/scenarios/${selectedScenario.id}/steps`, {
+      const response = await fetch(`http://localhost:8080/api/pipelines/${selectedPipeline.id}/steps`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -117,7 +117,7 @@ const ScenarioManagementPage: React.FC<ScenarioManagementPageProps> = ({
       if (response.ok) {
         const result = await response.json();
         console.log('Step added successfully:', result);
-        fetchSteps(selectedScenario.id);
+        fetchSteps(selectedPipeline.id);
         setShowAddStepModal(false);
         setSelectedApiItem(null);
         setStepName('');
@@ -139,8 +139,8 @@ const ScenarioManagementPage: React.FC<ScenarioManagementPageProps> = ({
         credentials: 'include'
       });
 
-      if (response.ok && selectedScenario) {
-        fetchSteps(selectedScenario.id);
+      if (response.ok && selectedPipeline) {
+        fetchSteps(selectedPipeline.id);
       }
     } catch (error) {
       console.error('Error deleting step:', error);
@@ -164,8 +164,8 @@ const ScenarioManagementPage: React.FC<ScenarioManagementPageProps> = ({
 
       {/* Content */}
       <div className="flex-1 p-6">
-        {selectedScenario ? (
-          /* Selected Scenario Detail View */
+        {selectedPipeline ? (
+          /* Selected Pipeline Detail View */
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
             {/* Scenario Header */}
             <div className="border-b border-gray-200 pb-6 mb-6">
@@ -181,15 +181,15 @@ const ScenarioManagementPage: React.FC<ScenarioManagementPageProps> = ({
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                       </svg>
                     </button>
-                    <h1 className="text-2xl font-bold text-gray-900">{selectedScenario.name}</h1>
+                    <h1 className="text-2xl font-bold text-gray-900">{selectedPipeline.name}</h1>
                   </div>
-                  <p className="text-gray-600 mb-4">{selectedScenario.description}</p>
+                  <p className="text-gray-600 mb-4">{selectedPipeline.description}</p>
                   <div className="flex items-center gap-4 text-sm text-gray-500">
-                    <span>{selectedScenario.stepCount}개 단계</span>
+                    <span>{selectedPipeline.stepCount}개 단계</span>
                     <span>•</span>
-                    <span>생성일: {new Date(selectedScenario.createdAt).toLocaleDateString()}</span>
+                    <span>생성일: {new Date(selectedPipeline.createdAt).toLocaleDateString()}</span>
                     <span>•</span>
-                    <span>수정일: {new Date(selectedScenario.updatedAt).toLocaleDateString()}</span>
+                    <span>수정일: {new Date(selectedPipeline.updatedAt).toLocaleDateString()}</span>
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -511,4 +511,4 @@ const ScenarioManagementPage: React.FC<ScenarioManagementPageProps> = ({
   );
 };
 
-export default ScenarioManagementPage;
+export default PipelineManagementPage;

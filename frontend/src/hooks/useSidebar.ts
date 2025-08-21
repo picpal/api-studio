@@ -226,31 +226,50 @@ export const useSidebar = () => {
 
   // 아이템 삭제
   const deleteItem = async (folderId: string, itemId: string) => {
-    console.log('🛠️ deleteItem function called with:', {
-      folderId,
-      itemId
-    });
+    console.log('🔥 deleteItem called with:', { folderId, itemId });
     
     try {
-      console.log('🛠️ Making API call to delete item with ID:', parseInt(itemId));
+      console.log('🔥 Calling itemApi.delete with itemId:', parseInt(itemId));
+      // API 호출로 백엔드에서 아이템 삭제
       await itemApi.delete(parseInt(itemId));
-      console.log('🛠️ API delete call successful!');
+      console.log('🔥 itemApi.delete completed successfully');
       
-      console.log('🛠️ Updating folders state...');
-      setFolders(prev => prev.map(folder => 
-        folder.id === folderId 
-          ? { ...folder, items: folder.items.filter(item => item.id !== itemId) }
-          : folder
-      ));
+      // 프론트엔드 상태 업데이트
+      setFolders(prev => {
+        console.log('🔥 Before state update - folders:', prev);
+        console.log('🔥 Looking for folderId:', folderId, 'itemId:', itemId);
+        
+        const targetFolder = prev.find(f => f.id === folderId);
+        console.log('🔥 Target folder found:', targetFolder);
+        if (targetFolder) {
+          console.log('🔥 Items in target folder before deletion:', targetFolder.items);
+          const itemExists = targetFolder.items.find(item => item.id === itemId);
+          console.log('🔥 Item to delete exists:', itemExists);
+        }
+        
+        const newFolders = prev.map(folder => 
+          folder.id === folderId 
+            ? { ...folder, items: folder.items.filter(item => item.id !== itemId) }
+            : folder
+        );
+        console.log('🔥 Updated folders after item deletion:', newFolders);
+        
+        const updatedTargetFolder = newFolders.find(f => f.id === folderId);
+        if (updatedTargetFolder) {
+          console.log('🔥 Items in target folder after deletion:', updatedTargetFolder.items);
+        }
+        
+        return newFolders;
+      });
       
       if (selectedItemId === itemId) {
-        console.log('🛠️ Clearing selected item ID');
         setSelectedItemId(null);
+        console.log('🔥 Cleared selectedItemId');
       }
-      console.log('🛠️ deleteItem completed successfully!');
+      
+      console.log('🔥 deleteItem completed successfully');
     } catch (error) {
-      console.error('❌ 아이템 삭제 중 오류:', error);
-      console.error('❌ Error details:', error.response?.data);
+      console.error('🔥 아이템 삭제 중 오류:', error);
       setError('아이템을 삭제하는 중 오류가 발생했습니다.');
     }
   };

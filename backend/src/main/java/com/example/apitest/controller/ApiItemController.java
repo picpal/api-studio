@@ -7,6 +7,7 @@ import com.example.apitest.entity.UserActivity;
 import com.example.apitest.repository.ApiItemRepository;
 import com.example.apitest.repository.ApiFolderRepository;
 import com.example.apitest.repository.ApiItemHistoryRepository;
+import com.example.apitest.repository.PipelineStepRepository;
 import com.example.apitest.service.ActivityLoggingService;
 import com.example.apitest.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -38,6 +39,9 @@ public class ApiItemController {
     
     @Autowired
     private ApiItemHistoryRepository historyRepository;
+    
+    @Autowired
+    private PipelineStepRepository pipelineStepRepository;
     
     @Autowired
     private ActivityLoggingService activityLoggingService;
@@ -217,13 +221,6 @@ public class ApiItemController {
     public ResponseEntity<Map<String, Object>> updateItem(@PathVariable Long id, @RequestBody Map<String, Object> itemDetails,
                                                          HttpSession session, HttpServletRequest request) {
         try {
-            System.err.println("=== UPDATE ITEM REQUEST START ===");
-            System.err.println("Item ID: " + id);
-            System.err.println("Request body keys: " + itemDetails.keySet());
-            System.err.println("Full itemDetails: " + itemDetails);
-            System.err.println("Parameters field: " + itemDetails.get("parameters"));
-            System.err.println("Parameters class: " + (itemDetails.get("parameters") != null ? itemDetails.get("parameters").getClass() : "null"));
-            
             User currentUser = getCurrentUser(session);
         return itemRepository.findById(id)
             .map(item -> {
@@ -317,30 +314,62 @@ public class ApiItemController {
     @DeleteMapping("/{id}")
     @Transactional(rollbackFor = Exception.class)
     public ResponseEntity<?> deleteItem(@PathVariable Long id, HttpSession session, HttpServletRequest request) {
+        System.out.println("🔥🔥 DELETE request received for item ID: " + id);
         try {
             User currentUser = getCurrentUser(session);
+            System.out.println("🔥🔥 Current user: " + (currentUser != null ? currentUser.getEmail() : "null"));
             
             return itemRepository.findById(id)
                 .map(item -> {
+                    System.out.println("🔥🔥 Item found for deletion: " + item.getName() + " (ID: " + item.getId() + ")");
                     String itemName = item.getName();
                     String folderName = getFolderName(item.getFolderId());
                     
-                    // 관련된 히스토리들을 먼저 삭제
-                    historyRepository.deleteByApiItemId(id);
-                    
-                    // 아이템 삭제
-                    itemRepository.deleteById(id);
-                    
-                    // API 아이템 삭제 로깅
-                    if (currentUser != null) {
-                        activityLoggingService.logItemDelete(currentUser, itemName, folderName,
-                            request.getRequestURI(), request.getMethod());
+                    try {
+                        // 1. 먼저 관련된 파이프라인 스텝들을 삭제 (외래키 제약조건을 해결)
+                        System.out.println("🔥🔥 Deleting pipeline steps for item ID: " + id);
+                        int deletedPipelineStepCount = pipelineStepRepository.deleteByApiItemId(id);
+                        System.out.println("🔥🔥 Pipeline steps deleted successfully: " + deletedPipelineStepCount + " records");
+                        
+                        // 2. 그 다음 관련된 히스토리들을 삭제 (외래키 제약조건을 해결)
+                        System.out.println("🔥🔥 Deleting history records for item ID: " + id);
+                        int deletedHistoryCount = historyRepository.deleteByApiItemId(id);
+                        System.out.println("🔥🔥 History records deleted successfully: " + deletedHistoryCount + " records");
+                        
+                        // 3. 그 다음 아이템 삭제 (커스텀 @Modifying 쿼리 사용)
+                        System.out.println("🔥🔥 Deleting item with ID: " + id);
+                        int deletedCount = itemRepository.deleteByIdCustom(id);
+                        System.out.println("🔥🔥 Item deleted successfully from database, count: " + deletedCount);
+                        
+                        if (deletedCount == 0) {
+                            System.err.println("🔥🔥 ERROR: No item was deleted from database!");
+                            throw new RuntimeException("Item deletion failed - no rows affected");
+                        }
+                        
+                        // API 아이템 삭제 로깅
+                        if (currentUser != null) {
+                            System.out.println("🔥🔥 Logging delete activity");
+                            activityLoggingService.logItemDelete(currentUser, itemName, folderName,
+                                request.getRequestURI(), request.getMethod());
+                            System.out.println("🔥🔥 Delete activity logged successfully");
+                        }
+                        
+                        System.out.println("🔥🔥 Returning success response");
+                        return ResponseEntity.ok().build();
+                    } catch (Exception innerException) {
+                        System.err.println("🔥🔥 Exception during deletion process: " + innerException.getMessage());
+                        innerException.printStackTrace();
+                        throw innerException;
                     }
-                    
-                    return ResponseEntity.ok().build();
                 })
-                .orElse(ResponseEntity.notFound().build());
+                .orElseGet(() -> {
+                    System.out.println("🔥🔥 Item not found with ID: " + id);
+                    return ResponseEntity.notFound().build();
+                });
         } catch (Exception e) {
+            System.err.println("🔥🔥 Exception in deleteItem: " + e.getMessage());
+            e.printStackTrace();
+            
             // 실패 로깅
             User currentUser = getCurrentUser(session);
             if (currentUser != null) {

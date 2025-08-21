@@ -1,17 +1,55 @@
-# 프로젝트 이름 (플레이스홀더)
+# API Test Automation Project
 
-이 프로젝트는 프론트엔드 애플리케이션과 백엔드 API로 구성되어 있습니다. 이 README는 개발 환경을 설정하고 애플리케이션의 두 부분을 실행하는 방법에 대한 지침을 제공합니다.
+QA 팀을 위한 API 테스트 자동화 도구입니다. 이 프로젝트는 React + TypeScript 프론트엔드와 Spring Boot 백엔드로 구성되어 있으며, API 테스트와 배치 실행 자동화 기능을 제공합니다.
 
 ## 목차
+- [프로젝트 기능](#프로젝트-기능)
+- [기술 스택](#기술-스택)
 - [사전 준비 사항](#사전-준비-사항)
-- [백엔드 설정 및 실행](#백엔드-설정-및-실행)
-  - [설정](#백엔드-설정)
-  - [실행](#백엔드-실행)
-- [프론트엔드 설정 및 실행](#프론트엔드-설정-및-실행)
-  - [설정](#프론트엔드-설정)
-  - [실행](#프론트엔드-실행)
+- [로컬 환경 구성 및 실행](#로컬-환경-구성-및-실행)
+  - [1. 저장소 클론](#1-저장소-클론)
+  - [2. 백엔드 설정 및 실행](#2-백엔드-설정-및-실행)
+  - [3. 프론트엔드 설정 및 실행](#3-프론트엔드-설정-및-실행)
+  - [4. 애플리케이션 접속](#4-애플리케이션-접속)
+- [데이터베이스](#데이터베이스)
 - [인증 방식](#인증-방식)
 - [Postman 컬렉션 사용 안내](#postman-컬렉션-사용-안내)
+
+## 프로젝트 기능
+
+### API Testing
+- **API 요청 관리**: HTTP 메소드별 API 요청 생성 및 관리
+- **폴더 구조**: API를 폴더별로 체계적 관리
+- **파라미터 관리**: Query Parameters, Headers, Request Body 설정
+- **응답 검증**: Response Validation을 통한 자동 테스트
+- **요청 히스토리**: API 요청 결과 저장 및 관리
+
+### Test Automation
+- **배치 실행**: 여러 API를 한번에 실행하는 자동화 기능
+- **실시간 진행상황**: 배치 실행 중 실시간 상태 모니터링
+- **테스트 리포팅**: 실행 결과 통계 및 성공률 분석
+- **Pipeline 관리**: 테스트 시나리오를 파이프라인으로 구성
+
+### 관리 기능
+- **사용자 인증**: 세션 기반 로그인/로그아웃
+- **권한 관리**: 폴더별 접근 권한 설정
+- **활동 로그**: 사용자 활동 추적 및 기록
+
+## 기술 스택
+
+### Frontend
+- **React 18** + **TypeScript**
+- **Tailwind CSS** - 스타일링
+- **Monaco Editor** - 코드 에디터 (JSON 구문 강조)
+- **Axios** - API 통신
+- **Vite** - 빌드 도구
+
+### Backend
+- **Spring Boot 3**
+- **JPA/Hibernate** - 데이터베이스 ORM
+- **H2 Database** - 개발용 인메모리 데이터베이스
+- **Spring Security** - 인증 및 보안
+- **Jackson** - JSON 처리
 
 ## 사전 준비 사항
 시작하기 전에 다음 소프트웨어가 시스템에 설치되어 있는지 확인하십시오:
@@ -22,48 +60,76 @@
     *   [Oracle JDK](https://www.oracle.com/java/technologies/downloads/)에서 다운로드하거나 [Adoptium Temurin](https://adoptium.net/)과 같은 OpenJDK 배포판을 사용할 수 있습니다.
 *   **Git**: 저장소를 클론하기 위해 필요합니다.
 
-## 백엔드 설정 및 실행
+## 로컬 환경 구성 및 실행
 
-백엔드는 Gradle로 빌드된 Spring Boot 애플리케이션입니다.
+### 1. 저장소 클론
+```bash
+git clone <repository-url>
+cd feature-test
+```
 
-### 백엔드 설정
-호환되는 JDK가 설치되어 있는 것 외에는 특별한 설정 단계가 필요하지 않습니다. 프로젝트는 Gradle Wrapper를 사용하므로 Gradle을 전역으로 설치할 필요가 없습니다.
+### 2. 백엔드 설정 및 실행
 
-### 백엔드 실행
-백엔드 서버를 시작하려면 `backend` 디렉토리로 이동하여 다음 명령어를 실행하십시오:
+백엔드는 Spring Boot 3 + Gradle로 구성된 애플리케이션입니다.
 
+#### 2-1. 백엔드 디렉토리로 이동
 ```bash
 cd backend
+```
+
+#### 2-2. 백엔드 실행
+```bash
+# Windows
+gradlew.bat bootRun
+
+# macOS/Linux  
 ./gradlew bootRun
 ```
-백엔드 서버는 일반적으로 `http://localhost:8080`에서 실행됩니다.
 
-## 프론트엔드 설정 및 실행
+백엔드 서버가 성공적으로 시작되면 `http://localhost:8080`에서 실행됩니다.
 
-프론트엔드는 Vite로 빌드되고 Tailwind CSS로 스타일링된 React 애플리케이션입니다.
+### 3. 프론트엔드 설정 및 실행
 
-### 프론트엔드 설정
-1.  `frontend` 디렉토리로 이동하십시오:
-    ```bash
-    cd frontend
-    ```
-2.  필요한 Node.js 의존성을 설치하십시오:
-    ```bash
-    npm install
-    # 또는 yarn을 사용하는 경우
-    # yarn install
-    ```
+프론트엔드는 React 18 + TypeScript + Vite로 구성된 애플리케이션입니다.
 
-### 프론트엔드 실행
-프론트엔드 개발 서버를 시작하려면 `frontend` 디렉토리로 이동하여 다음 명령어를 실행하십시오:
-
+#### 3-1. 프론트엔드 디렉토리로 이동 (새 터미널)
 ```bash
 cd frontend
-npm run dev
-# 또는 yarn을 사용하는 경우
-# yarn dev
 ```
-프론트엔드 애플리케이션은 일반적으로 `http://localhost:5173`에서 접근할 수 있습니다 (5173 포트가 사용 중인 경우 다른 포트).
+
+#### 3-2. 의존성 설치
+```bash
+npm install
+# 또는 yarn 사용 시
+# yarn install
+```
+
+#### 3-3. 개발 서버 실행
+```bash
+npm start
+# 또는 yarn 사용 시
+# yarn start
+```
+
+프론트엔드 애플리케이션이 성공적으로 시작되면 `http://localhost:3001`에서 접근할 수 있습니다.
+
+### 4. 애플리케이션 접속
+
+브라우저에서 `http://localhost:3001`로 접속하여 애플리케이션을 사용할 수 있습니다.
+
+**기본 로그인 정보:**
+- 이메일: `admin@blue.com`  
+- 비밀번호: `Admin!2024@Blue`
+
+## 데이터베이스
+
+이 프로젝트는 개발 편의성을 위해 H2 인메모리 데이터베이스를 사용합니다.
+
+**H2 Console 접속:**
+- URL: http://localhost:8080/h2-console
+- JDBC URL: `jdbc:h2:file:./data/testdb`
+- Username: `sa`
+- Password: (빈 값)
 
 ## 인증 방식
 
