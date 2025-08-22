@@ -10,8 +10,11 @@ import com.example.apitest.repository.PipelineStepRepository;
 import com.example.apitest.repository.ApiItemRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,14 +37,56 @@ public class PipelineController {
 
     // Folder Operations
     @GetMapping("/folders")
-    public ResponseEntity<List<PipelineFolder>> getAllFolders() {
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<PipelineFolderDTO>> getAllFolders() {
         System.out.println("PipelineController.getAllFolders() called!");
-        List<PipelineFolder> folders = pipelineFolderRepository.findAll().stream()
-            .filter(folder -> folder.getIsActive() != null && folder.getIsActive())
-            .collect(java.util.stream.Collectors.toList());
-        System.out.println("Found " + folders.size() + " folders in database");
-        System.out.println("Returning folders response");
-        return ResponseEntity.ok(folders);
+        try {
+            List<PipelineFolder> folders = pipelineFolderRepository.findAll().stream()
+                .filter(folder -> folder.getIsActive() != null && folder.getIsActive())
+                .collect(java.util.stream.Collectors.toList());
+            
+            System.out.println("Found " + folders.size() + " folders in database");
+            
+            List<PipelineFolderDTO> folderDTOs = new ArrayList<>();
+            
+            for (PipelineFolder folder : folders) {
+                PipelineFolderDTO dto = new PipelineFolderDTO();
+                dto.setId(folder.getId());
+                dto.setName(folder.getName());
+                dto.setDescription(folder.getDescription());
+                dto.setIsActive(folder.getIsActive());
+                dto.setCreatedAt(folder.getCreatedAt());
+                dto.setUpdatedAt(folder.getUpdatedAt());
+                
+                // 파이프라인 정보만 기본적인 정보로 로드
+                List<Pipeline> pipelines = pipelineRepository.findByIsActiveTrueAndFolderIdOrderByCreatedAtAsc(folder.getId());
+                List<PipelineDTO> pipelineDTOs = new ArrayList<>();
+                
+                for (Pipeline pipeline : pipelines) {
+                    PipelineDTO pipelineDTO = new PipelineDTO();
+                    pipelineDTO.setId(pipeline.getId());
+                    pipelineDTO.setName(pipeline.getName());
+                    pipelineDTO.setDescription(pipeline.getDescription());
+                    pipelineDTO.setFolderId(pipeline.getFolderId());
+                    pipelineDTO.setStepCount(0); // 스텝 개수는 필요시 별도 조회
+                    pipelineDTO.setCreatedAt(pipeline.getCreatedAt());
+                    pipelineDTO.setUpdatedAt(pipeline.getUpdatedAt());
+                    pipelineDTOs.add(pipelineDTO);
+                }
+                
+                dto.setPipelines(pipelineDTOs);
+                folderDTOs.add(dto);
+                
+                System.out.println("Folder " + folder.getName() + " has " + pipelines.size() + " pipelines");
+            }
+            
+            System.out.println("Returning folders response");
+            return ResponseEntity.ok(folderDTOs);
+        } catch (Exception e) {
+            System.err.println("Error in getAllFolders: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @PostMapping("/folders")
@@ -76,55 +121,33 @@ public class PipelineController {
     }
 
     // Pipeline Operations
-    // @TODO 사용하는곳이 없는데 왜 있을까?
     @GetMapping
     public ResponseEntity<List<Pipeline>> getAllPipelines() {
         List<Pipeline> pipelines = pipelineRepository.findByIsActiveTrueOrderByCreatedAtAsc();
         return ResponseEntity.ok(pipelines);
     }
 
-    @GetMapping("/folder/{folderId}")
-    public ResponseEntity<List<Pipeline>> getPipelinesByFolder(@PathVariable Long folderId) {
-        List<Pipeline> pipelines = pipelineRepository.findByIsActiveTrueAndFolderIdOrderByCreatedAtAsc(folderId);
-        return ResponseEntity.ok(pipelines);
-    }
-
-    // @TODO 여기도 사용하는 부분이 없는데 왜 선언된걸까
     @PostMapping
     public ResponseEntity<Pipeline> createPipeline(@RequestBody CreatePipelineRequest request) {
         Optional<PipelineFolder> folder = pipelineFolderRepository.findById(request.getFolderId());
         if (!folder.isPresent()) {
             return ResponseEntity.badRequest().build();
         }
-        
+
         Pipeline pipeline = new Pipeline();
         pipeline.setName(request.getName());
         pipeline.setDescription(request.getDescription());
-        pipeline.setFolderId(request.getFolderId());
+        pipeline.setFolder(folder.get());
         pipeline.setIsActive(true);
-        
+
         Pipeline savedPipeline = pipelineRepository.save(pipeline);
         return ResponseEntity.ok(savedPipeline);
     }
 
-    // Request DTO class
-    public static class CreatePipelineRequest {
-        private String name;
-        private String description;
-        private Long folderId;
-
-        // Constructors
-        public CreatePipelineRequest() {}
-
-        // Getters and Setters
-        public String getName() { return name; }
-        public void setName(String name) { this.name = name; }
-        
-        public String getDescription() { return description; }
-        public void setDescription(String description) { this.description = description; }
-        
-        public Long getFolderId() { return folderId; }
-        public void setFolderId(Long folderId) { this.folderId = folderId; }
+    @GetMapping("/folder/{folderId}")
+    public ResponseEntity<List<Pipeline>> getPipelinesByFolder(@PathVariable Long folderId) {
+        List<Pipeline> pipelines = pipelineRepository.findByIsActiveTrueAndFolderIdOrderByCreatedAtAsc(folderId);
+        return ResponseEntity.ok(pipelines);
     }
 
     @PutMapping("/{id}")
@@ -236,7 +259,26 @@ public class PipelineController {
         return ResponseEntity.ok(updatedSteps);
     }
 
-    // Request DTO classes for steps
+    // Request DTO classes
+    public static class CreatePipelineRequest {
+        private String name;
+        private String description;
+        private Long folderId;
+
+        // Constructors
+        public CreatePipelineRequest() {}
+
+        // Getters and Setters
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+        
+        public String getDescription() { return description; }
+        public void setDescription(String description) { this.description = description; }
+        
+        public Long getFolderId() { return folderId; }
+        public void setFolderId(Long folderId) { this.folderId = folderId; }
+    }
+
     public static class CreateStepRequest {
         private Long apiItemId;
         private String stepName;
@@ -263,5 +305,76 @@ public class PipelineController {
 
         public Integer getNewOrder() { return newOrder; }
         public void setNewOrder(Integer newOrder) { this.newOrder = newOrder; }
+    }
+
+    // DTO classes for API responses
+    public static class PipelineFolderDTO {
+        private Long id;
+        private String name;
+        private String description;
+        private List<PipelineDTO> pipelines;
+        private Boolean isActive;
+        private LocalDateTime createdAt;
+        private LocalDateTime updatedAt;
+
+        // Constructors
+        public PipelineFolderDTO() {}
+
+        // Getters and Setters
+        public Long getId() { return id; }
+        public void setId(Long id) { this.id = id; }
+        
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+        
+        public String getDescription() { return description; }
+        public void setDescription(String description) { this.description = description; }
+        
+        public List<PipelineDTO> getPipelines() { return pipelines; }
+        public void setPipelines(List<PipelineDTO> pipelines) { this.pipelines = pipelines; }
+        
+        public Boolean getIsActive() { return isActive; }
+        public void setIsActive(Boolean isActive) { this.isActive = isActive; }
+        
+        public LocalDateTime getCreatedAt() { return createdAt; }
+        public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+        
+        public LocalDateTime getUpdatedAt() { return updatedAt; }
+        public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    }
+
+    public static class PipelineDTO {
+        private Long id;
+        private String name;
+        private String description;
+        private Long folderId;
+        private Integer stepCount;
+        private LocalDateTime createdAt;
+        private LocalDateTime updatedAt;
+
+        // Constructors
+        public PipelineDTO() {}
+
+        // Getters and Setters
+        public Long getId() { return id; }
+        public void setId(Long id) { this.id = id; }
+        
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+        
+        public String getDescription() { return description; }
+        public void setDescription(String description) { this.description = description; }
+        
+        public Long getFolderId() { return folderId; }
+        public void setFolderId(Long folderId) { this.folderId = folderId; }
+        
+        public Integer getStepCount() { return stepCount; }
+        public void setStepCount(Integer stepCount) { this.stepCount = stepCount; }
+        
+        public LocalDateTime getCreatedAt() { return createdAt; }
+        public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+        
+        public LocalDateTime getUpdatedAt() { return updatedAt; }
+        public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     }
 }

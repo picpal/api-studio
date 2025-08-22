@@ -6,7 +6,7 @@ import PipelineSidebar from './pipeline/PipelineSidebar';
 import MainContent from './MainContent';
 import AdminPage from '../pages/AdminPage';
 import TestAutomationPage from '../pages/TestAutomationPage';
-import PipelineManagementPage from './PipelineManagementPage';
+import { PipelineManagementPage } from '../pages/pipeline';
 import { BaseUrl, ApiItem } from '../types/api';
 
 interface LayoutProps {

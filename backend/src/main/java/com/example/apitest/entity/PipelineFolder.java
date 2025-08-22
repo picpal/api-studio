@@ -2,6 +2,7 @@ package com.example.apitest.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Where;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -18,8 +19,9 @@ public class PipelineFolder {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "folder_id")
+    @Where(clause = "is_active = true")
     @JsonIgnore
     private List<Pipeline> pipelines;
 
