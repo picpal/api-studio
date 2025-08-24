@@ -240,4 +240,30 @@ public class AdminController {
         System.out.println("DEBUG: Returning " + response.size() + " folders to admin frontend");
         return ResponseEntity.ok(response);
     }
+    
+    // 임시 비밀번호 재설정 엔드포인트 (보안상 임시로만 사용)
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, String>> resetPassword(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String newPassword = request.get("password");
+        
+        if (email == null || newPassword == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "이메일과 비밀번호가 필요합니다."));
+        }
+        
+        try {
+            Optional<User> userOpt = userRepository.findByEmail(email);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            User user = userOpt.get();
+            user.setPasswordSafely(newPassword);
+            userRepository.save(user);
+            
+            return ResponseEntity.ok(Map.of("message", "비밀번호가 성공적으로 변경되었습니다."));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
 }

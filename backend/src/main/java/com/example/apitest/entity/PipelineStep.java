@@ -1,6 +1,7 @@
 package com.example.apitest.entity;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.LocalDateTime;
 
 @Entity
@@ -12,10 +13,12 @@ public class PipelineStep {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "pipeline_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Pipeline pipeline;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "api_item_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private ApiItem apiItem;
 
     @Column(name = "step_order", nullable = false)

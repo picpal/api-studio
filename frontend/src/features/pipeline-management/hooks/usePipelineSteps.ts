@@ -8,11 +8,13 @@ export const usePipelineSteps = (pipelineId?: number) => {
   const [error, setError] = useState<string | null>(null);
 
   const fetchSteps = async (id: number) => {
+    console.log('usePipelineSteps.fetchSteps: Starting to fetch steps for pipeline:', id);
     setLoading(true);
     setError(null);
     
     try {
       const data = await pipelineApi.fetchSteps(id);
+      console.log('usePipelineSteps.fetchSteps: Received steps data:', data);
       setSteps(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch steps');
@@ -25,12 +27,17 @@ export const usePipelineSteps = (pipelineId?: number) => {
   useEffect(() => {
     if (pipelineId) {
       fetchSteps(pipelineId);
+    } else {
+      setSteps([]);
     }
   }, [pipelineId]);
 
   const refetchSteps = () => {
+    console.log('usePipelineSteps.refetchSteps: Called for pipeline:', pipelineId);
     if (pipelineId) {
       fetchSteps(pipelineId);
+    } else {
+      console.log('usePipelineSteps.refetchSteps: No pipelineId available');
     }
   };
 

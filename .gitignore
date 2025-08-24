@@ -25,12 +25,24 @@ node_modules/
 *.db
 *.mv.db
 *.trace.db
+**/data/
+
+# Log files
+*.log
+logs/
 
 # Temporary files
 *.tmp
 *.temp
 cookies*.txt
-*.log
+*.probe
+
+# Lock files
+*.lock
+**/checksums/
+**/dependencies-accessors/
+**/executionHistory/
+**/fileHashes/
 
 # Test files
 test_*.json
@@ -55,6 +67,17 @@ gradle-app.setting
 !gradle-wrapper.properties
 !gradle/wrapper/gradle-wrapper.jar
 !gradle/wrapper/gradle-wrapper.properties
+
+# Gradle build outputs
+**/build/
+.gradle
+build/
+out/
+bin/
+
+# Gradle lock files
+gradle.lockfile
+**/gradle.lockfile
 
 # Frontend specific
 /frontend/build/

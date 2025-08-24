@@ -4,10 +4,13 @@ import com.example.apitest.entity.Pipeline;
 import com.example.apitest.entity.PipelineFolder;
 import com.example.apitest.entity.PipelineStep;
 import com.example.apitest.entity.ApiItem;
+import com.example.apitest.entity.PipelineExecution;
+import com.example.apitest.entity.StepExecution;
 import com.example.apitest.repository.PipelineFolderRepository;
 import com.example.apitest.repository.PipelineRepository;
 import com.example.apitest.repository.PipelineStepRepository;
 import com.example.apitest.repository.ApiItemRepository;
+import com.example.apitest.service.PipelineExecutionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +37,9 @@ public class PipelineController {
 
     @Autowired
     private ApiItemRepository apiItemRepository;
+
+    @Autowired
+    private PipelineExecutionService pipelineExecutionService;
 
     // Folder Operations
     @GetMapping("/folders")
@@ -68,7 +74,9 @@ public class PipelineController {
                     pipelineDTO.setName(pipeline.getName());
                     pipelineDTO.setDescription(pipeline.getDescription());
                     pipelineDTO.setFolderId(pipeline.getFolderId());
-                    pipelineDTO.setStepCount(0); // 스텝 개수는 필요시 별도 조회
+                    // 실제 단계 개수 조회
+                    List<PipelineStep> pipelineSteps = pipelineStepRepository.findByIsActiveTrueAndPipelineIdOrderByStepOrderAsc(pipeline.getId());
+                    pipelineDTO.setStepCount(pipelineSteps.size());
                     pipelineDTO.setCreatedAt(pipeline.getCreatedAt());
                     pipelineDTO.setUpdatedAt(pipeline.getUpdatedAt());
                     pipelineDTOs.add(pipelineDTO);
@@ -151,17 +159,30 @@ public class PipelineController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Pipeline> updatePipeline(@PathVariable Long id, @RequestBody Pipeline pipeline) {
-        Optional<Pipeline> existingPipeline = pipelineRepository.findById(id);
-        if (existingPipeline.isPresent()) {
+    @Transactional
+    public ResponseEntity<Pipeline> updatePipeline(@PathVariable Long id, @RequestBody UpdatePipelineRequest request) {
+        System.out.println("PipelineController.updatePipeline() called for pipeline: " + id);
+        System.out.println("Request data: name=" + request.getName() + ", description=" + request.getDescription());
+        
+        try {
+            Optional<Pipeline> existingPipeline = pipelineRepository.findById(id);
+            if (!existingPipeline.isPresent()) {
+                System.out.println("Pipeline not found: " + id);
+                return ResponseEntity.notFound().build();
+            }
+            
             Pipeline updatedPipeline = existingPipeline.get();
-            updatedPipeline.setName(pipeline.getName());
-            updatedPipeline.setDescription(pipeline.getDescription());
-            updatedPipeline.setFolder(pipeline.getFolder());
+            updatedPipeline.setName(request.getName());
+            updatedPipeline.setDescription(request.getDescription());
             Pipeline savedPipeline = pipelineRepository.save(updatedPipeline);
+            
+            System.out.println("Pipeline updated successfully with ID: " + savedPipeline.getId());
             return ResponseEntity.ok(savedPipeline);
+        } catch (Exception e) {
+            System.err.println("Error in updatePipeline: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
         }
-        return ResponseEntity.notFound().build();
     }
 
     @DeleteMapping("/{id}")
@@ -178,37 +199,119 @@ public class PipelineController {
 
     // Step Operations
     @GetMapping("/{pipelineId}/steps")
-    public ResponseEntity<List<PipelineStep>> getStepsByPipeline(@PathVariable Long pipelineId) {
-        List<PipelineStep> steps = pipelineStepRepository.findByIsActiveTrueAndPipelineIdOrderByStepOrderAsc(pipelineId);
-        return ResponseEntity.ok(steps);
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<PipelineStepDTO>> getStepsByPipeline(@PathVariable Long pipelineId) {
+        System.out.println("PipelineController.getStepsByPipeline() called for pipeline: " + pipelineId);
+        try {
+            List<PipelineStep> steps = pipelineStepRepository.findByIsActiveTrueAndPipelineIdOrderByStepOrderAsc(pipelineId);
+            System.out.println("Found " + steps.size() + " steps for pipeline " + pipelineId);
+            
+            List<PipelineStepDTO> stepDTOs = new ArrayList<>();
+            for (PipelineStep step : steps) {
+                PipelineStepDTO dto = new PipelineStepDTO();
+                dto.setId(step.getId());
+                dto.setStepOrder(step.getStepOrder());
+                dto.setStepName(step.getStepName());
+                dto.setDescription(step.getDescription());
+                dto.setCreatedAt(step.getCreatedAt());
+                dto.setUpdatedAt(step.getUpdatedAt());
+                
+                // ApiItem 정보 설정
+                if (step.getApiItem() != null) {
+                    ApiItem apiItem = step.getApiItem();
+                    ApiItemDTO apiItemDTO = new ApiItemDTO();
+                    apiItemDTO.setId(apiItem.getId());
+                    apiItemDTO.setName(apiItem.getName());
+                    apiItemDTO.setMethod(apiItem.getMethod().toString());
+                    apiItemDTO.setUrl(apiItem.getUrl());
+                    apiItemDTO.setDescription(apiItem.getDescription());
+                    dto.setApiItem(apiItemDTO);
+                    System.out.println("Step " + step.getId() + " has ApiItem: " + apiItem.getName());
+                }
+                
+                stepDTOs.add(dto);
+            }
+            
+            System.out.println("Returning " + stepDTOs.size() + " step DTOs");
+            return ResponseEntity.ok(stepDTOs);
+        } catch (Exception e) {
+            System.err.println("Error fetching steps for pipeline " + pipelineId + ": " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @PostMapping("/{pipelineId}/steps")
-    public ResponseEntity<PipelineStep> addStep(@PathVariable Long pipelineId, @RequestBody CreateStepRequest request) {
-        Optional<Pipeline> pipeline = pipelineRepository.findById(pipelineId);
-        if (!pipeline.isPresent()) {
-            return ResponseEntity.badRequest().build();
+    @Transactional
+    public ResponseEntity<PipelineStepDTO> addStep(@PathVariable Long pipelineId, @RequestBody CreateStepRequest request) {
+        System.out.println("PipelineController.addStep() called for pipeline: " + pipelineId);
+        System.out.println("Request data: apiItemId=" + request.getApiItemId() + ", stepName=" + request.getStepName() + ", description=" + request.getDescription());
+        
+        try {
+            Optional<Pipeline> pipeline = pipelineRepository.findById(pipelineId);
+            if (!pipeline.isPresent()) {
+                System.out.println("Pipeline not found: " + pipelineId);
+                return ResponseEntity.badRequest().build();
+            }
+
+            Optional<ApiItem> apiItem = apiItemRepository.findById(request.getApiItemId());
+            if (!apiItem.isPresent()) {
+                System.out.println("ApiItem not found: " + request.getApiItemId());
+                return ResponseEntity.badRequest().build();
+            }
+
+            // Get the next step order
+            List<PipelineStep> existingSteps = pipelineStepRepository.findByIsActiveTrueAndPipelineIdOrderByStepOrderAsc(pipelineId);
+            int nextOrder = existingSteps.size() + 1;
+            System.out.println("Next step order will be: " + nextOrder);
+
+            PipelineStep step = new PipelineStep();
+            step.setPipeline(pipeline.get());
+            step.setApiItem(apiItem.get());
+            step.setStepOrder(nextOrder);
+            step.setStepName(request.getStepName());
+            step.setDescription(request.getDescription());
+            step.setDataExtractions(request.getDataExtractions());
+            step.setDataInjections(request.getDataInjections());
+            step.setExecutionCondition(request.getExecutionCondition());
+            step.setDelayAfter(request.getDelayAfter());
+            step.setIsActive(true);
+
+            PipelineStep savedStep = pipelineStepRepository.save(step);
+            System.out.println("Step saved successfully with ID: " + savedStep.getId());
+            
+            // Convert to DTO to avoid lazy loading issues
+            PipelineStepDTO dto = new PipelineStepDTO();
+            dto.setId(savedStep.getId());
+            dto.setStepOrder(savedStep.getStepOrder());
+            dto.setStepName(savedStep.getStepName());
+            dto.setDescription(savedStep.getDescription());
+            dto.setDataExtractions(savedStep.getDataExtractions());
+            dto.setDataInjections(savedStep.getDataInjections());
+            dto.setExecutionCondition(savedStep.getExecutionCondition());
+            dto.setDelayAfter(savedStep.getDelayAfter());
+            dto.setIsActive(savedStep.getIsActive());
+            dto.setCreatedAt(savedStep.getCreatedAt());
+            dto.setUpdatedAt(savedStep.getUpdatedAt());
+            
+            // Set ApiItem DTO
+            if (savedStep.getApiItem() != null) {
+                ApiItem stepApiItem = savedStep.getApiItem();
+                ApiItemDTO apiItemDTO = new ApiItemDTO();
+                apiItemDTO.setId(stepApiItem.getId());
+                apiItemDTO.setName(stepApiItem.getName());
+                apiItemDTO.setMethod(stepApiItem.getMethod().toString());
+                apiItemDTO.setUrl(stepApiItem.getUrl());
+                apiItemDTO.setDescription(stepApiItem.getDescription());
+                dto.setApiItem(apiItemDTO);
+            }
+            
+            return ResponseEntity.ok(dto);
+        } catch (Exception e) {
+            System.err.println("Error creating step: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
         }
-
-        Optional<ApiItem> apiItem = apiItemRepository.findById(request.getApiItemId());
-        if (!apiItem.isPresent()) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        // Get the next step order
-        List<PipelineStep> existingSteps = pipelineStepRepository.findByIsActiveTrueAndPipelineIdOrderByStepOrderAsc(pipelineId);
-        int nextOrder = existingSteps.size() + 1;
-
-        PipelineStep step = new PipelineStep();
-        step.setPipeline(pipeline.get());
-        step.setApiItem(apiItem.get());
-        step.setStepOrder(nextOrder);
-        step.setStepName(request.getStepName());
-        step.setDescription(request.getDescription());
-        step.setIsActive(true);
-
-        PipelineStep savedStep = pipelineStepRepository.save(step);
-        return ResponseEntity.ok(savedStep);
     }
 
     @DeleteMapping("/steps/{stepId}")
@@ -221,6 +324,76 @@ public class PipelineController {
             return ResponseEntity.ok().build();
         }
         return ResponseEntity.notFound().build();
+    }
+
+    @PutMapping("/steps/{stepId}")
+    @Transactional
+    public ResponseEntity<PipelineStepDTO> updateStep(@PathVariable Long stepId, @RequestBody CreateStepRequest request) {
+        System.out.println("PipelineController.updateStep() called for step: " + stepId);
+        System.out.println("Request data: apiItemId=" + request.getApiItemId() + ", stepName=" + request.getStepName() + ", description=" + request.getDescription());
+        
+        try {
+            Optional<PipelineStep> stepOptional = pipelineStepRepository.findById(stepId);
+            if (!stepOptional.isPresent()) {
+                System.out.println("Step not found: " + stepId);
+                return ResponseEntity.notFound().build();
+            }
+
+            PipelineStep step = stepOptional.get();
+
+            // API 아이템이 변경된 경우에만 확인
+            if (!step.getApiItem().getId().equals(request.getApiItemId())) {
+                Optional<ApiItem> apiItem = apiItemRepository.findById(request.getApiItemId());
+                if (!apiItem.isPresent()) {
+                    System.out.println("ApiItem not found: " + request.getApiItemId());
+                    return ResponseEntity.badRequest().build();
+                }
+                step.setApiItem(apiItem.get());
+            }
+
+            // 업데이트 가능한 필드들
+            step.setStepName(request.getStepName());
+            step.setDescription(request.getDescription());
+            step.setDataExtractions(request.getDataExtractions());
+            step.setDataInjections(request.getDataInjections());
+            step.setExecutionCondition(request.getExecutionCondition());
+            step.setDelayAfter(request.getDelayAfter());
+
+            PipelineStep updatedStep = pipelineStepRepository.save(step);
+            System.out.println("Step updated successfully with ID: " + updatedStep.getId());
+            
+            // Convert to DTO
+            PipelineStepDTO dto = new PipelineStepDTO();
+            dto.setId(updatedStep.getId());
+            dto.setStepOrder(updatedStep.getStepOrder());
+            dto.setStepName(updatedStep.getStepName());
+            dto.setDescription(updatedStep.getDescription());
+            dto.setDataExtractions(updatedStep.getDataExtractions());
+            dto.setDataInjections(updatedStep.getDataInjections());
+            dto.setExecutionCondition(updatedStep.getExecutionCondition());
+            dto.setDelayAfter(updatedStep.getDelayAfter());
+            dto.setIsActive(updatedStep.getIsActive());
+            dto.setCreatedAt(updatedStep.getCreatedAt());
+            dto.setUpdatedAt(updatedStep.getUpdatedAt());
+            
+            // Set ApiItem DTO
+            if (updatedStep.getApiItem() != null) {
+                ApiItem stepApiItem = updatedStep.getApiItem();
+                ApiItemDTO apiItemDTO = new ApiItemDTO();
+                apiItemDTO.setId(stepApiItem.getId());
+                apiItemDTO.setName(stepApiItem.getName());
+                apiItemDTO.setMethod(stepApiItem.getMethod().toString());
+                apiItemDTO.setUrl(stepApiItem.getUrl());
+                apiItemDTO.setDescription(stepApiItem.getDescription());
+                dto.setApiItem(apiItemDTO);
+            }
+            
+            return ResponseEntity.ok(dto);
+        } catch (Exception e) {
+            System.err.println("Error in updateStep: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @PutMapping("/steps/{stepId}/order")
@@ -259,6 +432,117 @@ public class PipelineController {
         return ResponseEntity.ok(updatedSteps);
     }
 
+    // Pipeline Execution Operations
+    @PostMapping("/{pipelineId}/execute")
+    public ResponseEntity<PipelineExecutionDTO> executePipeline(@PathVariable Long pipelineId) {
+        System.out.println("PipelineController.executePipeline() called for pipeline: " + pipelineId);
+        try {
+            PipelineExecution execution = pipelineExecutionService.startExecution(pipelineId);
+            PipelineExecutionDTO dto = convertToPipelineExecutionDTO(execution);
+            return ResponseEntity.ok(dto);
+        } catch (Exception e) {
+            System.err.println("Error starting pipeline execution: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/executions/{executionId}")
+    public ResponseEntity<PipelineExecutionDTO> getExecutionStatus(@PathVariable Long executionId) {
+        try {
+            PipelineExecution execution = pipelineExecutionService.getExecutionStatus(executionId);
+            PipelineExecutionDTO dto = convertToPipelineExecutionDTO(execution);
+            return ResponseEntity.ok(dto);
+        } catch (Exception e) {
+            System.err.println("Error getting execution status: " + e.getMessage());
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/executions/{executionId}/steps")
+    public ResponseEntity<List<StepExecutionDTO>> getExecutionSteps(@PathVariable Long executionId) {
+        try {
+            List<StepExecution> stepExecutions = pipelineExecutionService.getStepExecutions(executionId);
+            List<StepExecutionDTO> dtos = stepExecutions.stream()
+                    .map(this::convertToStepExecutionDTO)
+                    .collect(java.util.stream.Collectors.toList());
+            return ResponseEntity.ok(dtos);
+        } catch (Exception e) {
+            System.err.println("Error getting execution steps: " + e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/{pipelineId}/executions")
+    public ResponseEntity<List<PipelineExecutionDTO>> getExecutionHistory(@PathVariable Long pipelineId) {
+        try {
+            List<PipelineExecution> executions = pipelineExecutionService.getExecutionHistory(pipelineId);
+            List<PipelineExecutionDTO> dtos = executions.stream()
+                    .map(this::convertToPipelineExecutionDTO)
+                    .collect(java.util.stream.Collectors.toList());
+            return ResponseEntity.ok(dtos);
+        } catch (Exception e) {
+            System.err.println("Error getting execution history: " + e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    // Helper methods for DTO conversion
+    private PipelineExecutionDTO convertToPipelineExecutionDTO(PipelineExecution execution) {
+        PipelineExecutionDTO dto = new PipelineExecutionDTO();
+        dto.setId(execution.getId());
+        dto.setStatus(execution.getStatus().toString());
+        dto.setStartedAt(execution.getStartedAt());
+        dto.setCompletedAt(execution.getCompletedAt());
+        dto.setErrorMessage(execution.getErrorMessage());
+        dto.setTotalSteps(execution.getTotalSteps());
+        dto.setCompletedSteps(execution.getCompletedSteps());
+        dto.setSuccessfulSteps(execution.getSuccessfulSteps());
+        dto.setFailedSteps(execution.getFailedSteps());
+        dto.setSessionCookies(execution.getSessionCookies());
+        
+        if (execution.getPipeline() != null) {
+            dto.setPipelineId(execution.getPipeline().getId());
+            dto.setPipelineName(execution.getPipeline().getName());
+        }
+        
+        return dto;
+    }
+
+    private StepExecutionDTO convertToStepExecutionDTO(StepExecution stepExecution) {
+        StepExecutionDTO dto = new StepExecutionDTO();
+        dto.setId(stepExecution.getId());
+        dto.setStepOrder(stepExecution.getStepOrder());
+        dto.setStatus(stepExecution.getStatus().toString());
+        dto.setStartedAt(stepExecution.getStartedAt());
+        dto.setCompletedAt(stepExecution.getCompletedAt());
+        dto.setHttpStatus(stepExecution.getHttpStatus());
+        dto.setResponseTime(stepExecution.getResponseTime());
+        dto.setErrorMessage(stepExecution.getErrorMessage());
+        dto.setRequestData(stepExecution.getRequestData());
+        dto.setResponseData(stepExecution.getResponseData());
+        dto.setExtractedData(stepExecution.getExtractedData());
+        
+        if (stepExecution.getPipelineStep() != null) {
+            PipelineStep step = stepExecution.getPipelineStep();
+            dto.setStepName(step.getStepName());
+            dto.setStepDescription(step.getDescription());
+            
+            if (step.getApiItem() != null) {
+                ApiItem apiItem = step.getApiItem();
+                ApiItemDTO apiItemDTO = new ApiItemDTO();
+                apiItemDTO.setId(apiItem.getId());
+                apiItemDTO.setName(apiItem.getName());
+                apiItemDTO.setMethod(apiItem.getMethod().toString());
+                apiItemDTO.setUrl(apiItem.getUrl());
+                apiItemDTO.setDescription(apiItem.getDescription());
+                dto.setApiItem(apiItemDTO);
+            }
+        }
+        
+        return dto;
+    }
+
     // Request DTO classes
     public static class CreatePipelineRequest {
         private String name;
@@ -283,6 +567,10 @@ public class PipelineController {
         private Long apiItemId;
         private String stepName;
         private String description;
+        private String dataExtractions;
+        private String dataInjections;
+        private String executionCondition;
+        private Integer delayAfter;
 
         // Constructors
         public CreateStepRequest() {}
@@ -296,6 +584,18 @@ public class PipelineController {
         
         public String getDescription() { return description; }
         public void setDescription(String description) { this.description = description; }
+        
+        public String getDataExtractions() { return dataExtractions; }
+        public void setDataExtractions(String dataExtractions) { this.dataExtractions = dataExtractions; }
+        
+        public String getDataInjections() { return dataInjections; }
+        public void setDataInjections(String dataInjections) { this.dataInjections = dataInjections; }
+        
+        public String getExecutionCondition() { return executionCondition; }
+        public void setExecutionCondition(String executionCondition) { this.executionCondition = executionCondition; }
+        
+        public Integer getDelayAfter() { return delayAfter; }
+        public void setDelayAfter(Integer delayAfter) { this.delayAfter = delayAfter; }
     }
 
     public static class UpdateStepOrderRequest {
@@ -305,6 +605,21 @@ public class PipelineController {
 
         public Integer getNewOrder() { return newOrder; }
         public void setNewOrder(Integer newOrder) { this.newOrder = newOrder; }
+    }
+
+    public static class UpdatePipelineRequest {
+        private String name;
+        private String description;
+
+        // Constructors
+        public UpdatePipelineRequest() {}
+
+        // Getters and Setters
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+        
+        public String getDescription() { return description; }
+        public void setDescription(String description) { this.description = description; }
     }
 
     // DTO classes for API responses
@@ -376,5 +691,207 @@ public class PipelineController {
         
         public LocalDateTime getUpdatedAt() { return updatedAt; }
         public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    }
+
+    // PipelineStep DTO classes
+    public static class PipelineStepDTO {
+        private Long id;
+        private Integer stepOrder;
+        private String stepName;
+        private String description;
+        private String dataExtractions;
+        private String dataInjections;
+        private String executionCondition;
+        private Integer delayAfter;
+        private Boolean isActive;
+        private ApiItemDTO apiItem;
+        private LocalDateTime createdAt;
+        private LocalDateTime updatedAt;
+
+        // Constructors
+        public PipelineStepDTO() {}
+
+        // Getters and Setters
+        public Long getId() { return id; }
+        public void setId(Long id) { this.id = id; }
+
+        public Integer getStepOrder() { return stepOrder; }
+        public void setStepOrder(Integer stepOrder) { this.stepOrder = stepOrder; }
+
+        public String getStepName() { return stepName; }
+        public void setStepName(String stepName) { this.stepName = stepName; }
+
+        public String getDescription() { return description; }
+        public void setDescription(String description) { this.description = description; }
+        
+        public String getDataExtractions() { return dataExtractions; }
+        public void setDataExtractions(String dataExtractions) { this.dataExtractions = dataExtractions; }
+        
+        public String getDataInjections() { return dataInjections; }
+        public void setDataInjections(String dataInjections) { this.dataInjections = dataInjections; }
+        
+        public String getExecutionCondition() { return executionCondition; }
+        public void setExecutionCondition(String executionCondition) { this.executionCondition = executionCondition; }
+        
+        public Integer getDelayAfter() { return delayAfter; }
+        public void setDelayAfter(Integer delayAfter) { this.delayAfter = delayAfter; }
+        
+        public Boolean getIsActive() { return isActive; }
+        public void setIsActive(Boolean isActive) { this.isActive = isActive; }
+
+        public ApiItemDTO getApiItem() { return apiItem; }
+        public void setApiItem(ApiItemDTO apiItem) { this.apiItem = apiItem; }
+
+        public LocalDateTime getCreatedAt() { return createdAt; }
+        public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+        public LocalDateTime getUpdatedAt() { return updatedAt; }
+        public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    }
+
+    public static class ApiItemDTO {
+        private Long id;
+        private String name;
+        private String method;
+        private String url;
+        private String description;
+
+        // Constructors
+        public ApiItemDTO() {}
+
+        // Getters and Setters
+        public Long getId() { return id; }
+        public void setId(Long id) { this.id = id; }
+
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+
+        public String getMethod() { return method; }
+        public void setMethod(String method) { this.method = method; }
+
+        public String getUrl() { return url; }
+        public void setUrl(String url) { this.url = url; }
+
+        public String getDescription() { return description; }
+        public void setDescription(String description) { this.description = description; }
+    }
+
+    // Pipeline Execution DTO classes
+    public static class PipelineExecutionDTO {
+        private Long id;
+        private Long pipelineId;
+        private String pipelineName;
+        private String status;
+        private LocalDateTime startedAt;
+        private LocalDateTime completedAt;
+        private String errorMessage;
+        private Integer totalSteps;
+        private Integer completedSteps;
+        private Integer successfulSteps;
+        private Integer failedSteps;
+        private String sessionCookies;
+
+        // Constructors
+        public PipelineExecutionDTO() {}
+
+        // Getters and Setters
+        public Long getId() { return id; }
+        public void setId(Long id) { this.id = id; }
+
+        public Long getPipelineId() { return pipelineId; }
+        public void setPipelineId(Long pipelineId) { this.pipelineId = pipelineId; }
+
+        public String getPipelineName() { return pipelineName; }
+        public void setPipelineName(String pipelineName) { this.pipelineName = pipelineName; }
+
+        public String getStatus() { return status; }
+        public void setStatus(String status) { this.status = status; }
+
+        public LocalDateTime getStartedAt() { return startedAt; }
+        public void setStartedAt(LocalDateTime startedAt) { this.startedAt = startedAt; }
+
+        public LocalDateTime getCompletedAt() { return completedAt; }
+        public void setCompletedAt(LocalDateTime completedAt) { this.completedAt = completedAt; }
+
+        public String getErrorMessage() { return errorMessage; }
+        public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
+
+        public Integer getTotalSteps() { return totalSteps; }
+        public void setTotalSteps(Integer totalSteps) { this.totalSteps = totalSteps; }
+
+        public Integer getCompletedSteps() { return completedSteps; }
+        public void setCompletedSteps(Integer completedSteps) { this.completedSteps = completedSteps; }
+
+        public Integer getSuccessfulSteps() { return successfulSteps; }
+        public void setSuccessfulSteps(Integer successfulSteps) { this.successfulSteps = successfulSteps; }
+
+        public Integer getFailedSteps() { return failedSteps; }
+        public void setFailedSteps(Integer failedSteps) { this.failedSteps = failedSteps; }
+
+        public String getSessionCookies() { return sessionCookies; }
+        public void setSessionCookies(String sessionCookies) { this.sessionCookies = sessionCookies; }
+    }
+
+    public static class StepExecutionDTO {
+        private Long id;
+        private Integer stepOrder;
+        private String stepName;
+        private String stepDescription;
+        private String status;
+        private LocalDateTime startedAt;
+        private LocalDateTime completedAt;
+        private Integer httpStatus;
+        private Long responseTime;
+        private String errorMessage;
+        private String requestData;
+        private String responseData;
+        private String extractedData;
+        private ApiItemDTO apiItem;
+
+        // Constructors
+        public StepExecutionDTO() {}
+
+        // Getters and Setters
+        public Long getId() { return id; }
+        public void setId(Long id) { this.id = id; }
+
+        public Integer getStepOrder() { return stepOrder; }
+        public void setStepOrder(Integer stepOrder) { this.stepOrder = stepOrder; }
+
+        public String getStepName() { return stepName; }
+        public void setStepName(String stepName) { this.stepName = stepName; }
+
+        public String getStepDescription() { return stepDescription; }
+        public void setStepDescription(String stepDescription) { this.stepDescription = stepDescription; }
+
+        public String getStatus() { return status; }
+        public void setStatus(String status) { this.status = status; }
+
+        public LocalDateTime getStartedAt() { return startedAt; }
+        public void setStartedAt(LocalDateTime startedAt) { this.startedAt = startedAt; }
+
+        public LocalDateTime getCompletedAt() { return completedAt; }
+        public void setCompletedAt(LocalDateTime completedAt) { this.completedAt = completedAt; }
+
+        public Integer getHttpStatus() { return httpStatus; }
+        public void setHttpStatus(Integer httpStatus) { this.httpStatus = httpStatus; }
+
+        public Long getResponseTime() { return responseTime; }
+        public void setResponseTime(Long responseTime) { this.responseTime = responseTime; }
+
+        public String getErrorMessage() { return errorMessage; }
+        public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
+
+        public String getRequestData() { return requestData; }
+        public void setRequestData(String requestData) { this.requestData = requestData; }
+
+        public String getResponseData() { return responseData; }
+        public void setResponseData(String responseData) { this.responseData = responseData; }
+
+        public String getExtractedData() { return extractedData; }
+        public void setExtractedData(String extractedData) { this.extractedData = extractedData; }
+
+        public ApiItemDTO getApiItem() { return apiItem; }
+        public void setApiItem(ApiItemDTO apiItem) { this.apiItem = apiItem; }
     }
 }

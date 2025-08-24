@@ -63,7 +63,44 @@ export const StepsList: React.FC<StepsListProps> = ({ steps, onDeleteStep, loadi
             </div>
           </div>
           
-          {step.stepOrder > 1 && (
+          {/* 데이터 전달 정보 표시 */}
+          {(step.dataExtractions || step.dataInjections || step.delayAfter) && (
+            <div className="ml-11 mt-2 space-y-1">
+              {step.dataExtractions && step.dataExtractions !== '{}' && (
+                <div className="text-xs bg-green-50 text-green-700 rounded px-2 py-1 border border-green-200">
+                  <span className="font-medium">📤 데이터 추출:</span> {
+                    (() => {
+                      try {
+                        return Object.keys(JSON.parse(step.dataExtractions)).join(', ');
+                      } catch {
+                        return '설정됨';
+                      }
+                    })()
+                  }
+                </div>
+              )}
+              {step.dataInjections && step.dataInjections !== '{}' && (
+                <div className="text-xs bg-blue-50 text-blue-700 rounded px-2 py-1 border border-blue-200">
+                  <span className="font-medium">📥 데이터 사용:</span> {
+                    (() => {
+                      try {
+                        return Object.keys(JSON.parse(step.dataInjections)).join(', ');
+                      } catch {
+                        return '설정됨';
+                      }
+                    })()
+                  }
+                </div>
+              )}
+              {step.delayAfter && (
+                <div className="text-xs bg-yellow-50 text-yellow-700 rounded px-2 py-1 border border-yellow-200">
+                  <span className="font-medium">⏱️ 대기시간:</span> {step.delayAfter}ms
+                </div>
+              )}
+            </div>
+          )}
+          
+          {step.stepOrder > 1 && !step.dataExtractions && !step.dataInjections && (
             <div className="ml-11 text-xs text-gray-500 bg-gray-50 rounded px-2 py-1">
               이전 단계에서 추출된 데이터를 사용할 수 있습니다
             </div>

@@ -1,41 +1,86 @@
 import React, { useState, useEffect } from 'react';
-import { ApiItem } from '@/entities/pipeline';
+import { PipelineStep, ApiItem, CreateStepRequest } from '@/entities/pipeline';
 import { VariableBuilder } from '../VariableBuilder';
 
-interface AddStepModalProps {
+interface EditStepModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddStep: (stepData: { 
-    apiItemId: number; 
-    stepName: string; 
-    description: string;
-    dataExtractions?: string;
-    dataInjections?: string;
-    delayAfter?: number;
-  }) => Promise<void>;
+  onUpdateStep: (stepId: number, stepData: Partial<CreateStepRequest>) => Promise<void>;
+  step: PipelineStep | null;
   apiItems: ApiItem[];
   loading?: boolean;
-  stepCount?: number;
+  totalSteps?: number;
 }
 
-export const AddStepModal: React.FC<AddStepModalProps> = ({
+interface VariableRule {
+  id: string;
+  variableName: string;
+  jsonPath: string;
+}
+
+export const EditStepModal: React.FC<EditStepModalProps> = ({
   isOpen,
   onClose,
-  onAddStep,
+  onUpdateStep,
+  step,
   apiItems,
   loading,
-  stepCount
+  totalSteps
 }) => {
   const [selectedApiItem, setSelectedApiItem] = useState<number | null>(null);
   const [stepName, setStepName] = useState('');
   const [stepDescription, setStepDescription] = useState('');
   const [apiSearchTerm, setApiSearchTerm] = useState('');
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
-  const [dataExtractions, setDataExtractions] = useState('{}');
-  const [dataInjections, setDataInjections] = useState('{}');
+  const [extractionRules, setExtractionRules] = useState<VariableRule[]>([]);
+  const [injectionRules, setInjectionRules] = useState<VariableRule[]>([]);
   const [delayAfter, setDelayAfter] = useState<number | undefined>(undefined);
-  const [extractionRules, setExtractionRules] = useState<any[]>([]);
-  const [injectionRules, setInjectionRules] = useState<any[]>([]);
+
+  // step 데이터로 폼 초기화
+  useEffect(() => {
+    if (step && isOpen) {
+      setSelectedApiItem(step.apiItem.id);
+      setStepName(step.stepName);
+      setStepDescription(step.description || '');
+      setDelayAfter(step.delayAfter || undefined);
+
+      // 데이터 추출 규칙 파싱
+      if (step.dataExtractions && step.dataExtractions !== '{}') {
+        try {
+          const extractions = JSON.parse(step.dataExtractions);
+          const rules: VariableRule[] = Object.entries(extractions).map(([key, value], index) => ({
+            id: `extract_${index}`,
+            variableName: key,
+            jsonPath: value as string
+          }));
+          setExtractionRules(rules);
+          setShowAdvancedSettings(true);
+        } catch (e) {
+          setExtractionRules([]);
+        }
+      } else {
+        setExtractionRules([]);
+      }
+
+      // 데이터 주입 규칙 파싱
+      if (step.dataInjections && step.dataInjections !== '{}') {
+        try {
+          const injections = JSON.parse(step.dataInjections);
+          const rules: VariableRule[] = Object.entries(injections).map(([key, value], index) => ({
+            id: `inject_${index}`,
+            variableName: key,
+            jsonPath: value as string
+          }));
+          setInjectionRules(rules);
+          setShowAdvancedSettings(true);
+        } catch (e) {
+          setInjectionRules([]);
+        }
+      } else {
+        setInjectionRules([]);
+      }
+    }
+  }, [step, isOpen]);
 
   // 모달이 닫힐 때 상태 초기화
   useEffect(() => {
@@ -45,11 +90,9 @@ export const AddStepModal: React.FC<AddStepModalProps> = ({
       setStepDescription('');
       setApiSearchTerm('');
       setShowAdvancedSettings(false);
-      setDataExtractions('{}');
-      setDataInjections('{}');
-      setDelayAfter(undefined);
       setExtractionRules([]);
       setInjectionRules([]);
+      setDelayAfter(undefined);
     }
   }, [isOpen]);
 
@@ -57,12 +100,11 @@ export const AddStepModal: React.FC<AddStepModalProps> = ({
     onClose();
   };
 
-  const handleAddStep = async () => {
-    if (!selectedApiItem || !stepName.trim()) return;
+  const handleUpdateStep = async () => {
+    if (!selectedApiItem || !stepName.trim() || !step) return;
 
-    console.log('AddStepModal.handleAddStep: Calling onAddStep with data');
     try {
-      const stepData: any = {
+      const stepData: Partial<CreateStepRequest> = {
         apiItemId: selectedApiItem,
         stepName: stepName.trim(),
         description: stepDescription.trim()
@@ -70,7 +112,6 @@ export const AddStepModal: React.FC<AddStepModalProps> = ({
       
       // 고급 설정이 있는 경우에만 추가
       if (showAdvancedSettings) {
-        // VariableBuilder에서 생성된 규칙을 JSON으로 변환
         if (extractionRules.length > 0) {
           const extractionObj = extractionRules.reduce((acc, rule) => ({
             ...acc,
@@ -92,12 +133,9 @@ export const AddStepModal: React.FC<AddStepModalProps> = ({
         }
       }
       
-      await onAddStep(stepData);
-      console.log('AddStepModal.handleAddStep: onAddStep completed successfully');
-      // onAddStep이 성공한 경우에만 모달을 닫음 (useStepManagement의 콜백에서 처리됨)
+      await onUpdateStep(step.id, stepData);
     } catch (error) {
-      console.error('AddStepModal.handleAddStep: Error in onAddStep:', error);
-      // 에러가 발생한 경우 모달을 닫지 않음
+      console.error('EditStepModal.handleUpdateStep: Error in onUpdateStep:', error);
     }
   };
 
@@ -108,13 +146,13 @@ export const AddStepModal: React.FC<AddStepModalProps> = ({
     (item.description && item.description.toLowerCase().includes(apiSearchTerm.toLowerCase()))
   );
 
-  if (!isOpen) return null;
+  if (!isOpen || !step) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl m-4 max-h-[80vh] overflow-y-auto">
+      <div className="bg-white rounded-lg p-6 w-full max-w-2xl m-4 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-gray-900">새 단계 추가</h2>
+          <h2 className="text-xl font-bold text-gray-900">단계 편집 - Step {step.stepOrder}</h2>
           <button 
             onClick={handleClose}
             className="text-gray-400 hover:text-gray-600"
@@ -217,19 +255,6 @@ export const AddStepModal: React.FC<AddStepModalProps> = ({
                   </div>
                 </div>
               ))}
-              
-              {apiItems.length === 0 ? (
-                <div className="p-4 text-center text-gray-500">
-                  사용 가능한 API 아이템이 없습니다.
-                </div>
-              ) : filteredApiItems.length === 0 && apiSearchTerm && (
-                <div className="p-4 text-center text-gray-500">
-                  <div className="text-2xl mb-2">🔍</div>
-                  <div className="text-sm">
-                    "{apiSearchTerm}"에 대한 검색 결과가 없습니다.
-                  </div>
-                </div>
-              )}
             </div>
           </div>
           
@@ -303,10 +328,10 @@ export const AddStepModal: React.FC<AddStepModalProps> = ({
                   </div>
                 </div>
                 
-                {stepCount && stepCount > 0 && (
+                {totalSteps && step.stepOrder > 1 && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
                     <div className="text-sm text-yellow-800">
-                      📌 이전 {stepCount}단계에서 추출된 변수들을 {`{{변수명}}`} 형식으로 사용할 수 있습니다.
+                      📌 이전 {step.stepOrder - 1}단계에서 추출된 변수들을 {`{{변수명}}`} 형식으로 사용할 수 있습니다.
                     </div>
                   </div>
                 )}
@@ -323,11 +348,11 @@ export const AddStepModal: React.FC<AddStepModalProps> = ({
             취소
           </button>
           <button
-            onClick={handleAddStep}
+            onClick={handleUpdateStep}
             disabled={!selectedApiItem || !stepName.trim() || loading}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
           >
-            {loading ? '추가 중...' : '단계 추가'}
+            {loading ? '저장 중...' : '저장'}
           </button>
         </div>
       </div>

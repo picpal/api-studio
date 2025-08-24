@@ -31,6 +31,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
+                .requestMatchers("/api/admin/reset-password").permitAll()
                 .requestMatchers("/api/folders/**", "/api/items/**", "/api/history/**", "/api/admin/**", "/api/scenarios/**", "/api/pipelines/**").authenticated()
                 .anyRequest().authenticated()
             )

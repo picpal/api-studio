@@ -14,6 +14,9 @@ public interface PipelineStepRepository extends JpaRepository<PipelineStep, Long
     
     List<PipelineStep> findByIsActiveTrueAndPipelineIdOrderByStepOrderAsc(Long pipelineId);
     
+    @Query("SELECT ps FROM PipelineStep ps JOIN FETCH ps.apiItem WHERE ps.isActive = true AND ps.pipeline.id = :pipelineId ORDER BY ps.stepOrder ASC")
+    List<PipelineStep> findByIsActiveTrueAndPipelineIdOrderByStepOrderAscWithApiItem(@Param("pipelineId") Long pipelineId);
+    
     List<PipelineStep> findByIsActiveTrueOrderByStepOrderAsc();
     
     // API 아이템 삭제시 관련 파이프라인 스텝도 삭제
