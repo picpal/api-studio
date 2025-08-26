@@ -38,6 +38,30 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
     folderName: ''
   });
 
+  const [pipelineContextMenu, setPipelineContextMenu] = useState<{
+    show: boolean;
+    x: number;
+    y: number;
+    pipelineId: number | null;
+    pipelineName: string;
+    folderId: number;
+  }>({
+    show: false,
+    x: 0,
+    y: 0,
+    pipelineId: null,
+    pipelineName: '',
+    folderId: 0
+  });
+
+  const [renamingFolder, setRenamingFolder] = useState<{
+    id: number | null;
+    newName: string;
+  }>({
+    id: null,
+    newName: ''
+  });
+
   // Load folders from API
   useEffect(() => {
     let isMounted = true;
@@ -129,6 +153,30 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
     });
   };
 
+  const handlePipelineRightClick = (e: React.MouseEvent, pipelineId: number, pipelineName: string, folderId: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setPipelineContextMenu({
+      show: true,
+      x: e.clientX,
+      y: e.clientY,
+      pipelineId,
+      pipelineName,
+      folderId
+    });
+  };
+
+  const handlePipelineContextMenuClose = () => {
+    setPipelineContextMenu({
+      show: false,
+      x: 0,
+      y: 0,
+      pipelineId: null,
+      pipelineName: '',
+      folderId: 0
+    });
+  };
+
   const handleAddPipeline = () => {
     setSelectedFolderForPipeline(contextMenu.folderId);
     setShowNewPipelineModal(true);
@@ -190,17 +238,95 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
     handleContextMenuClose();
   };
 
+  const handleRemovePipeline = async () => {
+    if (pipelineContextMenu.pipelineId && confirm(`"${pipelineContextMenu.pipelineName}" 파이프라인을 삭제하시겠습니까?`)) {
+      try {
+        await pipelineApi.deletePipeline(pipelineContextMenu.pipelineId.toString());
+        
+        // Update the folders state to remove the pipeline
+        setFolders(prevFolders => 
+          prevFolders.map(folder => 
+            folder.id === pipelineContextMenu.folderId
+              ? { ...folder, pipelines: folder.pipelines.filter(p => p.id !== pipelineContextMenu.pipelineId) }
+              : folder
+          )
+        );
+        
+        // If the deleted pipeline was selected, clear selection
+        if (selectedPipeline?.id === pipelineContextMenu.pipelineId) {
+          onSelectPipeline?.(null);
+        }
+      } catch (error) {
+        console.error('Failed to delete pipeline:', error);
+        alert('파이프라인 삭제에 실패했습니다.');
+      }
+    }
+    handlePipelineContextMenuClose();
+  };
+
+  const handleStartRenameFolder = () => {
+    if (contextMenu.folderId && contextMenu.folderName) {
+      setRenamingFolder({
+        id: contextMenu.folderId,
+        newName: contextMenu.folderName
+      });
+    }
+    handleContextMenuClose();
+  };
+
+  const handleCancelRename = () => {
+    setRenamingFolder({
+      id: null,
+      newName: ''
+    });
+  };
+
+  const handleConfirmRename = async () => {
+    if (renamingFolder.id && renamingFolder.newName.trim()) {
+      try {
+        const updatedFolder = await pipelineApi.updateFolder(renamingFolder.id, {
+          name: renamingFolder.newName.trim()
+        });
+        
+        // Update the folders state with the new name
+        setFolders(prevFolders => 
+          prevFolders.map(folder => 
+            folder.id === renamingFolder.id 
+              ? { ...folder, name: updatedFolder.name }
+              : folder
+          )
+        );
+        
+        handleCancelRename();
+      } catch (error) {
+        console.error('Failed to rename folder:', error);
+        alert('폴더 이름 변경에 실패했습니다.');
+      }
+    }
+  };
+
+  const handleRenameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleConfirmRename();
+    } else if (e.key === 'Escape') {
+      handleCancelRename();
+    }
+  };
+
   // Close context menu when clicking outside
   React.useEffect(() => {
     const handleClickOutside = () => {
       if (contextMenu.show) {
         handleContextMenuClose();
       }
+      if (pipelineContextMenu.show) {
+        handlePipelineContextMenuClose();
+      }
     };
     
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
-  }, [contextMenu.show]);
+  }, [contextMenu.show, pipelineContextMenu.show]);
 
   const handleCancelCreateFolder = () => {
     setNewFolderName('');
@@ -324,27 +450,82 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
           {filteredFolders.map(folder => (
             <div key={folder.id} className="space-y-1">
               {/* Folder Header */}
-              <button
-                onClick={() => toggleFolder(folder.id)}
-                onContextMenu={(e) => handleFolderRightClick(e, folder.id, folder.name)}
-                className="w-full flex items-center gap-2 p-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-100 rounded transition-colors"
-              >
-                <svg 
-                  className={`w-4 h-4 text-gray-500 transition-transform ${
-                    expandedFolders.has(folder.id) ? 'rotate-90' : ''
-                  }`} 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
+              {renamingFolder.id === folder.id ? (
+                <div className="flex items-center gap-2 p-2">
+                  <svg 
+                    className={`w-4 h-4 text-gray-500 transition-transform ${
+                      expandedFolders.has(folder.id) ? 'rotate-90' : ''
+                    }`} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                  </svg>
+                  <input
+                    type="text"
+                    value={renamingFolder.newName}
+                    onChange={(e) => setRenamingFolder(prev => ({ ...prev, newName: e.target.value }))}
+                    onKeyDown={handleRenameKeyDown}
+                    onBlur={(e) => {
+                      // Don't cancel if clicking on the save/cancel buttons
+                      if (!e.relatedTarget || (!e.relatedTarget.closest('[data-rename-buttons]'))) {
+                        handleCancelRename();
+                      }
+                    }}
+                    className="flex-1 px-2 py-1 text-sm border border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                    autoFocus
+                  />
+                  <div className="flex gap-1" data-rename-buttons>
+                    <button
+                      onMouseDown={(e) => e.preventDefault()} // Prevent blur
+                      onClick={handleConfirmRename}
+                      className="p-1 text-green-600 hover:text-green-700 hover:bg-green-50 rounded transition-colors"
+                      title="저장"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </button>
+                    <button
+                      onMouseDown={(e) => e.preventDefault()} // Prevent blur
+                      onClick={handleCancelRename}
+                      className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                      title="취소"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <span className="text-xs text-gray-500">({folder.pipelines.length})</span>
+                </div>
+              ) : (
+                <button
+                  onClick={() => toggleFolder(folder.id)}
+                  onContextMenu={(e) => handleFolderRightClick(e, folder.id, folder.name)}
+                  className="w-full flex items-center gap-2 p-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-100 rounded transition-colors"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                </svg>
-                <span>{folder.name}</span>
-                <span className="ml-auto text-xs text-gray-500">({folder.pipelines.length})</span>
-              </button>
+                  <svg 
+                    className={`w-4 h-4 text-gray-500 transition-transform ${
+                      expandedFolders.has(folder.id) ? 'rotate-90' : ''
+                    }`} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                  </svg>
+                  <span>{folder.name}</span>
+                  <span className="ml-auto text-xs text-gray-500">({folder.pipelines.length})</span>
+                </button>
+              )}
 
               {/* Pipelines */}
               {expandedFolders.has(folder.id) && (
@@ -353,6 +534,7 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
                     <button
                       key={pipeline.id}
                       onClick={() => onSelectPipeline?.(pipeline)}
+                      onContextMenu={(e) => handlePipelineRightClick(e, pipeline.id, pipeline.name, folder.id)}
                       className={`w-full text-left p-2 rounded text-sm transition-colors ${
                         selectedPipeline?.id === pipeline.id
                           ? 'bg-blue-100 text-blue-700 border border-blue-200'
@@ -497,7 +679,7 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
         </div>
       )}
 
-      {/* Context Menu */}
+      {/* Folder Context Menu */}
       {contextMenu.show && (
         <div 
           className="fixed bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50 min-w-[140px]"
@@ -517,6 +699,15 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
             파이프라인 추가
           </button>
           <button
+            onClick={handleStartRenameFolder}
+            className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            폴더 이름 변경
+          </button>
+          <button
             onClick={handleRemoveFolder}
             className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
           >
@@ -524,6 +715,28 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
             폴더 삭제
+          </button>
+        </div>
+      )}
+
+      {/* Pipeline Context Menu */}
+      {pipelineContextMenu.show && (
+        <div 
+          className="fixed bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50 min-w-[140px]"
+          style={{ 
+            left: `${pipelineContextMenu.x}px`, 
+            top: `${pipelineContextMenu.y}px` 
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={handleRemovePipeline}
+            className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            파이프라인 삭제
           </button>
         </div>
       )}
