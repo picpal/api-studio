@@ -251,7 +251,6 @@ export const useApiRequest = () => {
             setLastValidationResult(validationResult);
           }
         } catch (error) {
-          console.error('Validation error:', error);
           setLastValidationResult({
             passed: false,
             results: [{
@@ -289,12 +288,8 @@ export const useApiRequest = () => {
     validationEnabled: boolean, 
     expectedValuesList: ExpectedValue[]
   ) => {
-    console.log('🚀 handleSend called with template variable detection!');
-    console.log('Request data:', request);
-    
     // 템플릿 변수 감지 (기본값 포함)
     const variables = extractTemplateVariablesFromRequestWithDefaults(request);
-    console.log('Found template variables:', variables);
     
     if (variables.length > 0) {
       // 템플릿 변수가 있으면 모달 표시를 위해 상태 저장
@@ -316,7 +311,6 @@ export const useApiRequest = () => {
     
     // 템플릿 변수를 실제 값으로 치환
     const processedRequest = replaceTemplateVariablesInRequest(request, variables);
-    console.log('Processed request with variables:', processedRequest);
     
     // 치환된 요청으로 API 호출
     await executeApiRequest(

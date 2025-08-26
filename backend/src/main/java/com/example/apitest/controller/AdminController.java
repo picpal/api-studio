@@ -217,15 +217,12 @@ public class AdminController {
     // 모든 폴더 목록 조회 (관리자용)
     @GetMapping("/folders")
     public ResponseEntity<List<Map<String, Object>>> getAllFolders(HttpSession session) {
-        System.out.println("DEBUG: AdminController.getAllFolders called");
         
         if (!isAdmin(session)) {
-            System.out.println("DEBUG: User is not admin, returning 403");
             return ResponseEntity.status(403).build();
         }
 
         List<ApiFolder> folders = folderRepository.findAll();
-        System.out.println("DEBUG: Found " + folders.size() + " folders for admin");
         
         List<Map<String, Object>> response = new ArrayList<>();
         
@@ -237,7 +234,6 @@ public class AdminController {
             response.add(folderMap);
         }
         
-        System.out.println("DEBUG: Returning " + response.size() + " folders to admin frontend");
         return ResponseEntity.ok(response);
     }
     

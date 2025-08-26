@@ -55,7 +55,6 @@ const Layout: React.FC<LayoutProps> = () => {
   }, [location.pathname]);
 
   const fetchPipelineById = async (pipelineId: number) => {
-    console.log('Fetching pipeline by ID:', pipelineId);
     try {
       // 모든 폴더를 가져와서 해당 파이프라인 찾기
       const response = await fetch('http://localhost:8080/api/pipelines/folders', {
@@ -63,11 +62,9 @@ const Layout: React.FC<LayoutProps> = () => {
       });
       if (response.ok) {
         const folders = await response.json();
-        console.log('Folders loaded:', folders);
         for (const folder of folders) {
           const pipeline = folder.pipelines?.find((p: any) => p.id === pipelineId);
           if (pipeline) {
-            console.log('Found pipeline:', pipeline);
             setSelectedPipeline({
               ...pipeline,
               id: pipelineId,
@@ -80,7 +77,7 @@ const Layout: React.FC<LayoutProps> = () => {
         }
       }
     } catch (error) {
-      console.error('Error fetching pipeline:', error);
+      // Error fetching pipeline
     }
   };
 
@@ -112,7 +109,6 @@ const Layout: React.FC<LayoutProps> = () => {
         folderName: folderName 
       });
     } catch (error) {
-      console.error('Failed to fetch item details:', error);
       // 에러 시 기본 아이템 정보만 사용
       setSelectedItem({ 
         ...item, 
@@ -178,13 +174,10 @@ const Layout: React.FC<LayoutProps> = () => {
         });
         if (response.ok) {
           const updatedPipeline = await response.json();
-          console.log('Pipeline refreshed from server:', updatedPipeline);
           setSelectedPipeline(updatedPipeline); // 서버에서 가져온 최신 데이터로 업데이트
-        } else {
-          console.error('Failed to refresh pipeline:', response.status);
         }
       } catch (error) {
-        console.error('Error refreshing pipeline data:', error);
+        // Error refreshing pipeline data
       }
     }
   };

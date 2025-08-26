@@ -52,7 +52,7 @@ export const useApiForm = (selectedItem: ApiItem | null) => {
         }
       }
     } catch (e) {
-      console.warn('Failed to parse requestParams:', e);
+      // Failed to parse requestParams
     }
 
     try {
@@ -64,7 +64,7 @@ export const useApiForm = (selectedItem: ApiItem | null) => {
         }
       }
     } catch (e) {
-      console.warn('Failed to parse requestHeaders:', e);
+      // Failed to parse requestHeaders
     }
 
     if (selectedItem.requestBody) {

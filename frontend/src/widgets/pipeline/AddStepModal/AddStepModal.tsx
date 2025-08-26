@@ -60,7 +60,6 @@ export const AddStepModal: React.FC<AddStepModalProps> = ({
   const handleAddStep = async () => {
     if (!selectedApiItem || !stepName.trim()) return;
 
-    console.log('AddStepModal.handleAddStep: Calling onAddStep with data');
     try {
       const stepData: any = {
         apiItemId: selectedApiItem,
@@ -93,10 +92,8 @@ export const AddStepModal: React.FC<AddStepModalProps> = ({
       }
       
       await onAddStep(stepData);
-      console.log('AddStepModal.handleAddStep: onAddStep completed successfully');
       // onAddStep이 성공한 경우에만 모달을 닫음 (useStepManagement의 콜백에서 처리됨)
     } catch (error) {
-      console.error('AddStepModal.handleAddStep: Error in onAddStep:', error);
       // 에러가 발생한 경우 모달을 닫지 않음
     }
   };

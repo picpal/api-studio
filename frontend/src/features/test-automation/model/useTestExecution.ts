@@ -59,7 +59,6 @@ export const useTestExecution = () => {
       }
       
       let fullUrl = url;
-      console.log(`Executing ${method} request to: ${fullUrl}`);
 
       const startTime = Date.now();
 
@@ -84,24 +83,8 @@ export const useTestExecution = () => {
         }
       }
 
-      console.log('Making axios request:', {
-        method: axiosConfig.method,
-        url: axiosConfig.url,
-        params: axiosConfig.params,
-        headers: axiosConfig.headers,
-        data: axiosConfig.data
-      });
-
       const result = await axios(axiosConfig);
       const endTime = Date.now();
-
-      console.log('Axios response received:', {
-        status: result.status,
-        statusText: result.statusText,
-        headers: result.headers,
-        url: axiosConfig.url,
-        data: typeof result.data === 'object' ? JSON.stringify(result.data).substring(0, 200) : String(result.data).substring(0, 200)
-      });
 
       // 응답 헤더 변환
       const responseHeaders: Record<string, string> = {};
@@ -121,11 +104,8 @@ export const useTestExecution = () => {
           responseBody = String(result.data);
         }
       } catch (error) {
-        console.error('Response body processing error:', error);
         responseBody = 'Unable to process response body';
       }
-
-      console.log(`API call completed: ${fullUrl}, Status: ${result.status}, Time: ${endTime - startTime}ms`);
 
       return {
         responseBody,
@@ -134,7 +114,6 @@ export const useTestExecution = () => {
       };
 
     } catch (error: any) {
-      console.error('API call error:', error);
       
       // axios 에러 처리
       if (error.response) {
@@ -248,7 +227,6 @@ export const useTestExecution = () => {
         try {
           execution.requestHeaders = api.requestHeaders ? (typeof api.requestHeaders === 'string' ? JSON.parse(api.requestHeaders) : api.requestHeaders) : {};
         } catch (error) {
-          console.error('Failed to parse request headers:', error);
           execution.requestHeaders = {};
         }
         
@@ -256,14 +234,11 @@ export const useTestExecution = () => {
         try {
           execution.requestParams = api.requestParams ? (typeof api.requestParams === 'string' ? JSON.parse(api.requestParams) : api.requestParams) : [];
         } catch (error) {
-          console.error('Failed to parse request params:', error);
           execution.requestParams = [];
         }
         
         // 실제 API 호출 (템플릿 변수 전달)
-        console.log('About to call executeApiCall for:', api.name, 'with variables:', templateVariablesMap);
         const response = await executeApiCall(api, templateVariablesMap);
-        console.log('executeApiCall completed for:', api.name, 'Status:', response.statusCode);
         
         const apiEndTime = Date.now();
         
@@ -274,56 +249,38 @@ export const useTestExecution = () => {
         if (finalStatus === 'success' && api.url.includes('/api/') && 
             response.responseBody && response.responseBody.trim().startsWith('<!DOCTYPE html>')) {
           finalStatus = 'failed';
-          console.warn('API endpoint returned HTML instead of expected data:', api.url);
         }
         
         // Validation 수행 (활성화된 경우)
         let validationResult: ValidationResult | undefined;
         
-        console.log('Validation check:', {
-          validationEnabled: api.validationEnabled,
-          hasExpectedValues: !!api.expectedValues,
-          expectedValues: api.expectedValues,
-          responseBody: response.responseBody?.substring(0, 200),
-          finalStatus: finalStatus
-        });
 
         // 성공 응답에 대해서만 validation 수행
         if (api.validationEnabled && api.expectedValues && finalStatus === 'success') {
           try {
             const expectedValues = JSON.parse(api.expectedValues);
-            console.log('Parsed expected values:', expectedValues);
             
             if (expectedValues && expectedValues.length > 0) {
               // 응답 body를 JSON으로 파싱하여 validation 수행
               let responseJson: any;
               try {
                 responseJson = JSON.parse(response.responseBody);
-                console.log('Parsed response JSON:', responseJson);
               } catch (error) {
                 // JSON 파싱 실패 시 문자열 그대로 사용
                 responseJson = response.responseBody;
-                console.log('Using response as string:', responseJson);
               }
               
-              console.log('Running validation...');
               validationResult = validateResponse(responseJson, expectedValues);
-              console.log('Validation result:', validationResult);
               
               // Validation 실패 시 전체 테스트도 실패로 처리
               if (!validationResult.passed) {
                 finalStatus = 'failed';
               }
-            } else {
-              console.log('No expected values to validate');
             }
           } catch (error) {
-            console.error('Validation error:', error);
             // Validation 오류 발생 시에도 테스트 실패로 처리
             finalStatus = 'failed';
           }
-        } else {
-          console.log('Validation skipped - not enabled, no expected values, or not a successful response');
         }
         
         execution.status = finalStatus;
@@ -349,8 +306,6 @@ export const useTestExecution = () => {
           failureCount++;
         }
       } catch (error) {
-        console.error('Execution error for API:', api.name, error);
-        console.error('Error stack:', error instanceof Error ? error.stack : error);
         
         execution.status = 'failed';
         execution.error = error instanceof Error ? error.message : 'Unknown error';
@@ -408,9 +363,8 @@ export const useTestExecution = () => {
       batchResult.name = savedHistory.name;
       batchResult.createdBy = savedHistory.createdBy;
 
-      console.log('Test history saved successfully:', savedHistory);
     } catch (error) {
-      console.error('Failed to save test history:', error);
+      // Failed to save test history
       // 저장 실패해도 메모리에는 보관
     }
 

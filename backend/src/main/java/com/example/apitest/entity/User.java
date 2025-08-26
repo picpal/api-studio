@@ -240,7 +240,7 @@ public class User {
                 throw e;
             }
             // 다른 예외는 로깅하고 기본 메시지 표시
-            System.err.println("비밀번호 검증 중 오류: " + e.getMessage());
+            // 비밀번호 검증 중 오류
             throw new IllegalArgumentException("비밀번호 검증 중 오류가 발생했습니다.");
         }
     }

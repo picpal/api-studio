@@ -17,7 +17,6 @@ export const useApiItems = () => {
         setApiItems(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch API items');
-        console.error('Error fetching API items:', err);
       } finally {
         setLoading(false);
       }

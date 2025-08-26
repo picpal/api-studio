@@ -121,10 +121,7 @@ export const itemApi = {
 
   // 아이템 삭제
   delete: async (id: number): Promise<void> => {
-    console.log('🌐 itemApi.delete called with ID:', id);
-    console.log('🌐 Making DELETE request to:', `/items/${id}`);
     const response = await apiClient.delete(`/items/${id}`);
-    console.log('🌐 DELETE response:', response.status, response.statusText);
     return response.data;
   }
 };

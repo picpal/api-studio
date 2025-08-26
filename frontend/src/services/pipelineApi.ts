@@ -56,11 +56,8 @@ interface CreatePipelineRequest {
 export const pipelineApi = {
   // Folder operations
   async getFolders(): Promise<PipelineFolder[]> {
-    console.log('pipelineApi.getFolders: Making request to /pipelines/folders');
     try {
       const response = await apiClient.get('/pipelines/folders');
-      console.log('pipelineApi.getFolders: Response status:', response.status);
-      console.log('pipelineApi.getFolders: Raw folders from server:', response.data);
       
       const processedFolders = response.data.map((folder: any) => ({
         ...folder,
@@ -69,10 +66,8 @@ export const pipelineApi = {
         pipelines: folder.pipelines || []
       }));
       
-      console.log('pipelineApi.getFolders: Processed folders:', processedFolders);
       return processedFolders;
     } catch (error) {
-      console.error('pipelineApi.getFolders: Error:', error);
       throw error;
     }
   },

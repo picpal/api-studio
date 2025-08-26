@@ -36,20 +36,15 @@ const BASE_URL = `${API_CONFIG.API_URL}/pipelines`;
 export const pipelineApi = {
   // Folder operations
   async getFolders(): Promise<PipelineFolder[]> {
-    console.log('pipelineApi.getFolders: Making request to', `${BASE_URL}/folders`);
     const response = await fetch(`${BASE_URL}/folders`, {
       credentials: 'include'
     });
-    console.log('pipelineApi.getFolders: Response status:', response.status);
-    console.log('pipelineApi.getFolders: Response ok:', response.ok);
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('pipelineApi.getFolders: Error response:', errorText);
       throw new Error('Failed to fetch folders');
     }
     const folders = await response.json();
-    console.log('pipelineApi.getFolders: Raw folders from server:', folders);
     
     const processedFolders = folders.map((folder: any) => ({
       ...folder,
@@ -58,7 +53,6 @@ export const pipelineApi = {
       pipelines: folder.pipelines || []
     }));
     
-    console.log('pipelineApi.getFolders: Processed folders:', processedFolders);
     return processedFolders;
   },
 

@@ -13,10 +13,8 @@ export const usePipelineExecution = () => {
     try {
       setIsExecuting(true);
       setError(null);
-      console.log('Starting pipeline execution...');
 
       const execution = await pipelineApi.executePipeline(pipelineId);
-      console.log('Pipeline execution started:', execution);
       
       setCurrentExecution(execution);
       
@@ -25,7 +23,6 @@ export const usePipelineExecution = () => {
       
       return execution;
     } catch (err: any) {
-      console.error('Failed to start pipeline execution:', err);
       setError(err.message || 'Failed to start pipeline execution');
       setIsExecuting(false);
       throw err;
@@ -39,21 +36,16 @@ export const usePipelineExecution = () => {
 
     pollingRef.current = setInterval(async () => {
       try {
-        console.log('Polling execution status...');
-        
         // Get execution status
         const execution = await pipelineApi.getExecutionStatus(executionId);
-        console.log('Execution status updated:', execution);
         setCurrentExecution(execution);
 
         // Get step executions
         const steps = await pipelineApi.getStepExecutions(executionId);
-        console.log('Step executions updated:', steps);
         setStepExecutions(steps);
 
         // Stop polling if execution is completed or failed
         if (execution.status === 'COMPLETED' || execution.status === 'FAILED') {
-          console.log('Execution finished, stopping polling');
           setIsExecuting(false);
           if (pollingRef.current) {
             clearInterval(pollingRef.current);
@@ -61,7 +53,6 @@ export const usePipelineExecution = () => {
           }
         }
       } catch (err: any) {
-        console.error('Error polling execution status:', err);
         setError(err.message || 'Failed to get execution status');
         setIsExecuting(false);
         if (pollingRef.current) {

@@ -30,13 +30,10 @@ const PipelineManagementPage: React.FC<PipelineManagementPageProps> = ({
   );
 
   const handleAddStep = async (stepData: { apiItemId: number; stepName: string; description: string }): Promise<void> => {
-    console.log('PipelineManagementPage.handleAddStep: Called with stepData:', stepData);
     try {
       await addStep(stepData);
-      console.log('PipelineManagementPage.handleAddStep: addStep completed successfully');
       // addStep이 성공하면 콜백에서 refetchSteps()와 setShowAddStepModal(false)가 자동으로 호출됨
     } catch (error) {
-      console.error('PipelineManagementPage.handleAddStep: Failed to add step:', error);
       // 에러가 발생해도 모달은 열어둠
       throw error; // 에러를 다시 throw해서 AddStepModal에서 처리할 수 있도록 함
     }

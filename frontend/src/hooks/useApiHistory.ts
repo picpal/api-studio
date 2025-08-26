@@ -18,7 +18,6 @@ export const useApiHistory = (selectedItem: ApiItem | null) => {
       const histories = await historyApi.getList(itemId);
       setHistoryList(histories || []);
     } catch (error: any) {
-      console.error('Failed to load history list:', error);
       setHistoryList([]);
       setSelectedHistoryId('');
     }
@@ -39,7 +38,6 @@ export const useApiHistory = (selectedItem: ApiItem | null) => {
       }
       
     } catch (error: any) {
-      console.error('Failed to save history:', error);
       throw new Error(`히스토리 저장 중 오류가 발생했습니다: ${error.response?.data?.message || error.message}`);
     } finally {
       setIsSavingHistory(false);
@@ -58,7 +56,6 @@ export const useApiHistory = (selectedItem: ApiItem | null) => {
       setSelectedHistoryId(historyId);
       return historyDetail;
     } catch (error: any) {
-      console.error('Failed to load history detail:', error);
       throw new Error('히스토리를 불러오는 중 오류가 발생했습니다.');
     }
   };

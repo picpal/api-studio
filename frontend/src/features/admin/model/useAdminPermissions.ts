@@ -19,20 +19,15 @@ export const useAdminPermissions = () => {
 
   const loadFolders = async () => {
     try {
-      console.log('Loading folders...');
       const response = await fetch('http://localhost:8080/api/admin/folders', {
         credentials: 'include',
       });
-      console.log('Folders response:', response.status, response.statusText);
       if (response.ok) {
         const data = await response.json();
-        console.log('Folders data:', data);
         setFolders(data);
-      } else {
-        console.error('Failed to load folders:', response.status, response.statusText);
       }
     } catch (error) {
-      console.error('Failed to load folders:', error);
+      // Failed to load folders
     } finally {
       setLoading(false);
     }
@@ -48,7 +43,7 @@ export const useAdminPermissions = () => {
         setFolderPermissions(data);
       }
     } catch (error) {
-      console.error('Failed to load folder permissions:', error);
+      // Failed to load folder permissions
     }
   };
 
@@ -73,7 +68,6 @@ export const useAdminPermissions = () => {
         alert(error.error || '오류가 발생했습니다.');
       }
     } catch (error) {
-      console.error('Failed to grant folder permission:', error);
       alert('서버 오류가 발생했습니다.');
     }
   };
@@ -95,7 +89,6 @@ export const useAdminPermissions = () => {
         alert(error.error || '오류가 발생했습니다.');
       }
     } catch (error) {
-      console.error('Failed to revoke folder permission:', error);
       alert('서버 오류가 발생했습니다.');
     }
   };

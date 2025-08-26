@@ -86,7 +86,7 @@ const MainContentRefactored: React.FC<MainContentProps> = ({
         }
       }
     } catch (e) {
-      console.warn('Failed to parse requestParams:', e);
+      // Failed to parse requestParams
     }
 
     try {
@@ -98,7 +98,7 @@ const MainContentRefactored: React.FC<MainContentProps> = ({
         }
       }
     } catch (e) {
-      console.warn('Failed to parse requestHeaders:', e);
+      // Failed to parse requestHeaders
     }
 
     if (item.requestBody) {
@@ -118,7 +118,7 @@ const MainContentRefactored: React.FC<MainContentProps> = ({
         }
       }
     } catch (e) {
-      console.warn('Failed to parse expectedValues:', e);
+      // Failed to parse expectedValues
       savedExpectedValues = [];
     }
 
@@ -173,7 +173,6 @@ const MainContentRefactored: React.FC<MainContentProps> = ({
         setRequest(prev => ({ ...prev, params: {} }));
       }
     } catch (error) {
-      console.error('Error parsing requestParams:', error);
       setParamsList([{ key: '', value: '', description: '', required: false, id: '1' }]);
       setRequest(prev => ({ ...prev, params: {} }));
     }
@@ -235,7 +234,6 @@ const MainContentRefactored: React.FC<MainContentProps> = ({
 
       setShowSaveModal(true);
     } catch (error: any) {
-      console.error('Failed to save API:', error);
       alert(`API 저장 중 오류가 발생했습니다: ${error.response?.data?.message || error.message}`);
     }
     setSaving(false);
@@ -259,7 +257,6 @@ const MainContentRefactored: React.FC<MainContentProps> = ({
       setShowSaveModal(false);
       alert('히스토리가 성공적으로 저장되었습니다!');
     } catch (error: any) {
-      console.error('Failed to save history:', error);
       alert(`히스토리 저장 중 오류가 발생했습니다: ${error.response?.data?.message || error.message}`);
     } finally {
       setIsSavingHistory(false);
@@ -278,7 +275,6 @@ const MainContentRefactored: React.FC<MainContentProps> = ({
       const histories = await historyApi.getList(itemId);
       setHistoryList(histories || []);
     } catch (error: any) {
-      console.error('Failed to load history list:', error);
       setHistoryList([]);
       setSelectedHistoryId('');
     }
@@ -345,7 +341,7 @@ const MainContentRefactored: React.FC<MainContentProps> = ({
             }
           }
         } catch (e) {
-          console.warn('Failed to parse expectedValues from history:', e);
+          // Failed to parse expectedValues from history
           savedExpectedValues = [];
         }
 
@@ -362,7 +358,6 @@ const MainContentRefactored: React.FC<MainContentProps> = ({
 
       setSelectedHistoryId(historyId);
     } catch (error: any) {
-      console.error('Failed to load history detail:', error);
       alert('히스토리를 불러오는 중 오류가 발생했습니다.');
     }
   };

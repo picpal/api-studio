@@ -314,60 +314,49 @@ public class ApiItemController {
     @DeleteMapping("/{id}")
     @Transactional(rollbackFor = Exception.class)
     public ResponseEntity<?> deleteItem(@PathVariable Long id, HttpSession session, HttpServletRequest request) {
-        System.out.println("🔥🔥 DELETE request received for item ID: " + id);
         try {
             User currentUser = getCurrentUser(session);
-            System.out.println("🔥🔥 Current user: " + (currentUser != null ? currentUser.getEmail() : "null"));
             
             return itemRepository.findById(id)
                 .map(item -> {
-                    System.out.println("🔥🔥 Item found for deletion: " + item.getName() + " (ID: " + item.getId() + ")");
                     String itemName = item.getName();
                     String folderName = getFolderName(item.getFolderId());
                     
                     try {
                         // 1. 먼저 관련된 파이프라인 스텝들을 삭제 (외래키 제약조건을 해결)
-                        System.out.println("🔥🔥 Deleting pipeline steps for item ID: " + id);
+                        // Delete related pipeline steps first
                         int deletedPipelineStepCount = pipelineStepRepository.deleteByApiItemId(id);
-                        System.out.println("🔥🔥 Pipeline steps deleted successfully: " + deletedPipelineStepCount + " records");
                         
                         // 2. 그 다음 관련된 히스토리들을 삭제 (외래키 제약조건을 해결)
-                        System.out.println("🔥🔥 Deleting history records for item ID: " + id);
+                        // Delete related history records
                         int deletedHistoryCount = historyRepository.deleteByApiItemId(id);
-                        System.out.println("🔥🔥 History records deleted successfully: " + deletedHistoryCount + " records");
                         
                         // 3. 그 다음 아이템 삭제 (커스텀 @Modifying 쿼리 사용)
-                        System.out.println("🔥🔥 Deleting item with ID: " + id);
+                        // Delete the item itself
                         int deletedCount = itemRepository.deleteByIdCustom(id);
-                        System.out.println("🔥🔥 Item deleted successfully from database, count: " + deletedCount);
                         
                         if (deletedCount == 0) {
-                            System.err.println("🔥🔥 ERROR: No item was deleted from database!");
                             throw new RuntimeException("Item deletion failed - no rows affected");
                         }
                         
                         // API 아이템 삭제 로깅
                         if (currentUser != null) {
-                            System.out.println("🔥🔥 Logging delete activity");
                             activityLoggingService.logItemDelete(currentUser, itemName, folderName,
                                 request.getRequestURI(), request.getMethod());
-                            System.out.println("🔥🔥 Delete activity logged successfully");
                         }
                         
-                        System.out.println("🔥🔥 Returning success response");
                         return ResponseEntity.ok().build();
                     } catch (Exception innerException) {
-                        System.err.println("🔥🔥 Exception during deletion process: " + innerException.getMessage());
+                        // Exception during deletion process
                         innerException.printStackTrace();
                         throw innerException;
                     }
                 })
                 .orElseGet(() -> {
-                    System.out.println("🔥🔥 Item not found with ID: " + id);
                     return ResponseEntity.notFound().build();
                 });
         } catch (Exception e) {
-            System.err.println("🔥🔥 Exception in deleteItem: " + e.getMessage());
+            // Exception in deleteItem
             e.printStackTrace();
             
             // 실패 로깅

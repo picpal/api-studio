@@ -135,7 +135,7 @@ export const EditStepModal: React.FC<EditStepModalProps> = ({
       
       await onUpdateStep(step.id, stepData);
     } catch (error) {
-      console.error('EditStepModal.handleUpdateStep: Error in onUpdateStep:', error);
+      // Error handled by the parent hook
     }
   };
 

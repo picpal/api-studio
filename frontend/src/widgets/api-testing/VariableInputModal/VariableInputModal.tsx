@@ -30,9 +30,6 @@ export const VariableInputModal: React.FC<VariableInputModalProps> = ({
       return;
     }
 
-    console.log('VariableInputModal useEffect triggered');
-    console.log('templateVariables received:', templateVariables);
-    console.log('variableNames received:', variableNames);
 
     // 사용할 변수 결정
     let varsToUse: TemplateVariable[] = [];
@@ -64,7 +61,6 @@ export const VariableInputModal: React.FC<VariableInputModalProps> = ({
       });
     }
 
-    console.log('Variables to use:', varsToUse);
     
     // 변수가 실제로 변경되었을 때만 업데이트 (무한루프 방지)
     if (JSON.stringify(currentVariables) !== JSON.stringify(varsToUse)) {
@@ -75,10 +71,8 @@ export const VariableInputModal: React.FC<VariableInputModalProps> = ({
       varsToUse.forEach(variable => {
         const defaultValue = variable.defaultValue || '';
         initialVars[variable.name] = defaultValue;
-        console.log(`Setting ${variable.name} = "${defaultValue}"`);
       });
       
-      console.log('Setting initial variables:', initialVars);
       setVariables(initialVars);
     }
 
@@ -120,7 +114,6 @@ export const VariableInputModal: React.FC<VariableInputModalProps> = ({
       }
     });
     
-    console.log('Final variables to submit:', finalVariables);
     onConfirm(finalVariables);
   };
 
@@ -164,7 +157,6 @@ export const VariableInputModal: React.FC<VariableInputModalProps> = ({
             <div className="space-y-4">
               {currentVariables.map((variable, index) => {
                 const currentValue = variables[variable.name] || '';
-                console.log(`Rendering input for ${variable.name}, value:`, currentValue, 'defaultValue:', variable.defaultValue);
                 
                 return (
                   <div key={variable.name} className="space-y-2">
@@ -192,7 +184,6 @@ export const VariableInputModal: React.FC<VariableInputModalProps> = ({
                         : `${variable.name} 값을 입력하세요`
                     }
                     required={!variable.defaultValue}
-                    onFocus={() => console.log(`Input focused: ${variable.name}, current value:`, variables[variable.name])}
                   />
                 </div>
                 );

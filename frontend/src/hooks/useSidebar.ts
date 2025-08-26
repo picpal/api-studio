@@ -27,7 +27,6 @@ export const useSidebar = () => {
 
       setFolders(convertedFolders);
     } catch (error) {
-      console.error('폴더 로드 중 오류:', error);
       setError('데이터를 로드하는 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
@@ -78,7 +77,6 @@ export const useSidebar = () => {
     try {
       await folderApi.update(parseInt(folderId), { isExpanded: newExpanded });
     } catch (error) {
-      console.error('폴더 상태 업데이트 중 오류:', error);
       setFolders(prev => prev.map(f => 
         f.id === folderId 
           ? { ...f, isExpanded: !newExpanded }
@@ -103,7 +101,6 @@ export const useSidebar = () => {
       
       return newFolder;
     } catch (error) {
-      console.error('폴더 생성 중 오류:', error);
       setError('폴더를 생성하는 중 오류가 발생했습니다.');
       throw error;
     }
@@ -124,7 +121,6 @@ export const useSidebar = () => {
       
       setError(null);
     } catch (error) {
-      console.error('폴더 이름 변경 중 오류:', error);
       setError('폴더 이름을 변경하는 중 오류가 발생했습니다.');
       throw error;
     }
@@ -158,7 +154,6 @@ export const useSidebar = () => {
         setSelectedItemId(null);
       }
     } catch (error) {
-      console.error('폴더 삭제 중 오류:', error);
       setError('폴더를 삭제하는 중 오류가 발생했습니다.');
     }
   };
@@ -194,7 +189,6 @@ export const useSidebar = () => {
       
       return newItem;
     } catch (error) {
-      console.error('아이템 생성 중 오류:', error);
       setError('새로운 아이템을 생성하는 중 오류가 발생했습니다.');
       throw error;
     }
@@ -218,7 +212,6 @@ export const useSidebar = () => {
       
       setError(null);
     } catch (error) {
-      console.error('아이템 이름 변경 중 오류:', error);
       setError('아이템 이름을 변경하는 중 오류가 발생했습니다.');
       throw error;
     }
@@ -226,50 +219,24 @@ export const useSidebar = () => {
 
   // 아이템 삭제
   const deleteItem = async (folderId: string, itemId: string) => {
-    console.log('🔥 deleteItem called with:', { folderId, itemId });
-    
     try {
-      console.log('🔥 Calling itemApi.delete with itemId:', parseInt(itemId));
       // API 호출로 백엔드에서 아이템 삭제
       await itemApi.delete(parseInt(itemId));
-      console.log('🔥 itemApi.delete completed successfully');
       
       // 프론트엔드 상태 업데이트
       setFolders(prev => {
-        console.log('🔥 Before state update - folders:', prev);
-        console.log('🔥 Looking for folderId:', folderId, 'itemId:', itemId);
-        
-        const targetFolder = prev.find(f => f.id === folderId);
-        console.log('🔥 Target folder found:', targetFolder);
-        if (targetFolder) {
-          console.log('🔥 Items in target folder before deletion:', targetFolder.items);
-          const itemExists = targetFolder.items.find(item => item.id === itemId);
-          console.log('🔥 Item to delete exists:', itemExists);
-        }
-        
         const newFolders = prev.map(folder => 
           folder.id === folderId 
             ? { ...folder, items: folder.items.filter(item => item.id !== itemId) }
             : folder
         );
-        console.log('🔥 Updated folders after item deletion:', newFolders);
-        
-        const updatedTargetFolder = newFolders.find(f => f.id === folderId);
-        if (updatedTargetFolder) {
-          console.log('🔥 Items in target folder after deletion:', updatedTargetFolder.items);
-        }
-        
         return newFolders;
       });
       
       if (selectedItemId === itemId) {
         setSelectedItemId(null);
-        console.log('🔥 Cleared selectedItemId');
       }
-      
-      console.log('🔥 deleteItem completed successfully');
     } catch (error) {
-      console.error('🔥 아이템 삭제 중 오류:', error);
       setError('아이템을 삭제하는 중 오류가 발생했습니다.');
     }
   };
@@ -299,7 +266,6 @@ export const useSidebar = () => {
         folderId: parseInt(targetFolderId)
       });
     } catch (error) {
-      console.error('아이템 폴더 변경 중 오류:', error);
       // 실패 시 원래 상태로 되돌림
       setFolders(prev => prev.map(folder => {
         if (folder.id === targetFolderId) {

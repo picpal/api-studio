@@ -39,7 +39,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const data = await authApi.me();
       setUser(data.user);
     } catch (error) {
-      console.error('Auth check failed:', error);
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -52,7 +51,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(data.user);
       return { success: true };
     } catch (error: any) {
-      console.error('Login failed:', error);
       const errorMessage = error.response?.data?.error || 'Login failed';
       return { success: false, error: errorMessage };
     }
@@ -62,7 +60,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       await authApi.logout();
     } catch (error) {
-      console.error('Logout failed:', error);
+      // Logout failed
     } finally {
       setUser(null);
     }
@@ -73,7 +71,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     // 401 에러 발생 시 자동 로그아웃 처리
     const handleAuthError = () => {
-      console.log('Authentication error detected, logging out...');
       setUser(null);
     };
 

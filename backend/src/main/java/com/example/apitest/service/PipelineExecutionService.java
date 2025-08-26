@@ -57,7 +57,6 @@ public class PipelineExecutionService {
 
     @Transactional
     public PipelineExecution startExecution(Long pipelineId) {
-        System.out.println("Starting pipeline execution for pipeline: " + pipelineId);
         
         // Get pipeline and its steps
         Optional<Pipeline> pipelineOpt = pipelineRepository.findById(pipelineId);
@@ -78,7 +77,6 @@ public class PipelineExecutionService {
                 apiItem.getMethod();
                 apiItem.getRequestHeaders();
                 apiItem.getRequestBody();
-                System.out.println("Loaded ApiItem " + apiItem.getId() + " for step " + step.getStepOrder());
             }
         }
         
@@ -94,13 +92,12 @@ public class PipelineExecutionService {
         // Ensure the execution is properly saved before using it
         pipelineExecutionRepository.flush();
 
-        System.out.println("Created pipeline execution with ID: " + execution.getId());
 
         // Execute steps synchronously for now to test core functionality
         try {
             executeStepsWithId(execution.getId(), steps);
         } catch (Exception e) {
-            System.err.println("Error in pipeline execution: " + e.getMessage());
+            // Pipeline execution failed, log error and clean up
             e.printStackTrace();
             execution.setStatus(PipelineExecution.ExecutionStatus.FAILED);
             execution.setErrorMessage(e.getMessage());
@@ -108,7 +105,6 @@ public class PipelineExecutionService {
             pipelineExecutionRepository.save(execution);
             
             // Clean up any remaining session data on failure
-            System.out.println("Pipeline execution failed - cleaned up session data");
         }
 
         return execution;
@@ -117,7 +113,6 @@ public class PipelineExecutionService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void executeStepsWithId(Long executionId, List<PipelineStep> steps) {
-        System.out.println("Starting execution of " + steps.size() + " steps for execution ID: " + executionId);
         
         // Get execution entity from database
         PipelineExecution execution = pipelineExecutionRepository.findById(executionId)
@@ -135,8 +130,6 @@ public class PipelineExecutionService {
         stepContext.put("httpClient", sessionHttpClient);
         
         for (PipelineStep step : steps) {
-            System.out.println("Executing step " + step.getStepOrder() + ": " + step.getStepName());
-            System.out.println("Step context before execution: " + stepContext.keySet());
             
             // Create step execution record
             StepExecution stepExecution = new StepExecution(execution, step);
@@ -156,12 +149,11 @@ public class PipelineExecutionService {
                 nextStepContext.put("httpClient", sessionHttpClient);
                 if (extractedData != null && !extractedData.isEmpty()) {
                     nextStepContext.putAll(extractedData);
-                    System.out.println("Extracted data for next step: " + extractedData);
                 }
                 stepContext = nextStepContext;
                 
             } catch (Exception e) {
-                System.err.println("Step " + step.getStepOrder() + " failed: " + e.getMessage());
+                // Step failed, mark as failed and continue cleanup
                 
                 // Mark step as failed
                 stepExecution.setStatus(StepExecution.StepStatus.FAILED);
@@ -184,10 +176,9 @@ public class PipelineExecutionService {
                     CookieManager stepFailureCookieManager = (CookieManager) sessionHttpClient.cookieHandler().orElse(null);
                     if (stepFailureCookieManager != null) {
                         stepFailureCookieManager.getCookieStore().removeAll();
-                        System.out.println("Cleaned up session cookies after step failure");
                     }
                 } catch (Exception cleanupError) {
-                    System.err.println("Failed to clean up cookies after step failure: " + cleanupError.getMessage());
+                    // Failed to clean up cookies after step failure
                 }
                 return;
             }
@@ -219,17 +210,15 @@ public class PipelineExecutionService {
                 });
                 
                 if (cookiesString.length() > 0) {
-                    System.out.println("Session cookies used during execution: " + cookiesString.toString());
                     // Only save if needed for debugging - normally we clean up after execution
                     // execution.setSessionCookies(cookiesString.toString());
                 }
                 
                 // Clean up cookies from memory after execution completion
                 executionCookieManager.getCookieStore().removeAll();
-                System.out.println("Cleaned up session cookies from memory");
             }
         } catch (Exception e) {
-            System.err.println("Failed to handle session cookies: " + e.getMessage());
+            // Failed to handle session cookies
         }
         
         // Mark as completed
@@ -237,7 +226,6 @@ public class PipelineExecutionService {
         execution.setCompletedAt(LocalDateTime.now());
         pipelineExecutionRepository.save(execution);
         
-        System.out.println("Pipeline execution completed successfully with session preserved");
     }
 
     private Map<String, Object> executeStep(StepExecution stepExecution, Map<String, Object> executionContext) throws Exception {
@@ -245,7 +233,6 @@ public class PipelineExecutionService {
         ApiItem apiItem = step.getApiItem();
         HttpClient sessionHttpClient = (HttpClient) executionContext.get("httpClient");
         
-        System.out.println("Executing API call with session: " + apiItem.getMethod() + " " + apiItem.getUrl());
         
         long startTime = System.currentTimeMillis();
         
@@ -350,18 +337,11 @@ public class PipelineExecutionService {
             }
             
             // Extract data for next steps
-            System.out.println("=== EXTRACTION CHECK ===");
-            System.out.println("Step ID: " + step.getId());
-            System.out.println("Step DataExtractions: " + step.getDataExtractions());
-            System.out.println("DataExtractions is null: " + (step.getDataExtractions() == null));
-            System.out.println("DataExtractions is empty: " + (step.getDataExtractions() != null && step.getDataExtractions().trim().isEmpty()));
             
             Map<String, Object> extractedData = new HashMap<>();
             if (step.getDataExtractions() != null && !step.getDataExtractions().trim().isEmpty()) {
-                System.out.println("Calling extractData...");
                 extractedData = extractData(step.getDataExtractions(), response.body(), stepExecution);
             } else {
-                System.out.println("Skipping data extraction - no rules defined");
             }
             
             // Mark as successful only if HTTP status is OK (< 400)
@@ -369,7 +349,6 @@ public class PipelineExecutionService {
             stepExecution.setCompletedAt(LocalDateTime.now());
             stepExecutionRepository.save(stepExecution);
             
-            System.out.println("Step completed successfully with session in " + responseTime + "ms");
             
             return extractedData;
             
@@ -443,14 +422,10 @@ public class PipelineExecutionService {
 
     private Map<String, Object> extractData(String extractionRules, String responseBody, StepExecution stepExecution) {
         try {
-            System.out.println("=== DATA EXTRACTION DEBUG ===");
-            System.out.println("Extraction rules: " + extractionRules);
-            System.out.println("Response body: " + responseBody);
             
             JsonNode extractionNode = objectMapper.readTree(extractionRules);
             JsonNode responseNode = objectMapper.readTree(responseBody);
             
-            System.out.println("Response node structure: " + responseNode.toString());
             
             Map<String, Object> extractedData = new HashMap<>();
             
@@ -458,29 +433,23 @@ public class PipelineExecutionService {
                 String key = entry.getKey();
                 String path = entry.getValue().asText();
                 
-                System.out.println("Extracting key: " + key + ", path: " + path);
                 
                 // Simple JSON path extraction (can be enhanced with JSONPath library)
                 Object value = extractValueByPath(responseNode, path);
-                System.out.println("Extracted value: " + value);
                 
                 if (value != null) {
                     extractedData.put(key, value);
-                    System.out.println("Successfully extracted " + key + " = " + value);
                 } else {
-                    System.out.println("Failed to extract value for path: " + path);
                 }
             });
             
             // Store extracted data
             stepExecution.setExtractedData(objectMapper.writeValueAsString(extractedData));
-            System.out.println("Final extracted data: " + objectMapper.writeValueAsString(extractedData));
-            System.out.println("=== END DATA EXTRACTION DEBUG ===");
             
             return extractedData;
             
         } catch (Exception e) {
-            System.err.println("Error extracting data: " + e.getMessage());
+            // Error extracting data
             e.printStackTrace();
             return new HashMap<>();
         }
@@ -488,21 +457,14 @@ public class PipelineExecutionService {
 
     private Object extractValueByPath(JsonNode node, String path) {
         // Simple implementation - can be enhanced with JSONPath
-        System.out.println("=== EXTRACT VALUE DEBUG ===");
-        System.out.println("Path: " + path);
-        System.out.println("Node: " + node.toString());
         
         String[] parts = path.split("\\.");
         JsonNode current = node;
         
-        System.out.println("Path parts: " + java.util.Arrays.toString(parts));
         
         for (String part : parts) {
-            System.out.println("Processing part: " + part);
-            System.out.println("Current node before: " + (current != null ? current.toString() : "null"));
             
             if (current == null) {
-                System.out.println("Current node is null, returning null");
                 return null;
             }
             
@@ -512,19 +474,15 @@ public class PipelineExecutionService {
                 if (current.isArray() && index < current.size()) {
                     current = current.get(index);
                 } else {
-                    System.out.println("Array access failed for index: " + index);
                     return null;
                 }
             } else {
                 // Object property
                 current = current.get(part);
-                System.out.println("After accessing property '" + part + "': " + (current != null ? current.toString() : "null"));
             }
         }
         
         Object result = current != null ? current.asText() : null;
-        System.out.println("Final result: " + result);
-        System.out.println("=== END EXTRACT VALUE DEBUG ===");
         
         return result;
     }

@@ -19,7 +19,7 @@ export const useAdminUsers = () => {
         setUsers(data);
       }
     } catch (error) {
-      console.error('Failed to load users:', error);
+      // Failed to load users
     } finally {
       setLoading(false);
     }
@@ -44,7 +44,6 @@ export const useAdminUsers = () => {
         alert(error.error || '오류가 발생했습니다.');
       }
     } catch (error) {
-      console.error('Failed to update user status:', error);
       alert('서버 오류가 발생했습니다.');
     }
   };

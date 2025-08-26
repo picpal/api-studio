@@ -29,7 +29,6 @@ export const pipelineApi = {
       const response = await pipelineApiClient.get(`/pipelines/${pipelineId}/steps`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching steps:', error);
       throw error;
     }
   },
@@ -39,7 +38,6 @@ export const pipelineApi = {
       const response = await pipelineApiClient.get('/items');
       return response.data;
     } catch (error) {
-      console.error('Error fetching API items:', error);
       throw error;
     }
   },
@@ -49,7 +47,6 @@ export const pipelineApi = {
       const response = await pipelineApiClient.post(`/pipelines/${pipelineId}/steps`, stepData);
       return response.data;
     } catch (error) {
-      console.error('Error adding step:', error);
       throw error;
     }
   },
@@ -58,7 +55,6 @@ export const pipelineApi = {
     try {
       await pipelineApiClient.delete(`/pipelines/steps/${stepId}`);
     } catch (error) {
-      console.error('Error deleting step:', error);
       throw error;
     }
   },
@@ -68,7 +64,6 @@ export const pipelineApi = {
       const response = await pipelineApiClient.put(`/pipelines/steps/${stepId}`, stepData);
       return response.data;
     } catch (error) {
-      console.error('Error updating step:', error);
       throw error;
     }
   },
@@ -78,7 +73,6 @@ export const pipelineApi = {
       const response = await pipelineApiClient.post(`/pipelines/${pipelineId}/execute`);
       return response.data;
     } catch (error) {
-      console.error('Error executing pipeline:', error);
       throw error;
     }
   },
@@ -88,7 +82,6 @@ export const pipelineApi = {
       const response = await pipelineApiClient.get(`/pipelines/executions/${executionId}`);
       return response.data;
     } catch (error) {
-      console.error('Error getting execution status:', error);
       throw error;
     }
   },
@@ -98,7 +91,6 @@ export const pipelineApi = {
       const response = await pipelineApiClient.get(`/pipelines/executions/${executionId}/steps`);
       return response.data;
     } catch (error) {
-      console.error('Error getting step executions:', error);
       throw error;
     }
   },
@@ -108,28 +100,15 @@ export const pipelineApi = {
       const response = await pipelineApiClient.get(`/pipelines/${pipelineId}/executions/history`);
       return response.data;
     } catch (error) {
-      console.error('Error getting execution history:', error);
       throw error;
     }
   },
 
   async updatePipeline(pipelineId: number, data: { name: string; description: string }): Promise<any> {
     try {
-      console.log('updatePipeline - Request URL:', `${API_CONFIG.API_URL}/pipelines/${pipelineId}`);
-      console.log('updatePipeline - Request data:', data);
-      
       const response = await pipelineApiClient.put(`/pipelines/${pipelineId}`, data);
-      console.log('updatePipeline - Response:', response.data);
       return response.data;
     } catch (error: any) {
-      console.error('Error updating pipeline:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        config: error.config
-      });
       throw error;
     }
   }

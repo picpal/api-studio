@@ -49,13 +49,11 @@ public class PipelineController {
     @GetMapping("/folders")
     @Transactional(readOnly = true)
     public ResponseEntity<List<PipelineFolderDTO>> getAllFolders() {
-        System.out.println("PipelineController.getAllFolders() called!");
         try {
             List<PipelineFolder> folders = pipelineFolderRepository.findAll().stream()
                 .filter(folder -> folder.getIsActive() != null && folder.getIsActive())
                 .collect(java.util.stream.Collectors.toList());
             
-            System.out.println("Found " + folders.size() + " folders in database");
             
             List<PipelineFolderDTO> folderDTOs = new ArrayList<>();
             
@@ -89,10 +87,8 @@ public class PipelineController {
                 dto.setPipelines(pipelineDTOs);
                 folderDTOs.add(dto);
                 
-                System.out.println("Folder " + folder.getName() + " has " + pipelines.size() + " pipelines");
             }
             
-            System.out.println("Returning folders response");
             return ResponseEntity.ok(folderDTOs);
         } catch (Exception e) {
             System.err.println("Error in getAllFolders: " + e.getMessage());
@@ -164,15 +160,12 @@ public class PipelineController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Pipeline> getPipeline(@PathVariable Long id) {
-        System.out.println("PipelineController.getPipeline() called for pipeline: " + id);
         
         try {
             Optional<Pipeline> pipeline = pipelineRepository.findById(id);
             if (pipeline.isPresent()) {
-                System.out.println("Pipeline found: " + pipeline.get().getName());
                 return ResponseEntity.ok(pipeline.get());
             } else {
-                System.out.println("Pipeline not found: " + id);
                 return ResponseEntity.notFound().build();
             }
         } catch (Exception e) {
@@ -185,13 +178,10 @@ public class PipelineController {
     @PutMapping("/{id}")
     @Transactional
     public ResponseEntity<Pipeline> updatePipeline(@PathVariable Long id, @RequestBody UpdatePipelineRequest request) {
-        System.out.println("PipelineController.updatePipeline() called for pipeline: " + id);
-        System.out.println("Request data: name=" + request.getName() + ", description=" + request.getDescription());
         
         try {
             Optional<Pipeline> existingPipeline = pipelineRepository.findById(id);
             if (!existingPipeline.isPresent()) {
-                System.out.println("Pipeline not found: " + id);
                 return ResponseEntity.notFound().build();
             }
             
@@ -200,7 +190,6 @@ public class PipelineController {
             updatedPipeline.setDescription(request.getDescription());
             Pipeline savedPipeline = pipelineRepository.save(updatedPipeline);
             
-            System.out.println("Pipeline updated successfully with ID: " + savedPipeline.getId());
             return ResponseEntity.ok(savedPipeline);
         } catch (Exception e) {
             System.err.println("Error in updatePipeline: " + e.getMessage());
@@ -225,11 +214,9 @@ public class PipelineController {
     @GetMapping("/{pipelineId}/steps")
     @Transactional(readOnly = true)
     public ResponseEntity<List<PipelineStepDTO>> getStepsByPipeline(@PathVariable Long pipelineId) {
-        System.out.println("PipelineController.getStepsByPipeline() called for pipeline: " + pipelineId);
         try {
             // 하드 삭제 방식으로 변경: isActive 조건 없이 모든 step 조회
             List<PipelineStep> steps = pipelineStepRepository.findByPipelineIdOrderByStepOrderAsc(pipelineId);
-            System.out.println("Found " + steps.size() + " steps for pipeline " + pipelineId);
             
             List<PipelineStepDTO> stepDTOs = new ArrayList<>();
             for (PipelineStep step : steps) {
@@ -256,16 +243,12 @@ public class PipelineController {
                     apiItemDTO.setUrl(apiItem.getUrl());
                     apiItemDTO.setDescription(apiItem.getDescription());
                     dto.setApiItem(apiItemDTO);
-                    System.out.println("Step " + step.getId() + " has ApiItem: " + apiItem.getName());
                 }
                 
-                System.out.println("Step " + step.getId() + " extractions: " + step.getDataExtractions());
-                System.out.println("Step " + step.getId() + " injections: " + step.getDataInjections());
                 
                 stepDTOs.add(dto);
             }
             
-            System.out.println("Returning " + stepDTOs.size() + " step DTOs");
             return ResponseEntity.ok(stepDTOs);
         } catch (Exception e) {
             System.err.println("Error fetching steps for pipeline " + pipelineId + ": " + e.getMessage());
@@ -277,19 +260,15 @@ public class PipelineController {
     @PostMapping("/{pipelineId}/steps")
     @Transactional
     public ResponseEntity<PipelineStepDTO> addStep(@PathVariable Long pipelineId, @RequestBody CreateStepRequest request) {
-        System.out.println("PipelineController.addStep() called for pipeline: " + pipelineId);
-        System.out.println("Request data: apiItemId=" + request.getApiItemId() + ", stepName=" + request.getStepName() + ", description=" + request.getDescription());
         
         try {
             Optional<Pipeline> pipeline = pipelineRepository.findById(pipelineId);
             if (!pipeline.isPresent()) {
-                System.out.println("Pipeline not found: " + pipelineId);
                 return ResponseEntity.badRequest().build();
             }
 
             Optional<ApiItem> apiItem = apiItemRepository.findById(request.getApiItemId());
             if (!apiItem.isPresent()) {
-                System.out.println("ApiItem not found: " + request.getApiItemId());
                 return ResponseEntity.badRequest().build();
             }
 
@@ -297,8 +276,6 @@ public class PipelineController {
             List<PipelineStep> existingSteps = pipelineStepRepository.findByPipelineIdOrderByStepOrderAsc(pipelineId);
             int nextOrder = existingSteps.size() + 1;
             
-            System.out.println("Existing steps: " + existingSteps.size());
-            System.out.println("Next step order will be: " + nextOrder);
 
             PipelineStep step = new PipelineStep();
             step.setPipeline(pipeline.get());
@@ -313,7 +290,6 @@ public class PipelineController {
             step.setIsActive(true);
 
             PipelineStep savedStep = pipelineStepRepository.save(step);
-            System.out.println("Step saved successfully with ID: " + savedStep.getId());
             
             // Convert to DTO to avoid lazy loading issues
             PipelineStepDTO dto = new PipelineStepDTO();
@@ -352,8 +328,6 @@ public class PipelineController {
     @DeleteMapping("/steps/{stepId}")
     @Transactional
     public ResponseEntity<Void> deleteStep(@PathVariable Long stepId) {
-        System.out.println("=== DELETE STEP CALLED (HARD DELETE) ===");
-        System.out.println("Step ID to delete: " + stepId);
         
         Optional<PipelineStep> step = pipelineStepRepository.findById(stepId);
         if (step.isPresent()) {
@@ -361,36 +335,27 @@ public class PipelineController {
             Long pipelineId = stepToDelete.getPipeline().getId();
             int deletedStepOrder = stepToDelete.getStepOrder();
             
-            System.out.println("Deleting step with order: " + deletedStepOrder + " from pipeline: " + pipelineId);
             
             // 먼저 관련된 StepExecution 레코드들을 삭제
-            System.out.println("Deleting related StepExecution records for step: " + stepId);
             stepExecutionRepository.deleteByPipelineStepId(stepId);
-            System.out.println("StepExecution records deleted");
             
             // 하드 삭제: 실제로 DB에서 제거
             pipelineStepRepository.delete(stepToDelete);
-            System.out.println("Step physically deleted from database");
             
             // 삭제 후 남은 모든 단계들을 가져와서 재정렬 (하드 삭제 방식)
             List<PipelineStep> remainingSteps = pipelineStepRepository
                 .findByPipelineIdOrderByStepOrderAsc(pipelineId);
             
-            System.out.println("Found " + remainingSteps.size() + " remaining active steps");
             
             // 순번을 1부터 시작해서 순차적으로 재정렬 (연속된 순번 보장)
             for (int i = 0; i < remainingSteps.size(); i++) {
                 int newOrder = i + 1;
-                System.out.println("Reordering step " + remainingSteps.get(i).getId() + 
-                    " from order " + remainingSteps.get(i).getStepOrder() + " to " + newOrder);
                 remainingSteps.get(i).setStepOrder(newOrder);
             }
             
             // 모든 변경사항을 저장
             pipelineStepRepository.saveAll(remainingSteps);
             
-            System.out.println("Step " + stepId + " hard deleted. Remaining steps reordered: " + 
-                remainingSteps.size() + " steps");
             
             return ResponseEntity.ok().build();
         }
@@ -400,13 +365,10 @@ public class PipelineController {
     @PutMapping("/steps/{stepId}")
     @Transactional
     public ResponseEntity<PipelineStepDTO> updateStep(@PathVariable Long stepId, @RequestBody CreateStepRequest request) {
-        System.out.println("PipelineController.updateStep() called for step: " + stepId);
-        System.out.println("Request data: apiItemId=" + request.getApiItemId() + ", stepName=" + request.getStepName() + ", description=" + request.getDescription());
         
         try {
             Optional<PipelineStep> stepOptional = pipelineStepRepository.findById(stepId);
             if (!stepOptional.isPresent()) {
-                System.out.println("Step not found: " + stepId);
                 return ResponseEntity.notFound().build();
             }
 
@@ -416,7 +378,6 @@ public class PipelineController {
             if (!step.getApiItem().getId().equals(request.getApiItemId())) {
                 Optional<ApiItem> apiItem = apiItemRepository.findById(request.getApiItemId());
                 if (!apiItem.isPresent()) {
-                    System.out.println("ApiItem not found: " + request.getApiItemId());
                     return ResponseEntity.badRequest().build();
                 }
                 step.setApiItem(apiItem.get());
@@ -431,7 +392,6 @@ public class PipelineController {
             step.setDelayAfter(request.getDelayAfter());
 
             PipelineStep updatedStep = pipelineStepRepository.save(step);
-            System.out.println("Step updated successfully with ID: " + updatedStep.getId());
             
             // Convert to DTO
             PipelineStepDTO dto = new PipelineStepDTO();
@@ -506,7 +466,6 @@ public class PipelineController {
     // Pipeline Execution Operations
     @PostMapping("/{pipelineId}/execute")
     public ResponseEntity<PipelineExecutionDTO> executePipeline(@PathVariable Long pipelineId) {
-        System.out.println("PipelineController.executePipeline() called for pipeline: " + pipelineId);
         try {
             PipelineExecution execution = pipelineExecutionService.startExecution(pipelineId);
             PipelineExecutionDTO dto = convertToPipelineExecutionDTO(execution);

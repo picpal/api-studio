@@ -58,7 +58,6 @@ export class ScenarioService {
           return undefined;
       }
     } catch (error) {
-      console.error('Data extraction error:', error);
       return undefined;
     }
   }
@@ -71,7 +70,6 @@ export class ScenarioService {
   ): ApiItem {
     const value = variables[injection.variableName];
     if (value === undefined) {
-      console.warn(`Variable ${injection.variableName} not found for injection`);
       return apiItem;
     }
     
@@ -119,7 +117,7 @@ export class ScenarioService {
           break;
       }
     } catch (error) {
-      console.error('Data injection error:', error);
+      // Data injection failed, continue with original API item
     }
     
     return updatedApi;
@@ -203,7 +201,6 @@ export class ScenarioExecutor {
   }
   
   async executeScenario(scenario: TestScenario, apiItems: ApiItem[]): Promise<ScenarioExecutionContext> {
-    console.log('Starting scenario execution:', scenario.name);
     
     try {
       // 단계별 순차 실행
@@ -238,7 +235,6 @@ export class ScenarioExecutor {
         
         // 실패 시 시나리오 중단 (조건에 따라)
         if (result.status === 'failed') {
-          console.warn(`Step failed: ${step.apiName}. Continuing to next step.`);
           // 필요에 따라 break; 로 중단할 수 있음
         }
         
@@ -250,7 +246,6 @@ export class ScenarioExecutor {
       
       this.context.status = 'completed';
     } catch (error) {
-      console.error('Scenario execution error:', error);
       this.context.status = 'failed';
     }
     
@@ -308,7 +303,6 @@ export class ScenarioExecutor {
       }
       
     } catch (error) {
-      console.error('Step execution error:', error);
       result.status = 'failed';
       result.error = error instanceof Error ? error.message : 'Unknown error';
     }
@@ -324,7 +318,6 @@ export class ScenarioExecutor {
   }> {
     // 실제 구현은 TestAutomationPage의 executeApiCall과 동일
     // 여기서는 간소화된 버전
-    console.log('Executing API call:', api.name);
     
     // TODO: 실제 API 호출 로직 구현
     // 현재는 mock 응답 반환

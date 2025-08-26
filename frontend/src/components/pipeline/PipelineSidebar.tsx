@@ -66,18 +66,14 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
   useEffect(() => {
     let isMounted = true;
     const fetchFolders = async () => {
-      console.log('PipelineSidebar: Starting to fetch folders...');
       try {
         const foldersData = await pipelineApi.getFolders();
-        console.log('PipelineSidebar: Fetched folders data:', foldersData);
         if (isMounted) {
           setFolders(foldersData);
           // 기본적으로 모든 폴더 확장
           setExpandedFolders(new Set(foldersData.map(f => f.id)));
-          console.log('PipelineSidebar: Set folders and expanded state');
         }
       } catch (error) {
-        console.error('PipelineSidebar: Failed to load folders:', error);
         if (isMounted) {
           setFolders([]);
         }

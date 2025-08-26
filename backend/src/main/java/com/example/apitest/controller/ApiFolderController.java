@@ -94,18 +94,14 @@ public class ApiFolderController {
     public List<ApiFolder> getAllFolders(HttpSession session) {
         User currentUser = getCurrentUser(session);
         if (currentUser == null) {
-            System.out.println("DEBUG: No current user found");
             return List.of(); // 로그인하지 않은 사용자에게는 빈 목록 반환
         }
         
-        System.out.println("DEBUG: Current user: " + currentUser.getEmail() + ", Role: " + currentUser.getRole());
         
         List<ApiFolder> allFolders = folderRepository.findAll();
-        System.out.println("DEBUG: Total folders in DB: " + allFolders.size());
         
         // 관리자는 모든 폴더를 볼 수 있음
         if (currentUser.getRole() == User.Role.ADMIN) {
-            System.out.println("DEBUG: User is admin, returning all folders");
             return allFolders;
         }
         
@@ -113,12 +109,10 @@ public class ApiFolderController {
         List<ApiFolder> permittedFolders = allFolders.stream()
                 .filter(folder -> {
                     boolean hasAccess = hasPermission(currentUser, folder, FolderPermission.Permission.READ);
-                    System.out.println("DEBUG: Folder '" + folder.getName() + "' access for user " + currentUser.getEmail() + ": " + hasAccess);
                     return hasAccess;
                 })
                 .toList();
         
-        System.out.println("DEBUG: User has access to " + permittedFolders.size() + " folders");
         return permittedFolders;
     }
 

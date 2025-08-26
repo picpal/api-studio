@@ -34,11 +34,9 @@ export const PipelineHeader: React.FC<PipelineHeaderProps> = ({ pipeline, actual
 
   const handleExecute = async () => {
     try {
-      console.log('Execute button clicked for pipeline:', pipeline.id);
       await startExecution(pipeline.id);
       setIsExecutionModalOpen(true);
     } catch (err: any) {
-      console.error('Failed to start execution:', err);
       // Error is already handled in the hook, just open modal to show the error
       setIsExecutionModalOpen(true);
     }
