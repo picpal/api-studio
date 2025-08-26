@@ -13,7 +13,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, onExp
       <div className="relative flex-1">
         <input
           type="text"
-          placeholder="Search Text :)"
+          placeholder="Search items..."
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
           className="w-full px-3 py-2 pl-9 pr-8 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"

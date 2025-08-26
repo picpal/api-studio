@@ -62,6 +62,12 @@
         <appender-ref ref="FILE"/>
     </logger>
 
+    <!-- Pipeline Execution Service logging -->
+    <logger name="com.example.apitest.service.PipelineExecutionService" level="DEBUG" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </logger>
+
     <!-- Root Logger -->
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>

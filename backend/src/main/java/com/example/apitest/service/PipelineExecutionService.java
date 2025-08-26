@@ -21,10 +21,14 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 @Transactional
 public class PipelineExecutionService {
+    
+    private static final Logger logger = LoggerFactory.getLogger(PipelineExecutionService.class);
 
     @Autowired
     private PipelineRepository pipelineRepository;
@@ -238,7 +242,12 @@ public class PipelineExecutionService {
         
         try {
             // Prepare request
+            logger.info("=== URL TEMPLATE PROCESSING ===");
+            logger.info("Original URL: " + apiItem.getUrl());
+            logger.info("Context before processing: " + executionContext);
             String url = processTemplate(apiItem.getUrl(), executionContext);
+            logger.info("Processed URL: " + url);
+            logger.info("=== END URL TEMPLATE PROCESSING ===");
             String method = apiItem.getMethod().toString().toLowerCase();
             
             // Build request headers
@@ -357,12 +366,12 @@ public class PipelineExecutionService {
     private String processTemplate(String template, Map<String, Object> context) {
         if (template == null) return null;
         
-        System.out.println("=== TEMPLATE PROCESSING DEBUG ===");
-        System.out.println("Input template: " + template);
-        System.out.println("Available context keys: " + context.keySet());
+        logger.info("=== TEMPLATE PROCESSING DEBUG ===");
+        logger.info("Input template: " + template);
+        logger.info("Available context keys: " + context.keySet());
         
         // Replace {{variable:defaultValue}} or {{variable}} with values from context
-        Pattern pattern = Pattern.compile("\\{\\{([^}:]+)(?::([^}]*))?\\}\\}");
+        Pattern pattern = Pattern.compile("\\{\\{([^:}]+)(?::([^}]*))?\\}\\}");
         Matcher matcher = pattern.matcher(template);
         
         StringBuffer result = new StringBuffer();
@@ -371,10 +380,12 @@ public class PipelineExecutionService {
             String defaultValue = matcher.group(2); // null if no default value specified
             Object value = context.get(variable);
             
-            System.out.println("Processing variable: " + variable);
-            System.out.println("Default value: " + defaultValue);
-            System.out.println("Context value: " + value);
-            System.out.println("Context value type: " + (value != null ? value.getClass().getName() : "null"));
+            logger.info("Processing variable: " + variable);
+            logger.info("Default value: " + defaultValue);
+            logger.info("Context value: " + value);
+            logger.info("Context value type: " + (value != null ? value.getClass().getName() : "null"));
+            logger.info("All context keys: " + context.keySet());
+            logger.info("Context contains '" + variable + "': " + context.containsKey(variable));
             
             String replacement;
             if (value != null) {
@@ -388,7 +399,7 @@ public class PipelineExecutionService {
                     try {
                         replacement = objectMapper.writeValueAsString(value);
                         // If it's a simple quoted string, remove the quotes
-                        if (replacement.startsWith("\"") && replacement.endsWith("\"") && !replacement.contains("\"", 1)) {
+                        if (replacement.startsWith("\"") && replacement.endsWith("\"") && replacement.indexOf("\"", 1) == replacement.length() - 1) {
                             replacement = replacement.substring(1, replacement.length() - 1);
                         }
                     } catch (Exception e) {
@@ -401,13 +412,13 @@ public class PipelineExecutionService {
                 replacement = "";
             }
             
-            System.out.println("Final replacement: " + replacement);
+            logger.info("Final replacement: " + replacement);
             matcher.appendReplacement(result, Matcher.quoteReplacement(replacement));
         }
         matcher.appendTail(result);
         
-        System.out.println("Final result: " + result.toString());
-        System.out.println("=== END TEMPLATE PROCESSING DEBUG ===");
+        logger.info("Final result: " + result.toString());
+        logger.info("=== END TEMPLATE PROCESSING DEBUG ===");
         
         return result.toString();
     }
