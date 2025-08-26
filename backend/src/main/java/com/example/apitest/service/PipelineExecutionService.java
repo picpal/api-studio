@@ -123,20 +123,20 @@ public class PipelineExecutionService {
         PipelineExecution execution = pipelineExecutionRepository.findById(executionId)
             .orElseThrow(() -> new RuntimeException("Pipeline execution not found: " + executionId));
         
-        Map<String, Object> executionContext = new HashMap<>();
-        
         // Create dedicated HttpClient for this pipeline execution to maintain session
         CookieManager cookieManager = new CookieManager();
         cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
         HttpClient sessionHttpClient = HttpClient.newBuilder()
                 .cookieHandler(cookieManager)
                 .build();
-                
-        // Add HttpClient to execution context for session management
-        executionContext.put("httpClient", sessionHttpClient);
+        
+        // Initialize with empty context for first step
+        Map<String, Object> stepContext = new HashMap<>();
+        stepContext.put("httpClient", sessionHttpClient);
         
         for (PipelineStep step : steps) {
             System.out.println("Executing step " + step.getStepOrder() + ": " + step.getStepName());
+            System.out.println("Step context before execution: " + stepContext.keySet());
             
             // Create step execution record
             StepExecution stepExecution = new StepExecution(execution, step);
@@ -144,12 +144,21 @@ public class PipelineExecutionService {
             stepExecution = stepExecutionRepository.save(stepExecution);
 
             try {
-                // Execute the step
-                executeStep(stepExecution, executionContext);
+                // Execute the step with current context
+                Map<String, Object> extractedData = executeStep(stepExecution, stepContext);
                 
                 // Update counters
                 execution.setCompletedSteps(execution.getCompletedSteps() + 1);
                 execution.setSuccessfulSteps(execution.getSuccessfulSteps() + 1);
+                
+                // Create new context for next step with only extracted data and httpClient
+                Map<String, Object> nextStepContext = new HashMap<>();
+                nextStepContext.put("httpClient", sessionHttpClient);
+                if (extractedData != null && !extractedData.isEmpty()) {
+                    nextStepContext.putAll(extractedData);
+                    System.out.println("Extracted data for next step: " + extractedData);
+                }
+                stepContext = nextStepContext;
                 
             } catch (Exception e) {
                 System.err.println("Step " + step.getStepOrder() + " failed: " + e.getMessage());
@@ -231,7 +240,7 @@ public class PipelineExecutionService {
         System.out.println("Pipeline execution completed successfully with session preserved");
     }
 
-    private void executeStep(StepExecution stepExecution, Map<String, Object> executionContext) throws Exception {
+    private Map<String, Object> executeStep(StepExecution stepExecution, Map<String, Object> executionContext) throws Exception {
         PipelineStep step = stepExecution.getPipelineStep();
         ApiItem apiItem = step.getApiItem();
         HttpClient sessionHttpClient = (HttpClient) executionContext.get("httpClient");
@@ -335,6 +344,11 @@ public class PipelineExecutionService {
             stepExecution.setResponseData(response.body());
             stepExecution.setResponseTime(responseTime);
             
+            // Check HTTP status code to determine success/failure
+            if (response.statusCode() >= 400) {
+                throw new Exception("HTTP " + response.statusCode() + " error: " + response.body());
+            }
+            
             // Extract data for next steps
             System.out.println("=== EXTRACTION CHECK ===");
             System.out.println("Step ID: " + step.getId());
@@ -342,19 +356,22 @@ public class PipelineExecutionService {
             System.out.println("DataExtractions is null: " + (step.getDataExtractions() == null));
             System.out.println("DataExtractions is empty: " + (step.getDataExtractions() != null && step.getDataExtractions().trim().isEmpty()));
             
+            Map<String, Object> extractedData = new HashMap<>();
             if (step.getDataExtractions() != null && !step.getDataExtractions().trim().isEmpty()) {
                 System.out.println("Calling extractData...");
-                extractData(step.getDataExtractions(), response.body(), executionContext, stepExecution);
+                extractedData = extractData(step.getDataExtractions(), response.body(), stepExecution);
             } else {
                 System.out.println("Skipping data extraction - no rules defined");
             }
             
-            // Mark as successful
+            // Mark as successful only if HTTP status is OK (< 400)
             stepExecution.setStatus(StepExecution.StepStatus.SUCCESS);
             stepExecution.setCompletedAt(LocalDateTime.now());
             stepExecutionRepository.save(stepExecution);
             
             System.out.println("Step completed successfully with session in " + responseTime + "ms");
+            
+            return extractedData;
             
         } catch (Exception e) {
             long endTime = System.currentTimeMillis();
@@ -424,7 +441,7 @@ public class PipelineExecutionService {
     }
     
 
-    private void extractData(String extractionRules, String responseBody, Map<String, Object> context, StepExecution stepExecution) {
+    private Map<String, Object> extractData(String extractionRules, String responseBody, StepExecution stepExecution) {
         try {
             System.out.println("=== DATA EXTRACTION DEBUG ===");
             System.out.println("Extraction rules: " + extractionRules);
@@ -448,7 +465,6 @@ public class PipelineExecutionService {
                 System.out.println("Extracted value: " + value);
                 
                 if (value != null) {
-                    context.put(key, value);
                     extractedData.put(key, value);
                     System.out.println("Successfully extracted " + key + " = " + value);
                 } else {
@@ -461,9 +477,12 @@ public class PipelineExecutionService {
             System.out.println("Final extracted data: " + objectMapper.writeValueAsString(extractedData));
             System.out.println("=== END DATA EXTRACTION DEBUG ===");
             
+            return extractedData;
+            
         } catch (Exception e) {
             System.err.println("Error extracting data: " + e.getMessage());
             e.printStackTrace();
+            return new HashMap<>();
         }
     }
 

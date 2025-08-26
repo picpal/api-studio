@@ -2,6 +2,7 @@ package com.example.apitest.repository;
 
 import com.example.apitest.entity.StepExecution;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -18,4 +19,8 @@ public interface StepExecutionRepository extends JpaRepository<StepExecution, Lo
     
     @Query("SELECT se FROM StepExecution se WHERE se.pipelineExecution.id = :executionId AND se.stepOrder <= :stepOrder ORDER BY se.stepOrder")
     List<StepExecution> findPreviousSteps(@Param("executionId") Long executionId, @Param("stepOrder") Integer stepOrder);
+    
+    @Modifying
+    @Query("DELETE FROM StepExecution se WHERE se.pipelineStep.id = :pipelineStepId")
+    void deleteByPipelineStepId(@Param("pipelineStepId") Long pipelineStepId);
 }

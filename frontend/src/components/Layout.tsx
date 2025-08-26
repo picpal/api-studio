@@ -270,6 +270,7 @@ const Layout: React.FC<LayoutProps> = () => {
             }`} style={{ top: '64px' }}>
               <PipelineSidebar
                 collapsed={false}
+                onToggleCollapse={() => setSidebarCollapsed(true)}
                 onSelectPipeline={handleSelectPipeline}
                 selectedPipeline={selectedPipeline}
               />

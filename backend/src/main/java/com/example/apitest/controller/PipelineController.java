@@ -9,6 +9,7 @@ import com.example.apitest.entity.StepExecution;
 import com.example.apitest.repository.PipelineFolderRepository;
 import com.example.apitest.repository.PipelineRepository;
 import com.example.apitest.repository.PipelineStepRepository;
+import com.example.apitest.repository.StepExecutionRepository;
 import com.example.apitest.repository.ApiItemRepository;
 import com.example.apitest.service.PipelineExecutionService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,9 @@ public class PipelineController {
 
     @Autowired
     private PipelineStepRepository pipelineStepRepository;
+
+    @Autowired
+    private StepExecutionRepository stepExecutionRepository;
 
     @Autowired
     private ApiItemRepository apiItemRepository;
@@ -346,6 +350,7 @@ public class PipelineController {
     }
 
     @DeleteMapping("/steps/{stepId}")
+    @Transactional
     public ResponseEntity<Void> deleteStep(@PathVariable Long stepId) {
         System.out.println("=== DELETE STEP CALLED (HARD DELETE) ===");
         System.out.println("Step ID to delete: " + stepId);
@@ -357,6 +362,11 @@ public class PipelineController {
             int deletedStepOrder = stepToDelete.getStepOrder();
             
             System.out.println("Deleting step with order: " + deletedStepOrder + " from pipeline: " + pipelineId);
+            
+            // 먼저 관련된 StepExecution 레코드들을 삭제
+            System.out.println("Deleting related StepExecution records for step: " + stepId);
+            stepExecutionRepository.deleteByPipelineStepId(stepId);
+            System.out.println("StepExecution records deleted");
             
             // 하드 삭제: 실제로 DB에서 제거
             pipelineStepRepository.delete(stepToDelete);

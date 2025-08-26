@@ -59,7 +59,8 @@ export const PipelineHeader: React.FC<PipelineHeaderProps> = ({ pipeline, actual
             <h1 className="text-2xl font-bold text-gray-900">{pipeline.name}</h1>
           </div>
           <p className="text-gray-600 mb-4">{pipeline.description}</p>
-          <div className="flex items-center gap-4 text-sm text-gray-500">
+          {/* Desktop: Show step count with dates */}
+          <div className="hidden md:flex items-center gap-4 text-sm text-gray-500">
             <span>
               {stepsLoading ? (
                 <span className="flex items-center gap-1">
@@ -74,6 +75,23 @@ export const PipelineHeader: React.FC<PipelineHeaderProps> = ({ pipeline, actual
             <span>생성일: {new Date(pipeline.createdAt).toLocaleDateString()}</span>
             <span>•</span>
             <span>수정일: {new Date(pipeline.updatedAt).toLocaleDateString()}</span>
+          </div>
+
+          {/* Mobile: Show only step count prominently */}
+          <div className="md:hidden">
+            {stepsLoading ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg">
+                <div className="animate-spin w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                <span className="text-sm text-gray-600">로딩 중...</span>
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg font-semibold">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                <span className="text-base">{actualStepCount ?? pipeline.stepCount}개 단계</span>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex gap-2">

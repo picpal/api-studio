@@ -38,31 +38,31 @@ export const VisualFlow: React.FC<VisualFlowProps> = ({
 
   return (
     <div className="relative">
-      {/* 연결선 배경 */}
-      <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-200 via-blue-300 to-blue-200"></div>
+      {/* 연결선 배경 - 모바일에서는 숨김 */}
+      <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-200 via-blue-300 to-blue-200 hidden md:block"></div>
       
       <div className="space-y-6 relative">
         {steps.map((step, index) => (
           <div key={step.id} className="relative">
             {/* 단계 카드 */}
             <div 
-              className="ml-16 bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 group cursor-pointer"
+              className="md:ml-16 bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 group cursor-pointer"
               onClick={() => onEditStep && onEditStep(step)}
             >
               {/* 카드 헤더 */}
-              <div className="px-6 py-4 border-b border-gray-100">
+              <div className="px-4 md:px-6 py-4 border-b border-gray-100">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-500">STEP</span>
+                  <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
+                    <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
+                      <span className="text-xs md:text-sm font-medium text-gray-500">STEP</span>
                       <span className="text-lg font-bold text-blue-600">{step.stepOrder}</span>
                     </div>
-                    <div className="h-4 w-px bg-gray-300"></div>
-                    <h3 className="font-semibold text-gray-900">{step.stepName}</h3>
+                    <div className="h-4 w-px bg-gray-300 hidden md:block"></div>
+                    <h3 className="font-semibold text-gray-900 truncate text-sm md:text-base">{step.stepName}</h3>
                   </div>
                   
-                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="text-xs text-gray-400 mr-2">클릭하여 편집</div>
+                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                    <div className="text-xs text-gray-400 mr-2 hidden lg:block">클릭하여 편집</div>
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
@@ -84,14 +84,16 @@ export const VisualFlow: React.FC<VisualFlowProps> = ({
               </div>
               
               {/* 카드 본문 */}
-              <div className="px-6 py-4">
+              <div className="px-4 md:px-6 py-4">
                 {/* API 정보 */}
-                <div className="flex items-center gap-3 mb-4">
-                  <div className={`px-3 py-1 rounded-full text-xs font-medium ${getMethodColor(step.apiItem.method)}`}>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-4">
+                  <div className={`px-3 py-1 rounded-full text-xs font-medium ${getMethodColor(step.apiItem.method)} self-start`}>
                     {step.apiItem.method}
                   </div>
-                  <div className="font-mono text-sm text-gray-700 bg-gray-50 px-3 py-1 rounded-md flex-1">
-                    {step.apiItem.url}
+                  <div className="font-mono text-xs sm:text-sm text-gray-700 bg-gray-50 px-3 py-2 rounded-md flex-1 overflow-hidden">
+                    <div className="truncate" title={step.apiItem.url}>
+                      {step.apiItem.url}
+                    </div>
                   </div>
                 </div>
                 
@@ -100,7 +102,7 @@ export const VisualFlow: React.FC<VisualFlowProps> = ({
               </div>
             </div>
             
-            {/* 플로우 노드 */}
+            {/* 플로우 노드 - 모바일에서는 간소화 */}
             <FlowNode 
               step={step} 
               isLast={index === steps.length - 1}
@@ -121,7 +123,7 @@ interface FlowNodeProps {
 
 const FlowNode: React.FC<FlowNodeProps> = ({ step, isLast, hasDataFlow }) => {
   return (
-    <div className="absolute left-0 top-6">
+    <div className="absolute left-0 top-6 hidden md:block">
       {/* 플로우 노드 */}
       <div className={`w-16 h-16 rounded-full border-4 ${
         hasDataFlow 

@@ -144,31 +144,6 @@ export const VariableBuilder: React.FC<VariableBuilderProps> = ({
               + 새 변수 추가
             </button>
           </div>
-          
-          {type === 'extract' && suggestedPaths.length > 0 && (
-            <div className="mt-4 p-3 bg-blue-50 rounded border border-blue-200">
-              <div className="text-sm font-medium text-blue-800 mb-2">💡 추출 가능한 필드들:</div>
-              <div className="flex flex-wrap gap-1">
-                {suggestedPaths.slice(0, 8).map(path => (
-                  <button
-                    key={path}
-                    type="button"
-                    onClick={() => {
-                      const newRule: VariableRule = {
-                        id: Date.now().toString(),
-                        variableName: path.split('.').pop() || path,
-                        jsonPath: path
-                      };
-                      onRulesChange([...rules, newRule]);
-                    }}
-                    className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
-                  >
-                    {path}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       ) : (
         <textarea
