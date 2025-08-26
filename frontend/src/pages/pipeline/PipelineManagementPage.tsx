@@ -5,10 +5,12 @@ import { PipelineHeader, AddStepModal, EditStepModal, EditPipelineModal, Pipelin
 
 interface PipelineManagementPageProps {
   selectedPipeline?: Pipeline | null;
+  onPipelineUpdate?: () => void;
 }
 
 const PipelineManagementPage: React.FC<PipelineManagementPageProps> = ({ 
-  selectedPipeline
+  selectedPipeline,
+  onPipelineUpdate
 }) => {
   const [showAddStepModal, setShowAddStepModal] = useState(false);
   const [showEditStepModal, setShowEditStepModal] = useState(false);
@@ -62,6 +64,8 @@ const PipelineManagementPage: React.FC<PipelineManagementPageProps> = ({
   const handleUpdatePipeline = async (pipelineId: number, data: { name: string; description: string }) => {
     if (updatePipeline) {
       await updatePipeline(pipelineId, data);
+      // Pipeline 업데이트 후 부모 컴포넌트에서 서버 데이터 새로고침 요청
+      onPipelineUpdate?.();
     }
   };
 
@@ -137,7 +141,7 @@ const PipelineManagementPage: React.FC<PipelineManagementPageProps> = ({
         isOpen={showEditPipelineModal}
         onClose={() => setShowEditPipelineModal(false)}
         onUpdatePipeline={handleUpdatePipeline}
-        pipeline={selectedPipeline}
+        pipeline={selectedPipeline || null}
         loading={stepManagementLoading}
       />
     </div>

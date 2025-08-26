@@ -115,10 +115,21 @@ export const pipelineApi = {
 
   async updatePipeline(pipelineId: number, data: { name: string; description: string }): Promise<any> {
     try {
+      console.log('updatePipeline - Request URL:', `${API_CONFIG.API_URL}/pipelines/${pipelineId}`);
+      console.log('updatePipeline - Request data:', data);
+      
       const response = await pipelineApiClient.put(`/pipelines/${pipelineId}`, data);
+      console.log('updatePipeline - Response:', response.data);
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating pipeline:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: error.config
+      });
       throw error;
     }
   }

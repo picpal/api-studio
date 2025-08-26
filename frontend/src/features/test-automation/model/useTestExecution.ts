@@ -5,13 +5,25 @@ import { validateResponse, ValidationResult } from '../../../utils/responseValid
 import { testHistoryApi } from '../../../services/api';
 import { TestExecution } from '../ui/TestExecution';
 import { TestBatchResult } from '../ui/TestHistory';
+import { 
+  extractTemplateVariablesFromRequestWithDefaults,
+  replaceTemplateVariables,
+  TemplateVariable
+} from '../../../shared/utils/templateVariables';
 
 export const useTestExecution = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [currentExecution, setCurrentExecution] = useState<TestExecution[]>([]);
+  const [templateVariables, setTemplateVariables] = useState<TemplateVariable[]>([]);
+  const [showVariableModal, setShowVariableModal] = useState(false);
+  const [pendingBatchExecution, setPendingBatchExecution] = useState<{
+    selectedApis: Set<string>;
+    apiList: ApiItem[];
+    onBatchComplete: (batchResult: TestBatchResult) => void;
+  } | null>(null);
 
   // 실제 API 호출
-  const executeApiCall = async (api: ApiItem): Promise<{
+  const executeApiCall = async (api: ApiItem, templateVariables: Record<string, string> = {}): Promise<{
     responseBody: string;
     responseHeaders: Record<string, string>;
     statusCode: number;
@@ -19,17 +31,29 @@ export const useTestExecution = () => {
     try {
       // API 아이템에서 정보 추출
       const method = api.method;
-      const url = api.url;
-      const requestHeaders = api.requestHeaders ? (typeof api.requestHeaders === 'string' ? JSON.parse(api.requestHeaders) : api.requestHeaders) : {};
-      const requestBody = api.requestBody || '';
+      let url = api.url;
+      let requestHeaders = api.requestHeaders ? (typeof api.requestHeaders === 'string' ? JSON.parse(api.requestHeaders) : api.requestHeaders) : {};
+      let requestBody = api.requestBody || '';
       const requestParams = api.requestParams ? (typeof api.requestParams === 'string' ? JSON.parse(api.requestParams) : api.requestParams) : [];
 
-      // MainContent와 동일하게 파라미터를 객체로 변환
+      // 템플릿 변수 치환
+      url = replaceTemplateVariables(url, templateVariables);
+      requestBody = replaceTemplateVariables(requestBody, templateVariables);
+      
+      // Headers에서 템플릿 변수 치환
+      const processedHeaders: Record<string, string> = {};
+      Object.entries(requestHeaders).forEach(([key, value]) => {
+        processedHeaders[key] = replaceTemplateVariables(String(value), templateVariables);
+      });
+      requestHeaders = processedHeaders;
+
+      // MainContent와 동일하게 파라미터를 객체로 변환 (템플릿 변수 치환 포함)
       const paramsObject: Record<string, string> = {};
       if (requestParams.length > 0) {
         requestParams.forEach((param: any) => {
           if (param.key && param.value && param.key.trim() !== '' && param.value.trim() !== '') {
-            paramsObject[param.key] = param.value;
+            const processedValue = replaceTemplateVariables(param.value, templateVariables);
+            paramsObject[param.key] = processedValue;
           }
         });
       }
@@ -142,11 +166,52 @@ export const useTestExecution = () => {
     }
   };
 
-  const executeBatch = async (selectedApis: Set<string>, apiList: ApiItem[], onBatchComplete: (batchResult: TestBatchResult) => void) => {
+  // 템플릿 변수 감지 및 실행 함수
+  const checkTemplateVariablesAndExecute = (selectedApis: Set<string>, apiList: ApiItem[], onBatchComplete: (batchResult: TestBatchResult) => void) => {
     if (selectedApis.size === 0) {
       alert('테스트할 API를 선택해주세요.');
       return;
     }
+
+    // 선택된 API들에서 템플릿 변수 감지
+    const selectedApiList = apiList.filter(api => selectedApis.has(api.id));
+    const allTemplateVariables = new Map<string, TemplateVariable>();
+    
+    selectedApiList.forEach(api => {
+      const request = {
+        url: api.url,
+        headers: api.requestHeaders ? (typeof api.requestHeaders === 'string' ? JSON.parse(api.requestHeaders) : api.requestHeaders) : {},
+        body: api.requestBody || '',
+        params: api.requestParams || []
+      };
+      
+      const variables = extractTemplateVariablesFromRequestWithDefaults(request);
+      variables.forEach(variable => {
+        if (!allTemplateVariables.has(variable.name)) {
+          allTemplateVariables.set(variable.name, variable);
+        }
+      });
+    });
+
+    const templateVariablesList = Array.from(allTemplateVariables.values());
+    
+    if (templateVariablesList.length > 0) {
+      // 템플릿 변수가 있으면 모달 표시
+      setTemplateVariables(templateVariablesList);
+      setPendingBatchExecution({ selectedApis, apiList, onBatchComplete });
+      setShowVariableModal(true);
+      return;
+    }
+    
+    // 템플릿 변수가 없으면 바로 실행
+    executeBatchInternal(selectedApis, apiList, onBatchComplete, {});
+  };
+
+  const executeBatch = async (selectedApis: Set<string>, apiList: ApiItem[], onBatchComplete: (batchResult: TestBatchResult) => void) => {
+    checkTemplateVariablesAndExecute(selectedApis, apiList, onBatchComplete);
+  };
+
+  const executeBatchInternal = async (selectedApis: Set<string>, apiList: ApiItem[], onBatchComplete: (batchResult: TestBatchResult) => void, templateVariablesMap: Record<string, string> = {}) => {
 
     setIsRunning(true);
     const selectedApiList = apiList.filter(api => selectedApis.has(api.id));
@@ -195,9 +260,9 @@ export const useTestExecution = () => {
           execution.requestParams = [];
         }
         
-        // 실제 API 호출
-        console.log('About to call executeApiCall for:', api.name);
-        const response = await executeApiCall(api);
+        // 실제 API 호출 (템플릿 변수 전달)
+        console.log('About to call executeApiCall for:', api.name, 'with variables:', templateVariablesMap);
+        const response = await executeApiCall(api, templateVariablesMap);
         console.log('executeApiCall completed for:', api.name, 'Status:', response.statusCode);
         
         const apiEndTime = Date.now();
@@ -357,10 +422,39 @@ export const useTestExecution = () => {
     setCurrentExecution(executions);
   };
 
+  // 템플릿 변수 모달 핸들러
+  const handleVariableConfirm = async (variables: Record<string, string>) => {
+    if (!pendingBatchExecution) return;
+    
+    setShowVariableModal(false);
+    
+    // 치환된 요청으로 배치 실행
+    await executeBatchInternal(
+      pendingBatchExecution.selectedApis,
+      pendingBatchExecution.apiList,
+      pendingBatchExecution.onBatchComplete,
+      variables
+    );
+    
+    setPendingBatchExecution(null);
+    setTemplateVariables([]);
+  };
+
+  const handleVariableModalClose = () => {
+    setShowVariableModal(false);
+    setPendingBatchExecution(null);
+    setTemplateVariables([]);
+  };
+
   return {
     isRunning,
     currentExecution,
     executeBatch,
-    setExecutionResults
+    setExecutionResults,
+    // 템플릿 변수 관련
+    showVariableModal,
+    templateVariables,
+    handleVariableConfirm,
+    handleVariableModalClose
   };
 };

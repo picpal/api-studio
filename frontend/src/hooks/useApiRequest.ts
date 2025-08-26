@@ -5,6 +5,12 @@ import { HeaderItem } from '../components/api-test/HeadersTable';
 import { ExpectedValue } from '../components/api-test/ValidationTab';
 import axios from 'axios';
 import { validateResponse } from '../utils/responseValidation';
+import { 
+  extractTemplateVariablesFromRequest, 
+  extractTemplateVariablesFromRequestWithDefaults,
+  replaceTemplateVariablesInRequest,
+  TemplateVariable
+} from '../shared/utils/templateVariables';
 
 export const useApiRequest = () => {
   const [request, setRequest] = useState<ApiRequest>({
@@ -18,6 +24,15 @@ export const useApiRequest = () => {
   const [response, setResponse] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [lastValidationResult, setLastValidationResult] = useState<any>(null);
+  
+  // 템플릿 변수 모달 상태
+  const [showVariableModal, setShowVariableModal] = useState(false);
+  const [templateVariables, setTemplateVariables] = useState<TemplateVariable[]>([]);
+  const [pendingRequest, setPendingRequest] = useState<{
+    paramsList: ParamItem[];
+    validationEnabled: boolean;
+    expectedValuesList: ExpectedValue[];
+  } | null>(null);
 
   // 파라미터와 바디 동기화를 위한 헬퍼 함수들
   const convertParamsToFormData = useCallback((params: { [key: string]: string }): string => {
@@ -166,7 +181,9 @@ export const useApiRequest = () => {
     }
   }, [request, convertParamsListToBody]);
 
-  const handleSend = useCallback(async (
+  // 실제 API 호출을 수행하는 내부 함수
+  const executeApiRequest = useCallback(async (
+    requestToSend: ApiRequest,
     paramsList: ParamItem[], 
     validationEnabled: boolean, 
     expectedValuesList: ExpectedValue[]
@@ -188,7 +205,7 @@ export const useApiRequest = () => {
     const startTime = Date.now();
     
     try {
-      let fullUrl = request.url;
+      let fullUrl = requestToSend.url;
       
       // 외부 API인 경우 프록시 경로로 변경
       if (fullUrl.includes('devpg.bluewalnut.co.kr')) {
@@ -196,18 +213,18 @@ export const useApiRequest = () => {
       }
       
       const axiosConfig: any = {
-        method: request.method.toLowerCase(),
+        method: requestToSend.method.toLowerCase(),
         url: fullUrl,
-        params: request.params,
-        headers: request.headers,
+        params: requestToSend.params,
+        headers: requestToSend.headers,
         withCredentials: true,
       };
 
-      if (request.method !== 'GET' && request.body) {
+      if (requestToSend.method !== 'GET' && requestToSend.body) {
         try {
-          axiosConfig.data = JSON.parse(request.body);
+          axiosConfig.data = JSON.parse(requestToSend.body);
         } catch {
-          axiosConfig.data = request.body;
+          axiosConfig.data = requestToSend.body;
         }
       }
 
@@ -264,7 +281,61 @@ export const useApiRequest = () => {
     }
     
     setLoading(false);
-  }, [request]);
+  }, []);
+
+  // 새로운 handleSend - 템플릿 변수 감지 기능 포함
+  const handleSend = useCallback(async (
+    paramsList: ParamItem[], 
+    validationEnabled: boolean, 
+    expectedValuesList: ExpectedValue[]
+  ) => {
+    console.log('🚀 handleSend called with template variable detection!');
+    console.log('Request data:', request);
+    
+    // 템플릿 변수 감지 (기본값 포함)
+    const variables = extractTemplateVariablesFromRequestWithDefaults(request);
+    console.log('Found template variables:', variables);
+    
+    if (variables.length > 0) {
+      // 템플릿 변수가 있으면 모달 표시를 위해 상태 저장
+      setTemplateVariables(variables);
+      setPendingRequest({ paramsList, validationEnabled, expectedValuesList });
+      setShowVariableModal(true);
+      return;
+    }
+    
+    // 템플릿 변수가 없으면 바로 실행
+    await executeApiRequest(request, paramsList, validationEnabled, expectedValuesList);
+  }, [request, executeApiRequest]);
+
+  // 템플릿 변수 입력 후 실행
+  const handleVariableConfirm = useCallback(async (variables: Record<string, string>) => {
+    if (!pendingRequest) return;
+    
+    setShowVariableModal(false);
+    
+    // 템플릿 변수를 실제 값으로 치환
+    const processedRequest = replaceTemplateVariablesInRequest(request, variables);
+    console.log('Processed request with variables:', processedRequest);
+    
+    // 치환된 요청으로 API 호출
+    await executeApiRequest(
+      processedRequest, 
+      pendingRequest.paramsList, 
+      pendingRequest.validationEnabled, 
+      pendingRequest.expectedValuesList
+    );
+    
+    setPendingRequest(null);
+    setTemplateVariables([]);
+  }, [request, pendingRequest, executeApiRequest]);
+
+  // 템플릿 변수 모달 닫기
+  const handleVariableModalClose = useCallback(() => {
+    setShowVariableModal(false);
+    setPendingRequest(null);
+    setTemplateVariables([]);
+  }, []);
 
   const generateCurl = useCallback(() => {
     const fullUrl = request.url;
@@ -318,6 +389,11 @@ export const useApiRequest = () => {
     handleSend,
     generateCurl,
     resetRequest,
-    convertParamsToFormData
+    convertParamsToFormData,
+    // 템플릿 변수 관련 상태와 함수들
+    showVariableModal,
+    templateVariables,
+    handleVariableConfirm,
+    handleVariableModalClose
   };
 };

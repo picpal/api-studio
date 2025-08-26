@@ -10,6 +10,7 @@ import {
   useTestExecution,
   useTestHistory
 } from '../features/test-automation';
+import { VariableInputModal } from '../widgets/api-testing/VariableInputModal';
 
 interface TestAutomationPageProps {
   baseUrls: BaseUrl[];
@@ -46,7 +47,12 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
     isRunning,
     currentExecution,
     executeBatch,
-    setExecutionResults
+    setExecutionResults,
+    // 템플릿 변수 관련
+    showVariableModal,
+    templateVariables,
+    handleVariableConfirm,
+    handleVariableModalClose
   } = useTestExecution();
 
   // 모달 상태 관리
@@ -121,6 +127,15 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
         currentExecution={currentExecution}
         showModal={showReportModal}
         onClose={handleCloseReport}
+      />
+
+      {/* Template Variable Input Modal */}
+      <VariableInputModal
+        isOpen={showVariableModal}
+        onClose={handleVariableModalClose}
+        onConfirm={handleVariableConfirm}
+        templateVariables={templateVariables}
+        title="배치 테스트 변수 입력"
       />
     </div>
   );

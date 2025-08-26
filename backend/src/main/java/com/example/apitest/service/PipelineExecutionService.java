@@ -327,8 +327,17 @@ public class PipelineExecutionService {
             stepExecution.setResponseTime(responseTime);
             
             // Extract data for next steps
+            System.out.println("=== EXTRACTION CHECK ===");
+            System.out.println("Step ID: " + step.getId());
+            System.out.println("Step DataExtractions: " + step.getDataExtractions());
+            System.out.println("DataExtractions is null: " + (step.getDataExtractions() == null));
+            System.out.println("DataExtractions is empty: " + (step.getDataExtractions() != null && step.getDataExtractions().trim().isEmpty()));
+            
             if (step.getDataExtractions() != null && !step.getDataExtractions().trim().isEmpty()) {
+                System.out.println("Calling extractData...");
                 extractData(step.getDataExtractions(), response.body(), executionContext, stepExecution);
+            } else {
+                System.out.println("Skipping data extraction - no rules defined");
             }
             
             // Mark as successful
@@ -348,17 +357,57 @@ public class PipelineExecutionService {
     private String processTemplate(String template, Map<String, Object> context) {
         if (template == null) return null;
         
-        // Replace {{variable}} with values from context
-        Pattern pattern = Pattern.compile("\\{\\{([^}]+)\\}\\}");
+        System.out.println("=== TEMPLATE PROCESSING DEBUG ===");
+        System.out.println("Input template: " + template);
+        System.out.println("Available context keys: " + context.keySet());
+        
+        // Replace {{variable:defaultValue}} or {{variable}} with values from context
+        Pattern pattern = Pattern.compile("\\{\\{([^}:]+)(?::([^}]*))?\\}\\}");
         Matcher matcher = pattern.matcher(template);
         
         StringBuffer result = new StringBuffer();
         while (matcher.find()) {
             String variable = matcher.group(1);
+            String defaultValue = matcher.group(2); // null if no default value specified
             Object value = context.get(variable);
-            matcher.appendReplacement(result, value != null ? value.toString() : "");
+            
+            System.out.println("Processing variable: " + variable);
+            System.out.println("Default value: " + defaultValue);
+            System.out.println("Context value: " + value);
+            System.out.println("Context value type: " + (value != null ? value.getClass().getName() : "null"));
+            
+            String replacement;
+            if (value != null) {
+                // Handle different types appropriately
+                if (value instanceof String) {
+                    replacement = (String) value;
+                } else if (value instanceof Number) {
+                    replacement = value.toString();
+                } else {
+                    // For complex objects, try to serialize as JSON if possible
+                    try {
+                        replacement = objectMapper.writeValueAsString(value);
+                        // If it's a simple quoted string, remove the quotes
+                        if (replacement.startsWith("\"") && replacement.endsWith("\"") && !replacement.contains("\"", 1)) {
+                            replacement = replacement.substring(1, replacement.length() - 1);
+                        }
+                    } catch (Exception e) {
+                        replacement = value.toString();
+                    }
+                }
+            } else if (defaultValue != null) {
+                replacement = defaultValue;
+            } else {
+                replacement = "";
+            }
+            
+            System.out.println("Final replacement: " + replacement);
+            matcher.appendReplacement(result, Matcher.quoteReplacement(replacement));
         }
         matcher.appendTail(result);
+        
+        System.out.println("Final result: " + result.toString());
+        System.out.println("=== END TEMPLATE PROCESSING DEBUG ===");
         
         return result.toString();
     }
@@ -366,8 +415,14 @@ public class PipelineExecutionService {
 
     private void extractData(String extractionRules, String responseBody, Map<String, Object> context, StepExecution stepExecution) {
         try {
+            System.out.println("=== DATA EXTRACTION DEBUG ===");
+            System.out.println("Extraction rules: " + extractionRules);
+            System.out.println("Response body: " + responseBody);
+            
             JsonNode extractionNode = objectMapper.readTree(extractionRules);
             JsonNode responseNode = objectMapper.readTree(responseBody);
+            
+            System.out.println("Response node structure: " + responseNode.toString());
             
             Map<String, Object> extractedData = new HashMap<>();
             
@@ -375,29 +430,51 @@ public class PipelineExecutionService {
                 String key = entry.getKey();
                 String path = entry.getValue().asText();
                 
+                System.out.println("Extracting key: " + key + ", path: " + path);
+                
                 // Simple JSON path extraction (can be enhanced with JSONPath library)
                 Object value = extractValueByPath(responseNode, path);
+                System.out.println("Extracted value: " + value);
+                
                 if (value != null) {
                     context.put(key, value);
                     extractedData.put(key, value);
+                    System.out.println("Successfully extracted " + key + " = " + value);
+                } else {
+                    System.out.println("Failed to extract value for path: " + path);
                 }
             });
             
             // Store extracted data
             stepExecution.setExtractedData(objectMapper.writeValueAsString(extractedData));
+            System.out.println("Final extracted data: " + objectMapper.writeValueAsString(extractedData));
+            System.out.println("=== END DATA EXTRACTION DEBUG ===");
             
         } catch (Exception e) {
             System.err.println("Error extracting data: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
     private Object extractValueByPath(JsonNode node, String path) {
         // Simple implementation - can be enhanced with JSONPath
+        System.out.println("=== EXTRACT VALUE DEBUG ===");
+        System.out.println("Path: " + path);
+        System.out.println("Node: " + node.toString());
+        
         String[] parts = path.split("\\.");
         JsonNode current = node;
         
+        System.out.println("Path parts: " + java.util.Arrays.toString(parts));
+        
         for (String part : parts) {
-            if (current == null) return null;
+            System.out.println("Processing part: " + part);
+            System.out.println("Current node before: " + (current != null ? current.toString() : "null"));
+            
+            if (current == null) {
+                System.out.println("Current node is null, returning null");
+                return null;
+            }
             
             if (part.matches("\\d+")) {
                 // Array index
@@ -405,15 +482,21 @@ public class PipelineExecutionService {
                 if (current.isArray() && index < current.size()) {
                     current = current.get(index);
                 } else {
+                    System.out.println("Array access failed for index: " + index);
                     return null;
                 }
             } else {
                 // Object property
                 current = current.get(part);
+                System.out.println("After accessing property '" + part + "': " + (current != null ? current.toString() : "null"));
             }
         }
         
-        return current != null ? current.asText() : null;
+        Object result = current != null ? current.asText() : null;
+        System.out.println("Final result: " + result);
+        System.out.println("=== END EXTRACT VALUE DEBUG ===");
+        
+        return result;
     }
 
     public PipelineExecution getExecutionStatus(Long executionId) {

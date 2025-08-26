@@ -158,6 +158,26 @@ public class PipelineController {
         return ResponseEntity.ok(pipelines);
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<Pipeline> getPipeline(@PathVariable Long id) {
+        System.out.println("PipelineController.getPipeline() called for pipeline: " + id);
+        
+        try {
+            Optional<Pipeline> pipeline = pipelineRepository.findById(id);
+            if (pipeline.isPresent()) {
+                System.out.println("Pipeline found: " + pipeline.get().getName());
+                return ResponseEntity.ok(pipeline.get());
+            } else {
+                System.out.println("Pipeline not found: " + id);
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            System.err.println("Error in getPipeline: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
     @PutMapping("/{id}")
     @Transactional
     public ResponseEntity<Pipeline> updatePipeline(@PathVariable Long id, @RequestBody UpdatePipelineRequest request) {
@@ -203,7 +223,8 @@ public class PipelineController {
     public ResponseEntity<List<PipelineStepDTO>> getStepsByPipeline(@PathVariable Long pipelineId) {
         System.out.println("PipelineController.getStepsByPipeline() called for pipeline: " + pipelineId);
         try {
-            List<PipelineStep> steps = pipelineStepRepository.findByIsActiveTrueAndPipelineIdOrderByStepOrderAsc(pipelineId);
+            // 하드 삭제 방식으로 변경: isActive 조건 없이 모든 step 조회
+            List<PipelineStep> steps = pipelineStepRepository.findByPipelineIdOrderByStepOrderAsc(pipelineId);
             System.out.println("Found " + steps.size() + " steps for pipeline " + pipelineId);
             
             List<PipelineStepDTO> stepDTOs = new ArrayList<>();
@@ -213,6 +234,11 @@ public class PipelineController {
                 dto.setStepOrder(step.getStepOrder());
                 dto.setStepName(step.getStepName());
                 dto.setDescription(step.getDescription());
+                dto.setDataExtractions(step.getDataExtractions());
+                dto.setDataInjections(step.getDataInjections());
+                dto.setExecutionCondition(step.getExecutionCondition());
+                dto.setDelayAfter(step.getDelayAfter());
+                dto.setIsActive(step.getIsActive());
                 dto.setCreatedAt(step.getCreatedAt());
                 dto.setUpdatedAt(step.getUpdatedAt());
                 
@@ -228,6 +254,9 @@ public class PipelineController {
                     dto.setApiItem(apiItemDTO);
                     System.out.println("Step " + step.getId() + " has ApiItem: " + apiItem.getName());
                 }
+                
+                System.out.println("Step " + step.getId() + " extractions: " + step.getDataExtractions());
+                System.out.println("Step " + step.getId() + " injections: " + step.getDataInjections());
                 
                 stepDTOs.add(dto);
             }
@@ -260,9 +289,11 @@ public class PipelineController {
                 return ResponseEntity.badRequest().build();
             }
 
-            // Get the next step order
-            List<PipelineStep> existingSteps = pipelineStepRepository.findByIsActiveTrueAndPipelineIdOrderByStepOrderAsc(pipelineId);
+            // Get the next step order (하드 삭제 방식에서는 모든 step이 활성이므로 단순히 개수 + 1)
+            List<PipelineStep> existingSteps = pipelineStepRepository.findByPipelineIdOrderByStepOrderAsc(pipelineId);
             int nextOrder = existingSteps.size() + 1;
+            
+            System.out.println("Existing steps: " + existingSteps.size());
             System.out.println("Next step order will be: " + nextOrder);
 
             PipelineStep step = new PipelineStep();
@@ -316,11 +347,41 @@ public class PipelineController {
 
     @DeleteMapping("/steps/{stepId}")
     public ResponseEntity<Void> deleteStep(@PathVariable Long stepId) {
+        System.out.println("=== DELETE STEP CALLED (HARD DELETE) ===");
+        System.out.println("Step ID to delete: " + stepId);
+        
         Optional<PipelineStep> step = pipelineStepRepository.findById(stepId);
         if (step.isPresent()) {
             PipelineStep stepToDelete = step.get();
-            stepToDelete.setIsActive(false);
-            pipelineStepRepository.save(stepToDelete);
+            Long pipelineId = stepToDelete.getPipeline().getId();
+            int deletedStepOrder = stepToDelete.getStepOrder();
+            
+            System.out.println("Deleting step with order: " + deletedStepOrder + " from pipeline: " + pipelineId);
+            
+            // 하드 삭제: 실제로 DB에서 제거
+            pipelineStepRepository.delete(stepToDelete);
+            System.out.println("Step physically deleted from database");
+            
+            // 삭제 후 남은 모든 단계들을 가져와서 재정렬 (하드 삭제 방식)
+            List<PipelineStep> remainingSteps = pipelineStepRepository
+                .findByPipelineIdOrderByStepOrderAsc(pipelineId);
+            
+            System.out.println("Found " + remainingSteps.size() + " remaining active steps");
+            
+            // 순번을 1부터 시작해서 순차적으로 재정렬 (연속된 순번 보장)
+            for (int i = 0; i < remainingSteps.size(); i++) {
+                int newOrder = i + 1;
+                System.out.println("Reordering step " + remainingSteps.get(i).getId() + 
+                    " from order " + remainingSteps.get(i).getStepOrder() + " to " + newOrder);
+                remainingSteps.get(i).setStepOrder(newOrder);
+            }
+            
+            // 모든 변경사항을 저장
+            pipelineStepRepository.saveAll(remainingSteps);
+            
+            System.out.println("Step " + stepId + " hard deleted. Remaining steps reordered: " + 
+                remainingSteps.size() + " steps");
+            
             return ResponseEntity.ok().build();
         }
         return ResponseEntity.notFound().build();

@@ -28,6 +28,7 @@ public class Pipeline {
 
     @OneToMany(mappedBy = "pipeline", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("stepOrder ASC")
+    @JsonIgnoreProperties("pipeline")
     private List<PipelineStep> steps;
 
     @Column(name = "is_active")

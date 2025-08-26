@@ -11,6 +11,7 @@ import { useApiRequest } from '../hooks/useApiRequest';
 import { ParamItem } from './api-test/ParamsTable';
 import { HeaderItem } from './api-test/HeadersTable';
 import { ExpectedValue } from './api-test/ValidationTab';
+import { VariableInputModal } from '../widgets/api-testing/VariableInputModal';
 
 interface MainContentProps {
   selectedItem: ApiItem | null;
@@ -33,7 +34,12 @@ const MainContentRefactored: React.FC<MainContentProps> = ({
     handleSend,
     generateCurl,
     resetRequest,
-    convertParamsToFormData
+    convertParamsToFormData,
+    // 템플릿 변수 관련
+    showVariableModal,
+    templateVariables,
+    handleVariableConfirm,
+    handleVariableModalClose
   } = useApiRequest();
 
   // Local state
@@ -584,6 +590,15 @@ const MainContentRefactored: React.FC<MainContentProps> = ({
         onSave={handleSaveHistory}
         onCancel={() => setShowSaveModal(false)}
         defaultName={selectedItem?.name ? `${selectedItem.name} v${new Date().toISOString().slice(0, 10)}` : ''}
+      />
+
+      {/* Template Variable Input Modal */}
+      <VariableInputModal
+        isOpen={showVariableModal}
+        onClose={handleVariableModalClose}
+        onConfirm={handleVariableConfirm}
+        templateVariables={templateVariables}
+        title="API 테스트 변수 입력"
       />
     </div>
   );

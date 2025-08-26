@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { ApiItem } from '../entities/api-item';
 import { useApiForm } from '../features/api-testing';
+import { useApiRequest } from '../hooks/useApiRequest';
 import { ApiRequestPanel } from '../widgets/api-request-panel';
 import { ParamsTable } from '../features/api-testing';
 import { Button } from '../shared/ui';
+import { VariableInputModal } from '../widgets/api-testing/VariableInputModal';
 
 interface ApiTestingPageProps {
   selectedItem: ApiItem | null;
@@ -30,20 +32,30 @@ export const ApiTestingPage: React.FC<ApiTestingPageProps> = ({
     resetForm
   } = useApiForm(selectedItem);
 
-  const [loading, setLoading] = useState(false);
-  const [response, setResponse] = useState(null);
+  const {
+    request: apiRequest,
+    setRequest: setApiRequest,
+    response,
+    loading,
+    handleSend: handleApiSend,
+    showVariableModal,
+    templateVariables,
+    handleVariableConfirm,
+    handleVariableModalClose
+  } = useApiRequest();
+
+  // useApiForm의 request 변경을 useApiRequest에 동기화
+  useEffect(() => {
+    setApiRequest(request);
+  }, [request, setApiRequest]);
 
   const handleSend = async () => {
-    setLoading(true);
-    try {
-      // API 호출 로직
-      console.log('Sending request:', request);
-      // 실제 API 호출은 여기에 구현
-    } catch (error) {
-      console.error('API request failed:', error);
-    } finally {
-      setLoading(false);
-    }
+    // paramsList는 빈 배열로 전달 (API Testing 페이지에서는 사용하지 않음)
+    const paramsList: any[] = [];
+    const validationEnabled = false;
+    const expectedValuesList: any[] = [];
+    
+    await handleApiSend(paramsList, validationEnabled, expectedValuesList);
   };
 
   const handleMethodChange = (method: string) => {
@@ -65,6 +77,7 @@ export const ApiTestingPage: React.FC<ApiTestingPageProps> = ({
   }
 
   return (
+    <>
     <div className="flex-1 flex flex-col bg-white">
       {/* API Header */}
       <div className="bg-white border-b border-gray-200 p-4">
@@ -160,15 +173,67 @@ export const ApiTestingPage: React.FC<ApiTestingPageProps> = ({
             <h3 className="text-sm font-medium text-gray-700">Response</h3>
           </div>
           
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center text-gray-500">
-              <div className="text-4xl mb-4">🔍</div>
-              <p className="text-lg font-medium mb-2">요청을 시작할 수 있습니다</p>
-              <p className="text-sm">URL을 입력하고 Send 버튼을 눌러 API 테스트를 시작하세요</p>
+          {response ? (
+            <div className="flex-1 p-4 overflow-auto">
+              <div className="mb-4">
+                <div className="flex items-center gap-4 mb-2">
+                  <span className={`px-2 py-1 text-xs rounded ${
+                    response.status >= 200 && response.status < 300 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {response.status} {response.statusText}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {response.time}ms • {response.size}
+                  </span>
+                </div>
+                
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Response Body</h4>
+                <pre className="bg-gray-50 p-3 rounded text-xs overflow-auto max-h-96">
+                  {typeof response.data === 'object' 
+                    ? JSON.stringify(response.data, null, 2)
+                    : response.data}
+                </pre>
+                
+                {response.headers && Object.keys(response.headers).length > 0 && (
+                  <>
+                    <h4 className="text-sm font-medium text-gray-700 mt-4 mb-2">Response Headers</h4>
+                    <pre className="bg-gray-50 p-3 rounded text-xs">
+                      {JSON.stringify(response.headers, null, 2)}
+                    </pre>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              {loading ? (
+                <div className="text-center text-gray-500">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                  <p className="text-lg font-medium mb-2">요청 처리 중...</p>
+                </div>
+              ) : (
+                <div className="text-center text-gray-500">
+                  <div className="text-4xl mb-4">🔍</div>
+                  <p className="text-lg font-medium mb-2">요청을 시작할 수 있습니다</p>
+                  <p className="text-sm">URL을 입력하고 Send 버튼을 눌러 API 테스트를 시작하세요</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
+
+    {/* Template Variable Input Modal */}
+    <VariableInputModal
+      isOpen={showVariableModal}
+      onClose={handleVariableModalClose}
+      onConfirm={handleVariableConfirm}
+      templateVariables={templateVariables}
+      title="API 테스트 변수 입력"
+    />
+    </>
   );
 };

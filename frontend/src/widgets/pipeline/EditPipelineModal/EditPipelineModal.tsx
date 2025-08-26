@@ -18,6 +18,7 @@ export const EditPipelineModal: React.FC<EditPipelineModalProps> = ({
 }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // pipeline 데이터로 폼 초기화
   useEffect(() => {
@@ -40,15 +41,21 @@ export const EditPipelineModal: React.FC<EditPipelineModalProps> = ({
   };
 
   const handleUpdate = async () => {
-    if (!name.trim() || !pipeline) return;
+    if (!name.trim() || !pipeline || isUpdating) return;
 
+    setIsUpdating(true);
     try {
       await onUpdatePipeline(pipeline.id, {
         name: name.trim(),
         description: description.trim()
       });
+      // 성공 시 모달 닫기
+      onClose();
     } catch (error) {
       console.error('EditPipelineModal.handleUpdate: Error in onUpdatePipeline:', error);
+      // 에러 발생 시에도 모달은 열어둠
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -106,10 +113,10 @@ export const EditPipelineModal: React.FC<EditPipelineModalProps> = ({
           </button>
           <button
             onClick={handleUpdate}
-            disabled={!name.trim() || loading}
+            disabled={!name.trim() || loading || isUpdating}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
           >
-            {loading ? '저장 중...' : '저장'}
+            {loading || isUpdating ? '저장 중...' : '저장'}
           </button>
         </div>
       </div>

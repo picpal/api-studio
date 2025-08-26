@@ -169,6 +169,26 @@ const Layout: React.FC<LayoutProps> = () => {
     navigate(`/pipeline-management/${pipeline.id}`);
   };
 
+  const handlePipelineUpdate = async () => {
+    // 서버에서 최신 Pipeline 데이터를 가져와서 상태 업데이트
+    if (selectedPipeline) {
+      try {
+        const response = await fetch(`http://localhost:8080/api/pipelines/${selectedPipeline.id}`, {
+          credentials: 'include'
+        });
+        if (response.ok) {
+          const updatedPipeline = await response.json();
+          console.log('Pipeline refreshed from server:', updatedPipeline);
+          setSelectedPipeline(updatedPipeline); // 서버에서 가져온 최신 데이터로 업데이트
+        } else {
+          console.error('Failed to refresh pipeline:', response.status);
+        }
+      } catch (error) {
+        console.error('Error refreshing pipeline data:', error);
+      }
+    }
+  };
+
   return (
     <div className="h-screen bg-white flex flex-col">
       <Header 
@@ -285,6 +305,7 @@ const Layout: React.FC<LayoutProps> = () => {
           ) : (
             <PipelineManagementPage 
               selectedPipeline={selectedPipeline}
+              onPipelineUpdate={handlePipelineUpdate}
             />
           )}
         </div>
