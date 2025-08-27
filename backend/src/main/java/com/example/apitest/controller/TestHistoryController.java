@@ -1,8 +1,10 @@
 package com.example.apitest.controller;
 
+import com.example.apitest.annotation.CurrentUser;
+import com.example.apitest.annotation.RequireAuth;
 import com.example.apitest.entity.TestHistory;
+import com.example.apitest.entity.User;
 import com.example.apitest.repository.TestHistoryRepository;
-import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,13 +26,10 @@ public class TestHistoryController {
 
     // 테스트 히스토리 저장
     @PostMapping
-    public ResponseEntity<Map<String, Object>> saveTestHistory(@RequestBody Map<String, Object> request, HttpSession session) {
+    @RequireAuth
+    public ResponseEntity<Map<String, Object>> saveTestHistory(@RequestBody Map<String, Object> request, @CurrentUser User user) {
         try {
-            // 세션에서 사용자 정보 가져오기
-            String userEmail = (String) session.getAttribute("userEmail");
-            if (userEmail == null) {
-                return ResponseEntity.status(401).body(Map.of("error", "인증되지 않은 사용자입니다."));
-            }
+            String userEmail = user.getEmail();
 
             // 요청 데이터 추출
             String name = (String) request.get("name");
@@ -120,13 +119,10 @@ public class TestHistoryController {
 
     // 테스트 히스토리 삭제
     @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String, String>> deleteTestHistory(@PathVariable Long id, HttpSession session) {
+    @RequireAuth
+    public ResponseEntity<Map<String, String>> deleteTestHistory(@PathVariable Long id, @CurrentUser User user) {
         try {
-            // 세션에서 사용자 정보 가져오기
-            String userEmail = (String) session.getAttribute("userEmail");
-            if (userEmail == null) {
-                return ResponseEntity.status(401).body(Map.of("error", "인증되지 않은 사용자입니다."));
-            }
+            String userEmail = user.getEmail();
 
             Optional<TestHistory> historyOpt = testHistoryRepository.findById(id);
             

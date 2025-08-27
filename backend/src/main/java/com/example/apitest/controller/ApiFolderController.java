@@ -1,5 +1,7 @@
 package com.example.apitest.controller;
 
+import com.example.apitest.annotation.CurrentUser;
+import com.example.apitest.annotation.RequireAuth;
 import com.example.apitest.entity.ApiFolder;
 import com.example.apitest.entity.ApiItem;
 import com.example.apitest.entity.User;
@@ -10,7 +12,6 @@ import com.example.apitest.repository.ApiItemRepository;
 import com.example.apitest.repository.ApiItemHistoryRepository;
 import com.example.apitest.repository.FolderPermissionRepository;
 import com.example.apitest.service.ActivityLoggingService;
-import com.example.apitest.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,21 +41,6 @@ public class ApiFolderController {
     
     @Autowired
     private ActivityLoggingService activityLoggingService;
-    
-    @Autowired
-    private AuthService authService;
-    
-    /**
-     * 현재 로그인한 사용자 정보 가져오기
-     */
-    private User getCurrentUser(HttpSession session) {
-        String userEmail = (String) session.getAttribute("userEmail");
-        if (userEmail != null) {
-            Optional<User> userOpt = authService.findByEmail(userEmail);
-            return userOpt.orElse(null);
-        }
-        return null;
-    }
     
     /**
      * 사용자가 폴더에 대한 특정 권한을 가지고 있는지 확인
@@ -91,11 +77,8 @@ public class ApiFolderController {
     }
 
     @GetMapping
-    public List<ApiFolder> getAllFolders(HttpSession session) {
-        User currentUser = getCurrentUser(session);
-        if (currentUser == null) {
-            return List.of(); // 로그인하지 않은 사용자에게는 빈 목록 반환
-        }
+    @RequireAuth
+    public List<ApiFolder> getAllFolders(@CurrentUser User currentUser) {
         
         
         List<ApiFolder> allFolders = folderRepository.findAll();
@@ -117,11 +100,8 @@ public class ApiFolderController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiFolder> getFolder(@PathVariable Long id, HttpSession session) {
-        User currentUser = getCurrentUser(session);
-        if (currentUser == null) {
-            return ResponseEntity.status(401).build();
-        }
+    @RequireAuth
+    public ResponseEntity<ApiFolder> getFolder(@PathVariable Long id, @CurrentUser User currentUser) {
         
         Optional<ApiFolder> folderOpt = folderRepository.findById(id);
         if (folderOpt.isEmpty()) {
@@ -137,14 +117,9 @@ public class ApiFolderController {
     }
 
     @PostMapping
-    public ResponseEntity<ApiFolder> createFolder(@RequestBody ApiFolder folder, HttpSession session, HttpServletRequest request) {
+    @RequireAuth
+    public ResponseEntity<ApiFolder> createFolder(@RequestBody ApiFolder folder, @CurrentUser User currentUser, HttpServletRequest request) {
         try {
-            User currentUser = getCurrentUser(session);
-            
-            // 로그인한 사용자만 폴더 생성 가능
-            if (currentUser == null) {
-                return ResponseEntity.status(401).build();
-            }
             
             ApiFolder savedFolder = folderRepository.save(folder);
             
@@ -161,24 +136,18 @@ public class ApiFolderController {
             return ResponseEntity.ok(savedFolder);
         } catch (Exception e) {
             // 실패 로깅
-            User currentUser = getCurrentUser(session);
-            if (currentUser != null) {
-                activityLoggingService.logCrudFailure(currentUser, UserActivity.ActivityType.FOLDER_CREATE,
-                    "폴더 생성 실패: " + (folder != null ? folder.getName() : "unknown"), 
-                    e.getMessage(), request.getRequestURI(), request.getMethod());
-            }
+            activityLoggingService.logCrudFailure(currentUser, UserActivity.ActivityType.FOLDER_CREATE,
+                "폴더 생성 실패: " + (folder != null ? folder.getName() : "unknown"), 
+                e.getMessage(), request.getRequestURI(), request.getMethod());
             throw e;
         }
     }
 
     @PutMapping("/{id}")
+    @RequireAuth
     public ResponseEntity<ApiFolder> updateFolder(@PathVariable Long id, @RequestBody ApiFolder folderDetails, 
-                                                 HttpSession session, HttpServletRequest request) {
+                                                 @CurrentUser User currentUser, HttpServletRequest request) {
         try {
-            User currentUser = getCurrentUser(session);
-            if (currentUser == null) {
-                return ResponseEntity.status(401).build();
-            }
             
             Optional<ApiFolder> folderOpt = folderRepository.findById(id);
             if (folderOpt.isEmpty()) {
@@ -207,24 +176,18 @@ public class ApiFolderController {
             return ResponseEntity.ok(savedFolder);
         } catch (Exception e) {
             // 실패 로깅
-            User currentUser = getCurrentUser(session);
-            if (currentUser != null) {
-                activityLoggingService.logCrudFailure(currentUser, UserActivity.ActivityType.FOLDER_UPDATE,
-                    "폴더 수정 실패 (ID: " + id + ")", 
-                    e.getMessage(), request.getRequestURI(), request.getMethod());
-            }
+            activityLoggingService.logCrudFailure(currentUser, UserActivity.ActivityType.FOLDER_UPDATE,
+                "폴더 수정 실패 (ID: " + id + ")", 
+                e.getMessage(), request.getRequestURI(), request.getMethod());
             throw e;
         }
     }
 
     @DeleteMapping("/{id}")
     @Transactional
-    public ResponseEntity<?> deleteFolder(@PathVariable Long id, HttpSession session, HttpServletRequest request) {
+    @RequireAuth
+    public ResponseEntity<?> deleteFolder(@PathVariable Long id, @CurrentUser User currentUser, HttpServletRequest request) {
         try {
-            User currentUser = getCurrentUser(session);
-            if (currentUser == null) {
-                return ResponseEntity.status(401).build();
-            }
             
             Optional<ApiFolder> folderOpt = folderRepository.findById(id);
             if (folderOpt.isEmpty()) {
@@ -265,12 +228,9 @@ public class ApiFolderController {
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             // 실패 로깅
-            User currentUser = getCurrentUser(session);
-            if (currentUser != null) {
-                activityLoggingService.logCrudFailure(currentUser, UserActivity.ActivityType.FOLDER_DELETE,
-                    "폴더 삭제 실패 (ID: " + id + ")", 
-                    e.getMessage(), request.getRequestURI(), request.getMethod());
-            }
+            activityLoggingService.logCrudFailure(currentUser, UserActivity.ActivityType.FOLDER_DELETE,
+                "폴더 삭제 실패 (ID: " + id + ")", 
+                e.getMessage(), request.getRequestURI(), request.getMethod());
             throw e;
         }
     }

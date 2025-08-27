@@ -32,8 +32,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers("/api/admin/reset-password").permitAll()
-                .requestMatchers("/api/folders/**", "/api/items/**", "/api/history/**", "/api/admin/**", "/api/scenarios/**", "/api/pipelines/**").authenticated()
-                .anyRequest().authenticated()
+                .anyRequest().permitAll()  // Let AOP handle authentication
             )
             .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable()))
             .sessionManagement(session -> session
