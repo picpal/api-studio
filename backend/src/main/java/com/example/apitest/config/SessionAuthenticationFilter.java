@@ -38,6 +38,10 @@ public class SessionAuthenticationFilter extends OncePerRequestFilter {
                 Optional<User> userOpt = authService.findByEmail(userEmail);
                 if (userOpt.isPresent()) {
                     User user = userOpt.get();
+                    
+                    // Set user in request attribute for AspectJ
+                    request.setAttribute("sessionUser", user);
+                    
                     // Create authentication token
                     UsernamePasswordAuthenticationToken authToken = 
                         new UsernamePasswordAuthenticationToken(

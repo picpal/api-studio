@@ -3,33 +3,31 @@ package com.example.apitest.controller;
 import com.example.apitest.entity.User;
 import com.example.apitest.entity.UserActivity;
 import com.example.apitest.service.ActivityLoggingService;
+import com.example.apitest.service.AdminActivityService;
 import com.example.apitest.service.AuthService;
+import com.example.apitest.service.ExcelExportService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin/activities")
 @CrossOrigin(origins = {"http://localhost:3001", "http://localhost:3002"}, allowCredentials = "true")
 public class AdminActivityController {
+    
+    @Autowired
+    private AdminActivityService adminActivityService;
+    
+    @Autowired
+    private ExcelExportService excelExportService;
     
     @Autowired
     private ActivityLoggingService activityLoggingService;
@@ -79,59 +77,13 @@ public class AdminActivityController {
             return ResponseEntity.status(403).body(Map.of("error", "관리자 권한이 필요합니다."));
         }
         
-        Pageable pageable = PageRequest.of(page, size);
-        Page<UserActivity> activities;
-        
         try {
-            // 검색 조건에 따라 다른 메서드 호출
-            if (startDate != null && endDate != null) {
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-                LocalDateTime start = LocalDateTime.parse(startDate + "T00:00:00");
-                LocalDateTime end = LocalDateTime.parse(endDate + "T23:59:59");
-                activities = activityLoggingService.getActivitiesByDateRange(start, end, pageable);
-            } else if (userEmail != null && !userEmail.trim().isEmpty()) {
-                activities = activityLoggingService.getUserActivitiesByEmail(userEmail.trim(), pageable);
-            } else if (activityType != null && !activityType.trim().isEmpty()) {
-                UserActivity.ActivityType type = UserActivity.ActivityType.valueOf(activityType.toUpperCase());
-                activities = activityLoggingService.getActivitiesByType(type, pageable);
-            } else {
-                activities = activityLoggingService.getAllActivities(pageable);
-            }
-            
-            // 검색어가 있으면 필터링 (메모리에서)
-            if (searchTerm != null && !searchTerm.trim().isEmpty()) {
-                List<UserActivity> filteredList = activities.getContent().stream()
-                    .filter(activity -> matchesSearchTerm(activity, searchTerm.trim()))
-                    .collect(Collectors.toList());
-                
-                Map<String, Object> response = new HashMap<>();
-                response.put("activities", filteredList.stream()
-                    .map(this::convertToMap)
-                    .collect(Collectors.toList()));
-                response.put("totalPages", 1);
-                response.put("totalElements", filteredList.size());
-                response.put("currentPage", 0);
-                response.put("pageSize", filteredList.size());
-                
-                return ResponseEntity.ok(response);
-            }
-            
-        } catch (DateTimeParseException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", "잘못된 날짜 형식입니다. (yyyy-MM-dd)"));
+            Map<String, Object> response = adminActivityService.searchActivities(
+                page, size, startDate, endDate, searchTerm, activityType, userEmail);
+            return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", "잘못된 활동 유형입니다."));
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("activities", activities.getContent().stream()
-            .map(this::convertToMap)
-            .collect(Collectors.toList()));
-        response.put("totalPages", activities.getTotalPages());
-        response.put("totalElements", activities.getTotalElements());
-        response.put("currentPage", page);
-        response.put("pageSize", size);
-        
-        return ResponseEntity.ok(response);
     }
     
     /**
@@ -148,18 +100,7 @@ public class AdminActivityController {
             return ResponseEntity.status(403).body(Map.of("error", "관리자 권한이 필요합니다."));
         }
         
-        Pageable pageable = PageRequest.of(page, size);
-        Page<UserActivity> activities = activityLoggingService.getUserActivities(userId, pageable);
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("activities", activities.getContent().stream()
-            .map(this::convertToMap)
-            .collect(Collectors.toList()));
-        response.put("totalPages", activities.getTotalPages());
-        response.put("totalElements", activities.getTotalElements());
-        response.put("currentPage", page);
-        response.put("pageSize", size);
-        
+        Map<String, Object> response = adminActivityService.getUserActivities(userId, page, size);
         return ResponseEntity.ok(response);
     }
     
@@ -177,18 +118,7 @@ public class AdminActivityController {
             return ResponseEntity.status(403).body(Map.of("error", "관리자 권한이 필요합니다."));
         }
         
-        Pageable pageable = PageRequest.of(page, size);
-        Page<UserActivity> activities = activityLoggingService.getUserActivitiesByEmail(email, pageable);
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("activities", activities.getContent().stream()
-            .map(this::convertToMap)
-            .collect(Collectors.toList()));
-        response.put("totalPages", activities.getTotalPages());
-        response.put("totalElements", activities.getTotalElements());
-        response.put("currentPage", page);
-        response.put("pageSize", size);
-        
+        Map<String, Object> response = adminActivityService.getUserActivitiesByEmail(email, page, size);
         return ResponseEntity.ok(response);
     }
     
@@ -207,19 +137,7 @@ public class AdminActivityController {
         }
         
         try {
-            UserActivity.ActivityType type = UserActivity.ActivityType.valueOf(activityType.toUpperCase());
-            Pageable pageable = PageRequest.of(page, size);
-            Page<UserActivity> activities = activityLoggingService.getActivitiesByType(type, pageable);
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("activities", activities.getContent().stream()
-                .map(this::convertToMap)
-                .collect(Collectors.toList()));
-            response.put("totalPages", activities.getTotalPages());
-            response.put("totalElements", activities.getTotalElements());
-            response.put("currentPage", page);
-            response.put("pageSize", size);
-            
+            Map<String, Object> response = adminActivityService.getActivitiesByType(activityType, page, size);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", "잘못된 활동 유형입니다."));
@@ -242,22 +160,7 @@ public class AdminActivityController {
         }
         
         try {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-            LocalDateTime start = LocalDateTime.parse(startDate + " 00:00:00", formatter);
-            LocalDateTime end = LocalDateTime.parse(endDate + " 23:59:59", formatter);
-            
-            Pageable pageable = PageRequest.of(page, size);
-            Page<UserActivity> activities = activityLoggingService.getActivitiesByDateRange(start, end, pageable);
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("activities", activities.getContent().stream()
-                .map(this::convertToMap)
-                .collect(Collectors.toList()));
-            response.put("totalPages", activities.getTotalPages());
-            response.put("totalElements", activities.getTotalElements());
-            response.put("currentPage", page);
-            response.put("pageSize", size);
-            
+            Map<String, Object> response = adminActivityService.getActivitiesByDateRange(startDate, endDate, page, size);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", "잘못된 날짜 형식입니다. (yyyy-MM-dd)"));
@@ -276,15 +179,7 @@ public class AdminActivityController {
             return ResponseEntity.status(403).body(Map.of("error", "관리자 권한이 필요합니다."));
         }
         
-        List<UserActivity> failedLogins = activityLoggingService.getFailedLoginAttempts(hours);
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("failedLogins", failedLogins.stream()
-            .map(this::convertToMap)
-            .collect(Collectors.toList()));
-        response.put("count", failedLogins.size());
-        response.put("period", hours + "시간");
-        
+        Map<String, Object> response = adminActivityService.getFailedLoginAttempts(hours);
         return ResponseEntity.ok(response);
     }
     
@@ -301,16 +196,7 @@ public class AdminActivityController {
             return ResponseEntity.status(403).body(Map.of("error", "관리자 권한이 필요합니다."));
         }
         
-        List<UserActivity> activities = activityLoggingService.getActivitiesByIp(ipAddress, hours);
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("activities", activities.stream()
-            .map(this::convertToMap)
-            .collect(Collectors.toList()));
-        response.put("count", activities.size());
-        response.put("ipAddress", ipAddress);
-        response.put("period", hours + "시간");
-        
+        Map<String, Object> response = adminActivityService.getActivitiesByIp(ipAddress, hours);
         return ResponseEntity.ok(response);
     }
     
@@ -326,14 +212,7 @@ public class AdminActivityController {
             return ResponseEntity.status(403).body(Map.of("error", "관리자 권한이 필요합니다."));
         }
         
-        List<Object[]> stats = activityLoggingService.getDailyLoginStats(days);
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("stats", stats.stream()
-            .map(row -> Map.of("date", row[0], "count", row[1]))
-            .collect(Collectors.toList()));
-        response.put("period", days + "일");
-        
+        Map<String, Object> response = adminActivityService.getDailyLoginStats(days);
         return ResponseEntity.ok(response);
     }
     
@@ -350,15 +229,7 @@ public class AdminActivityController {
             return ResponseEntity.status(403).body(Map.of("error", "관리자 권한이 필요합니다."));
         }
         
-        Pageable pageable = PageRequest.of(0, limit);
-        List<Object[]> activeUsers = activityLoggingService.getMostActiveUsers(days, pageable);
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("activeUsers", activeUsers.stream()
-            .map(row -> Map.of("email", row[0], "activityCount", row[1]))
-            .collect(Collectors.toList()));
-        response.put("period", days + "일");
-        
+        Map<String, Object> response = adminActivityService.getMostActiveUsers(days, limit);
         return ResponseEntity.ok(response);
     }
     
@@ -383,87 +254,19 @@ public class AdminActivityController {
         }
         
         try {
-            // 모든 데이터를 가져오기 (페이징 없이)
-            Pageable pageable = PageRequest.of(0, 10000); // 최대 10,000개
-            Page<UserActivity> activities;
+            // 데이터 조회
+            List<UserActivity> activityList = adminActivityService.getActivitiesForExport(
+                startDate, endDate, searchTerm, activityType, userEmail);
             
-            // 검색 조건에 따라 데이터 조회
-            if (startDate != null && endDate != null) {
-                LocalDateTime start = LocalDateTime.parse(startDate + "T00:00:00");
-                LocalDateTime end = LocalDateTime.parse(endDate + "T23:59:59");
-                activities = activityLoggingService.getActivitiesByDateRange(start, end, pageable);
-            } else if (userEmail != null && !userEmail.trim().isEmpty()) {
-                activities = activityLoggingService.getUserActivitiesByEmail(userEmail.trim(), pageable);
-            } else if (activityType != null && !activityType.trim().isEmpty()) {
-                UserActivity.ActivityType type = UserActivity.ActivityType.valueOf(activityType.toUpperCase());
-                activities = activityLoggingService.getActivitiesByType(type, pageable);
-            } else {
-                activities = activityLoggingService.getAllActivities(pageable);
-            }
-            
-            List<UserActivity> activityList = activities.getContent();
-            
-            // 검색어가 있으면 필터링
-            if (searchTerm != null && !searchTerm.trim().isEmpty()) {
-                activityList = activityList.stream()
-                    .filter(activity -> matchesSearchTerm(activity, searchTerm.trim()))
-                    .collect(Collectors.toList());
-            }
-            
-            // Excel 파일 생성
-            Workbook workbook = new XSSFWorkbook();
-            Sheet sheet = workbook.createSheet("사용자 활동 로그");
-            
-            // 헤더 스타일
-            CellStyle headerStyle = workbook.createCellStyle();
-            Font headerFont = workbook.createFont();
-            headerFont.setBold(true);
-            headerStyle.setFont(headerFont);
-            headerStyle.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
-            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            
-            // 헤더 생성
-            Row headerRow = sheet.createRow(0);
-            String[] headers = {"ID", "사용자 이메일", "활동 유형", "액션 설명", "요청 URI", 
-                              "HTTP 메서드", "IP 주소", "결과", "오류 메시지", "생성 시간"};
-            
-            for (int i = 0; i < headers.length; i++) {
-                Cell cell = headerRow.createCell(i);
-                cell.setCellValue(headers[i]);
-                cell.setCellStyle(headerStyle);
-                sheet.autoSizeColumn(i);
-            }
-            
-            // 데이터 행 생성
-            int rowNum = 1;
-            for (UserActivity activity : activityList) {
-                Row row = sheet.createRow(rowNum++);
-                
-                row.createCell(0).setCellValue(activity.getId());
-                row.createCell(1).setCellValue(activity.getUserEmail());
-                row.createCell(2).setCellValue(activity.getActivityType().toString());
-                row.createCell(3).setCellValue(activity.getActionDescription());
-                row.createCell(4).setCellValue(activity.getRequestUri());
-                row.createCell(5).setCellValue(activity.getHttpMethod());
-                row.createCell(6).setCellValue(activity.getIpAddress());
-                row.createCell(7).setCellValue(activity.getResult().toString());
-                row.createCell(8).setCellValue(activity.getErrorMessage());
-                row.createCell(9).setCellValue(activity.getCreatedAt().toString());
-            }
-            
-            // 열 너비 자동 조정
-            for (int i = 0; i < headers.length; i++) {
-                sheet.autoSizeColumn(i);
-            }
+            // Excel 파일명 생성
+            String filename = excelExportService.generateFileName("user_activities");
             
             // HTTP 응답 설정
-            String filename = "user_activities_" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".xlsx";
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
             response.setHeader("Content-Disposition", "attachment; filename=" + filename);
             
-            // Excel 파일 출력
-            workbook.write(response.getOutputStream());
-            workbook.close();
+            // Excel 파일 생성 및 출력
+            excelExportService.exportUserActivitiesToExcel(activityList, response.getOutputStream());
             
             // Excel 다운로드 활동 로깅
             User currentUser = getCurrentUser(session);
@@ -476,41 +279,5 @@ public class AdminActivityController {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             response.getWriter().write("{\"error\":\"Excel 파일 생성 중 오류가 발생했습니다.\"}");
         }
-    }
-    
-    /**
-     * 검색어 매칭 검사
-     */
-    private boolean matchesSearchTerm(UserActivity activity, String searchTerm) {
-        String term = searchTerm.toLowerCase();
-        
-        return (activity.getUserEmail() != null && activity.getUserEmail().toLowerCase().contains(term)) ||
-               (activity.getActionDescription() != null && activity.getActionDescription().toLowerCase().contains(term)) ||
-               (activity.getRequestUri() != null && activity.getRequestUri().toLowerCase().contains(term)) ||
-               (activity.getIpAddress() != null && activity.getIpAddress().toLowerCase().contains(term)) ||
-               (activity.getErrorMessage() != null && activity.getErrorMessage().toLowerCase().contains(term)) ||
-               activity.getActivityType().toString().toLowerCase().contains(term) ||
-               activity.getResult().toString().toLowerCase().contains(term);
-    }
-    
-    /**
-     * UserActivity를 Map으로 변환 (JSON 응답용)
-     */
-    private Map<String, Object> convertToMap(UserActivity activity) {
-        Map<String, Object> map = new HashMap<>();
-        map.put("id", activity.getId());
-        map.put("userEmail", activity.getUserEmail());
-        map.put("activityType", activity.getActivityType().toString());
-        map.put("actionDescription", activity.getActionDescription());
-        map.put("requestUri", activity.getRequestUri());
-        map.put("httpMethod", activity.getHttpMethod());
-        map.put("ipAddress", activity.getIpAddress());
-        map.put("userAgent", activity.getUserAgent());
-        map.put("result", activity.getResult().toString());
-        map.put("errorMessage", activity.getErrorMessage());
-        map.put("createdAt", activity.getCreatedAt().toString());
-        map.put("sessionId", activity.getSessionId());
-        
-        return map;
     }
 }

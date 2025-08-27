@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type AdminTab = 'users' | 'permissions' | 'activities';
+export type AdminTab = 'users' | 'permissions' | 'activities' | 'api-keys';
 
 interface AdminTabsProps {
   activeTab: AdminTab;
@@ -44,6 +44,16 @@ export const AdminTabs: React.FC<AdminTabsProps> = ({
             }`}
           >
             사용자 활동 로그
+          </button>
+          <button
+            onClick={() => onTabChange('api-keys')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'api-keys'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            API 키 관리
           </button>
         </nav>
       </div>

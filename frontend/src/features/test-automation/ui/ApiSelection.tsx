@@ -41,7 +41,7 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
         <div className="p-4">
           <div className="flex items-center justify-between min-h-[2rem]">
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold">API Selection</h3>
+              <h3 className="text-md font-semibold">API Selection</h3>
               {apiSectionCollapsed && selectedApis.size > 0 && (
                 <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
                   {selectedApis.size} selected

@@ -1,6 +1,7 @@
 package com.example.apitest.aspect;
 
 import com.example.apitest.annotation.RequireAuth;
+import com.example.apitest.entity.ApiKey;
 import com.example.apitest.entity.User;
 import com.example.apitest.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,6 +13,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -48,39 +51,64 @@ public class AuthenticationAspect {
         }
         
         HttpServletRequest request = attributes.getRequest();
-        HttpSession session = request.getSession(false);
+        User authenticatedUser = null;
         
-        if (session == null) {
-            logger.warn("세션이 존재하지 않습니다 - IP: {}", request.getRemoteAddr());
+        // 1. API 키 인증 확인
+        ApiKey apiKey = (ApiKey) request.getAttribute("apiKey");
+        if (apiKey != null) {
+            authenticatedUser = apiKey.getUser();
+            logger.debug("API 키 인증 확인 - 사용자: {} ({})", authenticatedUser.getEmail(), authenticatedUser.getRole());
+        }
+        
+        // 2. Spring Security Context 확인 (API 키 인증된 경우도 포함)
+        if (authenticatedUser == null) {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.isAuthenticated()) {
+                if (auth.getPrincipal() instanceof User) {
+                    authenticatedUser = (User) auth.getPrincipal();
+                } else if (auth.getPrincipal() instanceof String) {
+                    // API 키로 인증된 경우 이메일로 사용자 조회
+                    String userEmail = (String) auth.getPrincipal();
+                    Optional<User> userOpt = authService.findByEmail(userEmail);
+                    if (userOpt.isPresent()) {
+                        authenticatedUser = userOpt.get();
+                    }
+                }
+                logger.debug("Spring Security 인증 확인 - 사용자: {}", authenticatedUser != null ? authenticatedUser.getEmail() : "없음");
+            }
+        }
+        
+        // 3. 세션 기반 인증 확인
+        if (authenticatedUser == null) {
+            HttpSession session = request.getSession(false);
+            if (session != null) {
+                String userEmail = (String) session.getAttribute("userEmail");
+                Long userId = (Long) session.getAttribute("userId");
+                
+                if (userEmail != null && userId != null) {
+                    Optional<User> userOpt = authService.findByEmail(userEmail);
+                    if (userOpt.isPresent()) {
+                        authenticatedUser = userOpt.get();
+                        logger.debug("세션 인증 확인 - 사용자: {} ({})", authenticatedUser.getEmail(), authenticatedUser.getRole());
+                    }
+                }
+            }
+        }
+        
+        // 인증된 사용자가 없는 경우
+        if (authenticatedUser == null) {
+            logger.warn("인증되지 않은 요청 - IP: {}", request.getRemoteAddr());
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "인증되지 않은 사용자입니다.");
         }
-        
-        String userEmail = (String) session.getAttribute("userEmail");
-        Long userId = (Long) session.getAttribute("userId");
-        
-        if (userEmail == null || userId == null) {
-            logger.warn("세션에 사용자 정보가 없습니다 - sessionId: {}, IP: {}", 
-                       session.getId(), request.getRemoteAddr());
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "인증되지 않은 사용자입니다.");
-        }
-        
-        // 데이터베이스에서 사용자 정보 확인
-        Optional<User> userOpt = authService.findByEmail(userEmail);
-        if (userOpt.isEmpty()) {
-            logger.warn("존재하지 않는 사용자 - email: {}, IP: {}", userEmail, request.getRemoteAddr());
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "존재하지 않는 사용자입니다.");
-        }
-        
-        User user = userOpt.get();
         
         // 관리자 권한 체크
-        if (requireAuth.adminOnly() && !User.Role.ADMIN.equals(user.getRole())) {
+        if (requireAuth.adminOnly() && !User.Role.ADMIN.equals(authenticatedUser.getRole())) {
             logger.warn("관리자 권한 필요 - 현재 사용자: {} ({}), IP: {}", 
-                       user.getEmail(), user.getRole(), request.getRemoteAddr());
+                       authenticatedUser.getEmail(), authenticatedUser.getRole(), request.getRemoteAddr());
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "관리자 권한이 필요합니다.");
         }
         
         logger.debug("인증 성공 - 사용자: {} ({}), 메소드: {}", 
-                    user.getEmail(), user.getRole(), joinPoint.getSignature().getName());
+                    authenticatedUser.getEmail(), authenticatedUser.getRole(), joinPoint.getSignature().getName());
     }
 }

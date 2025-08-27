@@ -23,4 +23,8 @@ public interface StepExecutionRepository extends JpaRepository<StepExecution, Lo
     @Modifying
     @Query("DELETE FROM StepExecution se WHERE se.pipelineStep.id = :pipelineStepId")
     void deleteByPipelineStepId(@Param("pipelineStepId") Long pipelineStepId);
+    
+    @Modifying
+    @Query("DELETE FROM StepExecution se WHERE se.pipelineExecution.pipeline.id = :pipelineId")
+    void deleteByPipelineId(@Param("pipelineId") Long pipelineId);
 }

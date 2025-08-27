@@ -22,6 +22,9 @@ public class SecurityConfig {
 
     @Autowired
     private AuthService authService;
+    
+    @Autowired
+    private ApiKeyAuthenticationFilter apiKeyAuthenticationFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -32,14 +35,21 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers("/api/admin/reset-password").permitAll()
-                .anyRequest().permitAll()  // Let AOP handle authentication
+                .requestMatchers("/api/admin/**").permitAll()  // 관리자 API는 AOP에서 처리
+                .requestMatchers("/api/**").authenticated()  // 일반 API 요청은 인증 필요
+                .anyRequest().permitAll()  // 웹 페이지는 세션 기반 인증 (AOP 처리)
             )
             .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable()))
             .sessionManagement(session -> session
+                .sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.IF_REQUIRED)
                 .maximumSessions(1)
                 .maxSessionsPreventsLogin(false)
             )
-            .addFilterBefore(new SessionAuthenticationFilter(authService), UsernamePasswordAuthenticationFilter.class);
+            .securityContext(securityContext -> securityContext
+                .securityContextRepository(new ConditionalSecurityContextRepository())
+            )
+            .addFilterBefore(new SessionAuthenticationFilter(authService), UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(apiKeyAuthenticationFilter, SessionAuthenticationFilter.class);
 
         return http.build();
     }

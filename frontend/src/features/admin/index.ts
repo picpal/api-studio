@@ -1,6 +1,7 @@
 export { UserManagement } from './ui/UserManagement';
 export { FolderPermissions } from './ui/FolderPermissions';
 export { AdminTabs } from './ui/AdminTabs';
+export { ApiKeyManagement } from './ui/ApiKeyManagement';
 
 export { useAdminUsers } from './model/useAdminUsers';
 export { useAdminPermissions } from './model/useAdminPermissions';

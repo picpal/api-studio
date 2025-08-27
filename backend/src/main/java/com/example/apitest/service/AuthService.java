@@ -8,6 +8,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -114,5 +115,12 @@ public class AuthService {
         
         User user = userOpt.get();
         return user.isPasswordExpired() || user.getForcePasswordChange();
+    }
+    
+    /**
+     * 모든 사용자 조회 (관리자용)
+     */
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
     }
 }

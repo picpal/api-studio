@@ -4,6 +4,7 @@ import {
   AdminTabs,
   UserManagement,
   FolderPermissions,
+  ApiKeyManagement,
   useAdminTabs,
   useAdminUsers,
   useAdminPermissions
@@ -73,6 +74,14 @@ const AdminPage: React.FC = () => {
             onSelectFolder={handleSelectFolder}
             onGrantPermission={grantFolderPermission}
             onRevokePermission={revokeFolderPermission}
+          />
+        )}
+
+        {/* API Key Management Tab */}
+        {activeTab === 'api-keys' && (
+          <ApiKeyManagement
+            users={users}
+            folders={folders}
           />
         )}
       </div>
