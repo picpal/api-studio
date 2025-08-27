@@ -261,14 +261,6 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
   };
 
   const handleItemContextMenu = (e: React.MouseEvent, itemId: string, itemName: string, folderId: string) => {
-    console.log('👍 Right-click context menu triggered for item:', {
-      itemId,
-      itemName,
-      folderId,
-      clientX: e.clientX,
-      clientY: e.clientY
-    });
-    
     e.preventDefault();
     e.stopPropagation();
     
@@ -280,8 +272,6 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
       itemName,
       folderId
     });
-    
-    console.log('👍 ItemContextMenu state set!');
   };
 
   // 폴더 리네임
@@ -386,18 +376,9 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
   };
 
   const handleItemDelete = () => {
-    console.log('🔥 handleItemDelete called!');
     if (itemContextMenu) {
-      console.log('🔥 itemContextMenu exists:', {
-        folderId: itemContextMenu.folderId,
-        itemId: itemContextMenu.itemId,
-        itemName: itemContextMenu.itemName
-      });
-      console.log('🔥 Calling deleteItem function...');
       deleteItem(itemContextMenu.folderId, itemContextMenu.itemId);
       setItemContextMenu(null);
-    } else {
-      console.log('🔥 itemContextMenu is null!');
     }
   };
 

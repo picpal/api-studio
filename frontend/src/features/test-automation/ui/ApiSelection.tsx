@@ -104,12 +104,14 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-md font-semibold">APIs</h3>
           {/* 데스크톱에서만 Select All 버튼 표시 (모바일은 상단에 위치) */}
-          <button
-            onClick={onSelectAll}
-            className="hidden lg:block text-xs text-blue-600 hover:text-blue-800"
-          >
-            {selectedApis.size === filteredApiList.length ? 'Deselect All' : 'Select All'}
-          </button>
+          {filteredApiList.length > 0 && (
+            <button
+              onClick={onSelectAll}
+              className="hidden lg:block text-xs px-2 py-1 text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded"
+            >
+              {selectedApis.size === filteredApiList.length ? 'Deselect All' : 'Select All'}
+            </button>
+          )}
         </div>
         
         <div className="space-y-2">

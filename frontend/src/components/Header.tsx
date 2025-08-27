@@ -17,8 +17,20 @@ const Header: React.FC<HeaderProps> = ({ onOpenAdmin, onToggleSidebar, sidebarCo
   return (
     <header className="w-full bg-white border-b border-gray-200 px-3 md:px-6 py-2 md:py-4">
       <div className="flex items-center justify-between">
-        {/* Navigation Menu - Both Desktop and Mobile */}
+        {/* Logo and Navigation Menu */}
         <div className="flex items-center">
+          {/* Logo - Show on tablet and PC */}
+          <div className="hidden md:flex items-center mr-8">
+            <div className="flex items-center">
+              <img 
+                src="/logo.png" 
+                alt="API Tester Logo" 
+                className="w-6 h-6 mr-3"
+              />
+              <h1 className="text-xl font-bold text-gray-800">API Studio</h1>
+            </div>
+          </div>
+
           {/* Mobile Sidebar Toggle - Only on mobile */}
           <button
             onClick={onToggleSidebar}
