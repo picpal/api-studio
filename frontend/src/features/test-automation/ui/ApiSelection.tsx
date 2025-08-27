@@ -49,10 +49,10 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
               )}
             </div>
             <div className="flex items-center gap-2">
-              {/* 데스크톱에서만 collapse 버튼 표시 */}
+              {/* collapse 버튼 - 모든 화면 크기에서 표시 */}
               <button
                 onClick={onToggleCollapse}
-                className="hidden lg:block p-1 text-gray-500 hover:text-gray-700 rounded"
+                className="p-1 text-gray-500 hover:text-gray-700 rounded"
                 title={apiSectionCollapsed ? "Expand API Selection" : "Collapse API Selection"}
               >
                 <svg className={`w-5 h-5 transition-transform ${apiSectionCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -68,11 +68,6 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
               <button
                 onClick={() => {
                   onFolderSelect(null);
-                  // 모바일/태블릿에서 All APIs 선택 시 API 목록이 보이도록 자동으로 펼치기
-                  const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
-                  if (!isDesktop) {
-                    onToggleCollapse();
-                  }
                 }}
                 className={`w-full text-left p-2 rounded text-sm flex items-center gap-2 ${
                   selectedFolder === null ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
@@ -88,11 +83,6 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
                   key={folder.id}
                   onClick={() => {
                     onFolderSelect(folder.id);
-                    // 모바일/태블릿에서 폴더 선택 시 API 목록이 보이도록 자동으로 펼치기
-                    const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
-                    if (!isDesktop) {
-                      onToggleCollapse();
-                    }
                   }}
                   className={`w-full text-left p-2 rounded text-sm flex items-center gap-2 ${
                     selectedFolder === folder.id ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
