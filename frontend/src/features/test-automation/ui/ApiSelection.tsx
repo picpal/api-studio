@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ApiItem } from '../../../types/api';
 
 interface Folder {
@@ -29,15 +29,61 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
   onSelectAll,
   onToggleCollapse
 }) => {
+  // 스크롤 상태
+  const [isDesktopScrollable, setIsDesktopScrollable] = useState(false);
+  const [isMobileScrollable, setIsMobileScrollable] = useState(false);
+  const [isFolderScrollable, setIsFolderScrollable] = useState(false);
+  const desktopScrollRef = useRef<HTMLDivElement>(null);
+  const mobileScrollRef = useRef<HTMLDivElement>(null);
+  const folderScrollRef = useRef<HTMLDivElement>(null);
+
   // 폴더별 필터링된 API 목록
   const filteredApiList = selectedFolder 
     ? apiList.filter(api => (api as any).folderId === selectedFolder)
     : apiList;
 
+  // 스크롤 가능 여부 체크
+  useEffect(() => {
+    const checkScrollable = () => {
+      // 데스크톱 스크롤 체크
+      if (desktopScrollRef.current) {
+        const { scrollHeight, clientHeight } = desktopScrollRef.current;
+        setIsDesktopScrollable(scrollHeight > clientHeight);
+      }
+      
+      // 모바일 스크롤 체크
+      if (mobileScrollRef.current) {
+        const { scrollHeight, clientHeight } = mobileScrollRef.current;
+        setIsMobileScrollable(scrollHeight > clientHeight);
+      }
+      
+      // 폴더 스크롤 체크
+      if (folderScrollRef.current) {
+        const { scrollHeight, clientHeight } = folderScrollRef.current;
+        setIsFolderScrollable(scrollHeight > clientHeight);
+      }
+    };
+
+    checkScrollable();
+    
+    const resizeObserver = new ResizeObserver(checkScrollable);
+    if (desktopScrollRef.current) {
+      resizeObserver.observe(desktopScrollRef.current);
+    }
+    if (mobileScrollRef.current) {
+      resizeObserver.observe(mobileScrollRef.current);
+    }
+    if (folderScrollRef.current) {
+      resizeObserver.observe(folderScrollRef.current);
+    }
+
+    return () => resizeObserver.disconnect();
+  }, [filteredApiList, apiSectionCollapsed, folders]);
+
   return (
     <div className="w-full lg:w-64 bg-white border-r lg:border-r border-b lg:border-b-0 border-gray-200 flex flex-col lg:h-full lg:max-h-none">
       {/* 폴더 목록 */}
-      <div className={`border-b lg:flex-shrink-0 ${apiSectionCollapsed ? '' : 'lg:h-2/5 lg:overflow-y-auto'}`}>
+      <div className={`border-b lg:flex-shrink-0 relative ${apiSectionCollapsed ? '' : 'lg:h-2/5'}`}>
         <div className="p-4">
           <div className="flex items-center justify-between min-h-[2rem]">
             <div className="flex items-center gap-2">
@@ -63,7 +109,10 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
           </div>
         </div>
         {!apiSectionCollapsed && (
-          <div className="px-4 pb-4">
+          <div 
+            ref={folderScrollRef}
+            className="px-4 pb-4 lg:overflow-y-auto lg:max-h-[calc(100%-4rem)]"
+          >
             <div className="space-y-1">
               <button
                 onClick={() => {
@@ -97,10 +146,16 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
             </div>
           </div>
         )}
+        
+        {/* 하단 그라이데이션 - 폴더 목록 */}
+        {!apiSectionCollapsed && isFolderScrollable && (
+          <div className="absolute bottom-0 left-0 right-0 h-6 pointer-events-none bg-gradient-to-t from-white via-white/80 to-transparent lg:block hidden" />
+        )}
       </div>
 
       {/* API 목록 - 데스크톱에서만 폴더와 같은 영역에 표시 */}
-      <div className={`hidden lg:flex lg:flex-col p-4 overflow-y-auto ${apiSectionCollapsed ? 'lg:h-full' : 'lg:h-3/5'}`}>
+      <div className={`hidden lg:flex lg:flex-col relative ${apiSectionCollapsed ? 'lg:h-full' : 'lg:h-3/5'}`}>
+        <div className="p-4 pb-0">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-md font-semibold">APIs</h3>
           {/* 데스크톱에서만 Select All 버튼 표시 (모바일은 상단에 위치) */}
@@ -113,8 +168,13 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
             </button>
           )}
         </div>
+        </div>
         
-        <div className="space-y-2">
+        <div 
+          ref={desktopScrollRef}
+          className="px-4 pb-4 overflow-y-auto flex-1"
+        >
+          <div className="space-y-2">
           {filteredApiList.map(api => (
             <label key={api.id} className="flex items-start p-2 border rounded hover:bg-gray-50 cursor-pointer">
               <input
@@ -142,11 +202,18 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
               </div>
             </label>
           ))}
+          </div>
         </div>
+        
+        {/* 하단 그라이데이션 - 데스크톱 */}
+        {isDesktopScrollable && (
+          <div className="absolute bottom-0 left-0 right-0 h-6 pointer-events-none bg-gradient-to-t from-white via-white/80 to-transparent" />
+        )}
       </div>
 
       {/* 모바일/태블릿 전용 API 목록 */}
-      <div className="lg:hidden bg-white border-b border-gray-200 p-4">
+      <div className="lg:hidden bg-white border-b border-gray-200 relative">
+        <div className="p-4 pb-0">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-md font-semibold">APIs</h3>
           {/* 모바일 Select All 버튼 */}
@@ -159,8 +226,12 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
             </button>
           )}
         </div>
+        </div>
         
-        <div className="space-y-2 max-h-60 overflow-y-auto">
+        <div 
+          ref={mobileScrollRef}
+          className="px-4 pb-4 space-y-2 max-h-60 overflow-y-auto"
+        >
           {filteredApiList.map(api => (
             <label key={api.id} className="flex items-start p-2 border rounded hover:bg-gray-50 cursor-pointer">
               <input
@@ -189,6 +260,11 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
             </label>
           ))}
         </div>
+        
+        {/* 하단 그라이데이션 - 모바일 */}
+        {isMobileScrollable && (
+          <div className="absolute bottom-0 left-0 right-0 h-6 pointer-events-none bg-gradient-to-t from-white via-white/80 to-transparent" />
+        )}
       </div>
     </div>
   );

@@ -126,6 +126,10 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
   // 알림
   const [showAlert, setShowAlert] = useState(false);
 
+  // 스크롤 상태
+  const [isScrollable, setIsScrollable] = useState(false);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+
   // selectedItem이 변경될 때 해당 아이템 업데이트
   useEffect(() => {
     if (selectedItem) {
@@ -154,6 +158,25 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
       return () => document.removeEventListener('click', handleClickOutside);
     }
   }, [contextMenu, itemContextMenu]);
+
+  // 스크롤 가능 여부 체크
+  useEffect(() => {
+    const checkScrollable = () => {
+      if (scrollContainerRef.current) {
+        const { scrollHeight, clientHeight } = scrollContainerRef.current;
+        setIsScrollable(scrollHeight > clientHeight);
+      }
+    };
+
+    checkScrollable();
+    
+    const resizeObserver = new ResizeObserver(checkScrollable);
+    if (scrollContainerRef.current) {
+      resizeObserver.observe(scrollContainerRef.current);
+    }
+
+    return () => resizeObserver.disconnect();
+  }, [filteredFolders, loading, error]);
 
   // Drag & Drop sensors
   const sensors = useSensors(
@@ -745,7 +768,11 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
       </div>
       
       {/* Folders List */}
-      <div className="flex-1 overflow-y-auto min-h-0 pb-4">
+      <div className="flex-1 relative min-h-0">
+        <div 
+          ref={scrollContainerRef}
+          className="overflow-y-auto h-full pb-4"
+        >
         {loading ? (
           <div className="p-4 text-center text-gray-500">
             <div className="text-2xl mb-2">⏳</div>
@@ -822,6 +849,12 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
               ) : null}
             </DragOverlay>
           </DndContext>
+        )}
+        </div>
+        
+        {/* 하단 그라이데이션 */}
+        {isScrollable && (
+          <div className="absolute bottom-0 left-0 right-0 h-8 pointer-events-none bg-gradient-to-t from-white via-white/80 to-transparent" />
         )}
       </div>
       

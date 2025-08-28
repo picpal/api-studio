@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 export interface ParamItem {
   key: string;
@@ -21,10 +21,49 @@ const ParamsTable: React.FC<ParamsTableProps> = ({
   onRemoveParam,
   onAddParam,
 }) => {
+  // 스크롤 상태
+  const [isDesktopScrollable, setIsDesktopScrollable] = useState(false);
+  const [isMobileScrollable, setIsMobileScrollable] = useState(false);
+  const desktopScrollRef = useRef<HTMLDivElement>(null);
+  const mobileScrollRef = useRef<HTMLDivElement>(null);
+
+  // 스크롤 가능 여부 체크
+  useEffect(() => {
+    const checkScrollable = () => {
+      // 데스크톱 스크롤 체크
+      if (desktopScrollRef.current) {
+        const { scrollHeight, clientHeight } = desktopScrollRef.current;
+        setIsDesktopScrollable(scrollHeight > clientHeight);
+      }
+      
+      // 모바일 스크롤 체크
+      if (mobileScrollRef.current) {
+        const { scrollHeight, clientHeight } = mobileScrollRef.current;
+        setIsMobileScrollable(scrollHeight > clientHeight);
+      }
+    };
+
+    checkScrollable();
+    
+    const resizeObserver = new ResizeObserver(checkScrollable);
+    if (desktopScrollRef.current) {
+      resizeObserver.observe(desktopScrollRef.current);
+    }
+    if (mobileScrollRef.current) {
+      resizeObserver.observe(mobileScrollRef.current);
+    }
+
+    return () => resizeObserver.disconnect();
+  }, [paramsList]);
   return (
     <div>
       {/* Desktop Table Layout */}
-      <div className="hidden md:block overflow-y-auto" style={{maxHeight: 'calc(100vh - 480px)', minHeight: '250px'}}>
+      <div className="hidden md:block relative">
+        <div 
+          ref={desktopScrollRef}
+          className="overflow-y-auto" 
+          style={{maxHeight: 'calc(100vh - 480px)', minHeight: '250px'}}
+        >
         <table className="w-full border-collapse">
           <thead className="bg-gray-50 border-b border-gray-300 sticky top-0 z-10">
             <tr>
@@ -130,10 +169,21 @@ const ParamsTable: React.FC<ParamsTableProps> = ({
             </tr>
           </tbody>
         </table>
+        </div>
+        
+        {/* 하단 그라이데이션 - 데스크톱 */}
+        {isDesktopScrollable && (
+          <div className="absolute bottom-0 left-0 right-0 h-4 pointer-events-none bg-gradient-to-t from-white via-white/80 to-transparent" />
+        )}
       </div>
 
       {/* Mobile Table Layout */}
-      <div className="md:hidden overflow-y-auto" style={{maxHeight: 'calc(100vh - 480px)', minHeight: '250px'}}>
+      <div className="md:hidden relative">
+        <div 
+          ref={mobileScrollRef}
+          className="overflow-y-auto" 
+          style={{maxHeight: 'calc(100vh - 480px)', minHeight: '250px'}}
+        >
         <div className="bg-gray-50 border-b border-gray-300 sticky top-0 z-10">
           <div className="flex text-xs font-medium text-gray-600">
             <div className="px-3 py-2 border-r border-gray-300" style={{width: '40%'}}>Description</div>
@@ -197,6 +247,12 @@ const ParamsTable: React.FC<ParamsTableProps> = ({
             </button>
           </div>
         </div>
+        </div>
+        
+        {/* 하단 그라이데이션 - 모바일 */}
+        {isMobileScrollable && (
+          <div className="absolute bottom-0 left-0 right-0 h-4 pointer-events-none bg-gradient-to-t from-white via-white/80 to-transparent" />
+        )}
       </div>
     </div>
   );

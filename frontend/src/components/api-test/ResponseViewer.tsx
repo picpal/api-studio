@@ -98,7 +98,7 @@ const ResponseViewer: React.FC<ResponseViewerProps> = ({
           <div className="text-center text-gray-500">
             <div className="text-4xl mb-4">🔍</div>
             <p className="text-lg font-medium mb-2">요청을 시작할 수 있습니다</p>
-            <p className="text-sm">URL을 입력하고 Send 버튼을 눌러 API 테스트를 시작하세요</p>
+            <p className="text-sm w-3/4 m-auto">URL을 입력하고 Send 버튼을 눌러 API 테스트를 시작하세요</p>
           </div>
         </div>
       </div>

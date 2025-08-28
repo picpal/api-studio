@@ -62,6 +62,10 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
     newName: ''
   });
 
+  // 스크롤 상태
+  const [isScrollable, setIsScrollable] = useState(false);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+
   // Load folders from API
   useEffect(() => {
     let isMounted = true;
@@ -324,6 +328,25 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
     return () => document.removeEventListener('click', handleClickOutside);
   }, [contextMenu.show, pipelineContextMenu.show]);
 
+  // 스크롤 가능 여부 체크
+  useEffect(() => {
+    const checkScrollable = () => {
+      if (scrollContainerRef.current) {
+        const { scrollHeight, clientHeight } = scrollContainerRef.current;
+        setIsScrollable(scrollHeight > clientHeight);
+      }
+    };
+
+    checkScrollable();
+    
+    const resizeObserver = new ResizeObserver(checkScrollable);
+    if (scrollContainerRef.current) {
+      resizeObserver.observe(scrollContainerRef.current);
+    }
+
+    return () => resizeObserver.disconnect();
+  }, [folders, expandedFolders, searchTerm]);
+
   const handleCancelCreateFolder = () => {
     setNewFolderName('');
     setShowNewFolderModal(false);
@@ -343,7 +366,7 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
 
   if (collapsed) {
     return (
-      <div className="w-12 h-screen border-r border-gray-200 bg-white flex flex-col items-center py-3">
+      <div className="w-12 h-full border-r border-gray-200 bg-white flex flex-col items-center py-3">
         <div className="mb-3">
           <button
             onClick={onToggleCollapse}
@@ -360,7 +383,7 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
   }
 
   return (
-    <div className="w-80 h-screen border-r border-gray-200 bg-white flex flex-col">
+    <div className="w-80 h-full border-r border-gray-200 bg-white flex flex-col">
       {/* Header with Create Folder Button and Toggle */}
       <div className="px-4 py-3 border-b border-gray-100">
         <div className="flex items-center justify-between">
@@ -439,7 +462,11 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 relative min-h-0">
+        <div 
+          ref={scrollContainerRef}
+          className="overflow-y-auto h-full p-4"
+        >
 
         {/* Folders and Pipelines */}
         <div className="space-y-2">
@@ -559,6 +586,12 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
           <div className="text-center text-gray-500 text-sm py-8">
             {searchTerm ? '검색 결과가 없습니다.' : '파이프라인이 없습니다.'}
           </div>
+        )}
+        </div>
+        
+        {/* 하단 그라이데이션 */}
+        {isScrollable && (
+          <div className="absolute bottom-0 left-0 right-0 h-8 pointer-events-none bg-gradient-to-t from-white via-white/80 to-transparent" />
         )}
       </div>
 
