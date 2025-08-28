@@ -488,7 +488,16 @@ const MainContentRefactored: React.FC<MainContentProps> = ({
   };
 
   const removeHeader = (id: string) => {
-    setHeadersList(headersList.filter(h => h.id !== id));
+    const headerToRemove = headersList.find(h => h.id === id);
+    const updatedHeadersList = headersList.filter(h => h.id !== id);
+    setHeadersList(updatedHeadersList);
+
+    // request.headers에서도 제거
+    if (headerToRemove && headerToRemove.key) {
+      const updatedHeaders = { ...request.headers };
+      delete updatedHeaders[headerToRemove.key];
+      setRequest({ ...request, headers: updatedHeaders });
+    }
   };
 
   const addHeader = () => {

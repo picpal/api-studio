@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { createApiUrl, createFetchOptions } from '../config/api';
 
 interface UserActivity {
   id: number;
@@ -104,9 +105,11 @@ const ActivityLogs: React.FC = () => {
       if (activityType) params.append('activityType', activityType);
       if (userEmail) params.append('userEmail', userEmail);
       
-      const response = await fetch(`http://localhost:8080/api/admin/activities/export?${params}`, {
-        method: 'GET',
-        credentials: 'include'
+      const response = await fetch(createApiUrl(`/admin/activities/export?${params}`), {
+        ...createFetchOptions({
+          method: 'GET',
+          credentials: 'include'
+        })
       });
       
       if (response.ok) {

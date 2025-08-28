@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createApiUrl, createFetchOptions } from '../config/api';
 
 interface ChangePasswordModalProps {
   isOpen: boolean;
@@ -30,15 +31,14 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen, onClo
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8080/api/auth/change-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          oldPassword,
-          newPassword,
+      const response = await fetch(createApiUrl('/auth/change-password'), {
+        ...createFetchOptions({
+          method: 'POST',
+          credentials: 'include',
+          body: JSON.stringify({
+            oldPassword,
+            newPassword,
+          }),
         }),
       });
 

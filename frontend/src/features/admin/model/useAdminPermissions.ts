@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Folder, FolderPermission } from '../ui/FolderPermissions';
+import { createApiUrl, createFetchOptions } from '../../../config/api';
 
 export const useAdminPermissions = () => {
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -19,8 +20,10 @@ export const useAdminPermissions = () => {
 
   const loadFolders = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/admin/folders', {
-        credentials: 'include',
+      const response = await fetch(createApiUrl('/admin/folders'), {
+        ...createFetchOptions({
+          credentials: 'include'
+        })
       });
       if (response.ok) {
         const data = await response.json();
@@ -35,8 +38,10 @@ export const useAdminPermissions = () => {
 
   const loadFolderPermissions = async (folderId: number) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/admin/folders/${folderId}/permissions`, {
-        credentials: 'include',
+      const response = await fetch(createApiUrl(`/admin/folders/${folderId}/permissions`), {
+        ...createFetchOptions({
+          credentials: 'include'
+        })
       });
       if (response.ok) {
         const data = await response.json();
@@ -51,13 +56,12 @@ export const useAdminPermissions = () => {
     if (!selectedFolder) return;
     
     try {
-      const response = await fetch(`http://localhost:8080/api/admin/folders/${selectedFolder}/permissions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ userId, permission }),
+      const response = await fetch(createApiUrl(`/admin/folders/${selectedFolder}/permissions`), {
+        ...createFetchOptions({
+          method: 'POST',
+          credentials: 'include',
+          body: JSON.stringify({ userId, permission })
+        })
       });
       
       if (response.ok) {
@@ -76,9 +80,11 @@ export const useAdminPermissions = () => {
     if (!selectedFolder) return;
     
     try {
-      const response = await fetch(`http://localhost:8080/api/admin/folders/${selectedFolder}/permissions/${userId}`, {
-        method: 'DELETE',
-        credentials: 'include',
+      const response = await fetch(createApiUrl(`/admin/folders/${selectedFolder}/permissions/${userId}`), {
+        ...createFetchOptions({
+          method: 'DELETE',
+          credentials: 'include'
+        })
       });
       
       if (response.ok) {

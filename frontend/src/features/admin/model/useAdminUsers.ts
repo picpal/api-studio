@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { User } from '../ui/UserManagement';
+import { createApiUrl, createFetchOptions } from '../../../config/api';
 
 export const useAdminUsers = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -11,8 +12,10 @@ export const useAdminUsers = () => {
 
   const loadUsers = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/admin/users', {
-        credentials: 'include',
+      const response = await fetch(createApiUrl('/admin/users'), {
+        ...createFetchOptions({
+          credentials: 'include'
+        })
       });
       if (response.ok) {
         const data = await response.json();
@@ -27,13 +30,12 @@ export const useAdminUsers = () => {
 
   const updateUserStatus = async (userId: number, status: string) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/admin/users/${userId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ status }),
+      const response = await fetch(createApiUrl(`/admin/users/${userId}/status`), {
+        ...createFetchOptions({
+          method: 'PUT',
+          credentials: 'include',
+          body: JSON.stringify({ status })
+        })
       });
       
       if (response.ok) {
@@ -50,13 +52,12 @@ export const useAdminUsers = () => {
 
   const updateUserRole = async (userId: number, role: string) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/admin/users/${userId}/role`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ role }),
+      const response = await fetch(createApiUrl(`/admin/users/${userId}/role`), {
+        ...createFetchOptions({
+          method: 'PUT',
+          credentials: 'include',
+          body: JSON.stringify({ role })
+        })
       });
       
       if (response.ok) {

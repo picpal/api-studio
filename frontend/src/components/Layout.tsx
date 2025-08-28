@@ -8,6 +8,7 @@ import AdminPage from '../pages/AdminPage';
 import TestAutomationPage from '../pages/TestAutomationPage';
 import { PipelineManagementPage } from '../pages/pipeline';
 import { BaseUrl, ApiItem } from '../types/api';
+import { createApiUrl, createFetchOptions } from '../config/api';
 
 interface LayoutProps {
   children?: React.ReactNode;
@@ -21,7 +22,7 @@ const Layout: React.FC<LayoutProps> = () => {
     { id: '1', name: 'Development', url: 'https://dev-api.blue.com' },
     { id: '2', name: 'Staging', url: 'https://staging-api.blue.com' },
     { id: '3', name: 'Production', url: 'https://api.blue.com' },
-    { id: '4', name: 'Local', url: 'http://localhost:8080' }
+    { id: '4', name: 'Local', url: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080' }
   ]);
 
   const [selectedItem, setSelectedItem] = useState<ApiItem | null>(null);
@@ -57,8 +58,10 @@ const Layout: React.FC<LayoutProps> = () => {
   const fetchPipelineById = async (pipelineId: number) => {
     try {
       // 모든 폴더를 가져와서 해당 파이프라인 찾기
-      const response = await fetch('http://localhost:8080/api/pipelines/folders', {
-        credentials: 'include'
+      const response = await fetch(createApiUrl('/pipelines/folders'), {
+        ...createFetchOptions({
+          credentials: 'include'
+        })
       });
       if (response.ok) {
         const folders = await response.json();
@@ -169,8 +172,10 @@ const Layout: React.FC<LayoutProps> = () => {
     // 서버에서 최신 Pipeline 데이터를 가져와서 상태 업데이트
     if (selectedPipeline) {
       try {
-        const response = await fetch(`http://localhost:8080/api/pipelines/${selectedPipeline.id}`, {
-          credentials: 'include'
+        const response = await fetch(createApiUrl(`/pipelines/${selectedPipeline.id}`), {
+          ...createFetchOptions({
+            credentials: 'include'
+          })
         });
         if (response.ok) {
           const updatedPipeline = await response.json();

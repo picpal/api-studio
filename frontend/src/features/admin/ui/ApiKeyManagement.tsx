@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createApiUrl, createFetchOptions } from '../../../config/api';
 
 interface ApiKey {
   id: number;
@@ -51,18 +52,17 @@ export const ApiKeyManagement: React.FC<ApiKeyManagementProps> = ({
     
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:8080/api/admin/api-keys', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          userId: selectedUser,
-          keyName,
-          description,
-          allowedFolderIds: selectedFolders,
-          expiresAt: expiresAt || null
+      const response = await fetch(createApiUrl('/admin/api-keys'), {
+        ...createFetchOptions({
+          method: 'POST',
+          credentials: 'include',
+          body: JSON.stringify({
+            userId: selectedUser,
+            keyName,
+            description,
+            allowedFolderIds: selectedFolders,
+            expiresAt: expiresAt || null
+          })
         })
       });
 
@@ -81,8 +81,10 @@ export const ApiKeyManagement: React.FC<ApiKeyManagementProps> = ({
 
   const loadApiKeys = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/admin/api-keys', {
-        credentials: 'include'
+      const response = await fetch(createApiUrl('/admin/api-keys'), {
+        ...createFetchOptions({
+          credentials: 'include'
+        })
       });
       if (response.ok) {
         const data = await response.json();
@@ -99,9 +101,11 @@ export const ApiKeyManagement: React.FC<ApiKeyManagementProps> = ({
     }
     
     try {
-      const response = await fetch(`http://localhost:8080/api/admin/api-keys/${keyId}`, {
-        method: 'DELETE',
-        credentials: 'include'
+      const response = await fetch(createApiUrl(`/admin/api-keys/${keyId}`), {
+        ...createFetchOptions({
+          method: 'DELETE',
+          credentials: 'include'
+        })
       });
       if (response.ok) {
         loadApiKeys();
