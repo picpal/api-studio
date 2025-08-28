@@ -251,10 +251,47 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
     e.preventDefault();
     e.stopPropagation();
     
+    // 아이템 컨텍스트 메뉴가 열려있다면 닫기
+    if (itemContextMenu?.show) {
+      setItemContextMenu(null);
+    }
+    
+    // 메뉴 크기 예상치 (실제 렌더링 크기에 맞게 조정)
+    const menuWidth = 150;
+    const menuHeight = 140; // 3개 아이템 + 구분선 (약 140px)
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    const clickX = e.clientX;
+    const clickY = e.clientY;
+    
+    // 화면 하단에 공간이 충분하지 않으면 위로 표시
+    // 최소한 클릭 지점과 가까운 위치에 메뉴를 표시
+    const spaceBelow = windowHeight - clickY;
+    const spaceAbove = clickY;
+    const padding = 10; // 화면 가장자리 여백
+    
+    let adjustedY;
+    if (spaceBelow >= menuHeight + padding) {
+      // 아래 공간이 충분하면 그대로 표시
+      adjustedY = clickY;
+    } else if (spaceAbove >= menuHeight + padding) {
+      // 위 공간이 충분하면 메뉴를 클릭 위치 바로 위에 표시
+      // 클릭 위치에서 메뉴 높이만큼 위로 이동
+      adjustedY = Math.max(padding, clickY - menuHeight);
+    } else {
+      // 둘 다 부족하면 화면 내에서 최적 위치 찾기
+      adjustedY = Math.min(windowHeight - menuHeight - padding, Math.max(padding, clickY - menuHeight/2));
+    }
+    
+    // 화면 우측에 공간이 충분하지 않으면 왼쪽으로 표시
+    const adjustedX = (clickX + menuWidth > windowWidth - 20)
+      ? Math.max(10, clickX - menuWidth)
+      : clickX;
+    
     setContextMenu({
       show: true,
-      x: e.clientX,
-      y: e.clientY,
+      x: adjustedX,
+      y: adjustedY,
       folderId,
       folderName
     });
@@ -264,10 +301,47 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
     e.preventDefault();
     e.stopPropagation();
     
+    // 폴더 컨텍스트 메뉴가 열려있다면 닫기
+    if (contextMenu?.show) {
+      setContextMenu(null);
+    }
+    
+    // 메뉴 크기 예상치 (실제 렌더링 크기에 맞게 조정)
+    const menuWidth = 150;
+    const menuHeight = 100; // 2개 아이템 + 구분선 (약 100px)
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    const clickX = e.clientX;
+    const clickY = e.clientY;
+    
+    // 화면 하단에 공간이 충분하지 않으면 위로 표시
+    // 최소한 클릭 지점과 가까운 위치에 메뉴를 표시
+    const spaceBelow = windowHeight - clickY;
+    const spaceAbove = clickY;
+    const padding = 10; // 화면 가장자리 여백
+    
+    let adjustedY;
+    if (spaceBelow >= menuHeight + padding) {
+      // 아래 공간이 충분하면 그대로 표시
+      adjustedY = clickY;
+    } else if (spaceAbove >= menuHeight + padding) {
+      // 위 공간이 충분하면 메뉴를 클릭 위치 바로 위에 표시
+      // 클릭 위치에서 메뉴 높이만큼 위로 이동
+      adjustedY = Math.max(padding, clickY - menuHeight);
+    } else {
+      // 둘 다 부족하면 화면 내에서 최적 위치 찾기
+      adjustedY = Math.min(windowHeight - menuHeight - padding, Math.max(padding, clickY - menuHeight/2));
+    }
+    
+    // 화면 우측에 공간이 충분하지 않으면 왼쪽으로 표시
+    const adjustedX = (clickX + menuWidth > windowWidth - 20)
+      ? Math.max(10, clickX - menuWidth)
+      : clickX;
+    
     setItemContextMenu({
       show: true,
-      x: e.clientX,
-      y: e.clientY,
+      x: adjustedX,
+      y: adjustedY,
       itemId,
       itemName,
       folderId

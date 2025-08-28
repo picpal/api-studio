@@ -27,6 +27,11 @@ dependencies {
     implementation 'org.apache.poi:poi-ooxml:5.2.4'
     
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'org.mockito:mockito-junit-jupiter'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.junit.jupiter:junit-jupiter-engine'
+    testImplementation 'org.assertj:assertj-core'
 }
 
 tasks.named('test') {
@@ -52,12 +57,18 @@ jacocoTestReport {
     afterEvaluate {
         classDirectories.setFrom(files(classDirectories.files.collect {
             fileTree(dir: it, exclude: [
-                'com/example/apitest/ApiTestApplication.class',
-                'com/example/apitest/config/**',
-                'com/example/apitest/controller/**',
-                'com/example/apitest/entity/**',
-                'com/example/apitest/repository/**',
+                '**/ApiTestApplication.class'
             ])
         }))
+    }
+}
+
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            limit {
+                minimum = 0.05
+            }
+        }
     }
 }
