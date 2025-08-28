@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ApiItem } from '../entities/api-item';
+import { ApiItem } from '../types/api';
 import { useApiForm } from '../features/api-testing';
 import { useApiRequest } from '../hooks/useApiRequest';
 import { ApiRequestPanel } from '../widgets/api-request-panel';
@@ -9,12 +9,10 @@ import { VariableInputModal } from '../widgets/api-testing/VariableInputModal';
 
 interface ApiTestingPageProps {
   selectedItem: ApiItem | null;
-  onUpdateSelectedItem: (item: Partial<ApiItem>) => void;
 }
 
 export const ApiTestingPage: React.FC<ApiTestingPageProps> = ({
-  selectedItem,
-  onUpdateSelectedItem
+  selectedItem
 }) => {
   const {
     request,
@@ -58,7 +56,7 @@ export const ApiTestingPage: React.FC<ApiTestingPageProps> = ({
     await handleApiSend(paramsList, validationEnabled, expectedValuesList);
   };
 
-  const handleMethodChange = (method: string) => {
+  const handleMethodChange = (method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH') => {
     setRequest(prev => ({ ...prev, method }));
   };
 

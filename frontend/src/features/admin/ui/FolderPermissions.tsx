@@ -97,36 +97,40 @@ export const FolderPermissions: React.FC<FolderPermissionsProps> = ({
           </div>
           <div className="p-4">
             {/* Add Permission Form */}
-            <div className="mb-4 p-4 bg-gray-50 rounded">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">권한 추가</h3>
-              <div className="grid grid-cols-2 gap-2">
-                <select
-                  id="userId"
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            <div className="mb-5">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">권한 추가</h3>
+              <div className="flex gap-2 items-center">
+                <div className="flex-1">
+                  <select
+                    id="userId"
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  >
+                    <option value="">사용자 선택</option>
+                    {users.filter(u => u.status === 'APPROVED').map(user => (
+                      <option key={user.id} value={user.id}>
+                        {user.email}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-1">
+                  <select
+                    id="permission"
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  >
+                    <option value="">권한 선택</option>
+                    <option value="read">읽기</option>
+                    <option value="WRITE">쓰기</option>
+                    <option value="ADMIN">관리</option>
+                  </select>
+                </div>
+                <button
+                  onClick={handleGrantPermission}
+                  className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 whitespace-nowrap"
                 >
-                  <option value="">사용자 선택</option>
-                  {users.filter(u => u.status === 'APPROVED').map(user => (
-                    <option key={user.id} value={user.id}>
-                      {user.email}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  id="permission"
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                >
-                  <option value="">권한 선택</option>
-                  <option value="read">읽기</option>
-                  <option value="WRITE">쓰기</option>
-                  <option value="ADMIN">관리</option>
-                </select>
+                  권한 추가
+                </button>
               </div>
-              <button
-                onClick={handleGrantPermission}
-                className="mt-2 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-              >
-                권한 추가
-              </button>
             </div>
 
             {/* Permission List */}

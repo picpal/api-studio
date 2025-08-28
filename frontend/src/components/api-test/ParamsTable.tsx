@@ -62,7 +62,7 @@ const ParamsTable: React.FC<ParamsTableProps> = ({
         <div 
           ref={desktopScrollRef}
           className="overflow-y-auto" 
-          style={{maxHeight: 'calc(100vh - 480px)', minHeight: '250px'}}
+          style={{maxHeight: 'calc(100vh - 430px)', minHeight: '250px'}}
         >
         <table className="w-full border-collapse">
           <thead className="bg-gray-50 border-b border-gray-300 sticky top-0 z-10">

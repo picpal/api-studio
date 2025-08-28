@@ -4,7 +4,6 @@ export const PipelineEmpty: React.FC = () => {
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
       <div className="text-center">
-        <div className="text-6xl mb-4">🎯</div>
         <h2 className="text-xl font-semibold text-gray-900 mb-2">
           API Pipeline
         </h2>

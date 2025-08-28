@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ApiRequest, ApiItem } from '../../../entities/api-item';
+import { ApiRequest, ApiItem } from '../../../types/api';
 
 interface ParamItem {
   key: string;

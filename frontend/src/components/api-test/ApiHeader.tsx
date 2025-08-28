@@ -119,7 +119,6 @@ const ApiHeader: React.FC<ApiHeaderProps> = ({
         )
       ) : (
         <div className="bg-gray-50 p-8 rounded border text-center">
-          <div className="text-4xl mb-4">📋</div>
           <h3 className="text-lg font-medium text-gray-700 mb-2">API를 선택하세요</h3>
           <p className="text-sm text-gray-500">
             좌측 사이드바에서 API를 선택하거나 새로운 API를 생성하여 시작하세요

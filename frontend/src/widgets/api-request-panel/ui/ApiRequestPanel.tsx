@@ -1,12 +1,12 @@
 import React from 'react';
-import { ApiRequest } from '../../../entities/api-item';
+import { ApiRequest } from '../../../types/api';
 import { Button, Input, Select } from '../../../shared/ui';
 
 interface ApiRequestPanelProps {
   request: ApiRequest;
   loading: boolean;
   onRequestChange: (request: ApiRequest) => void;
-  onMethodChange: (method: string) => void;
+  onMethodChange: (method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH') => void;
   onSend: () => void;
 }
 
