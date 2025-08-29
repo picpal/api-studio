@@ -7,6 +7,7 @@ import MainContent from './MainContent';
 import AdminPage from '../pages/AdminPage';
 import TestAutomationPage from '../pages/TestAutomationPage';
 import { PipelineManagementPage } from '../pages/pipeline';
+import { MeetingPage } from '../pages/MeetingPage';
 import { BaseUrl, ApiItem } from '../types/api';
 import { createApiUrl, createFetchOptions } from '../config/api';
 
@@ -28,7 +29,7 @@ const Layout: React.FC<LayoutProps> = () => {
   const [selectedItem, setSelectedItem] = useState<ApiItem | null>(null);
   const [selectedPipeline, setSelectedPipeline] = useState<any>(null);
   const [showAdminPage, setShowAdminPage] = useState(false);
-  const [currentPage, setCurrentPage] = useState<'api-testing' | 'test-automation' | 'pipeline-management'>('api-testing');
+  const [currentPage, setCurrentPage] = useState<'api-testing' | 'test-automation' | 'pipeline-management' | 'meeting'>('api-testing');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     // 데스크톱에서는 열린 상태, 모바일에서는 닫힌 상태로 시작
     return window.innerWidth < 768;
@@ -50,6 +51,8 @@ const Layout: React.FC<LayoutProps> = () => {
       }
     } else if (path.startsWith('/test-automation')) {
       setCurrentPage('test-automation');
+    } else if (path.startsWith('/meeting')) {
+      setCurrentPage('meeting');
     } else {
       setCurrentPage('api-testing');
     }
@@ -151,7 +154,7 @@ const Layout: React.FC<LayoutProps> = () => {
     }
   };
 
-  const handleNavigate = (page: 'api-testing' | 'test-automation' | 'pipeline-management') => {
+  const handleNavigate = (page: 'api-testing' | 'test-automation' | 'pipeline-management' | 'meeting') => {
     setCurrentPage(page);
     // URL 업데이트
     if (page === 'api-testing') {
@@ -160,6 +163,8 @@ const Layout: React.FC<LayoutProps> = () => {
       navigate('/test-automation');
     } else if (page === 'pipeline-management') {
       navigate('/pipeline-management');
+    } else if (page === 'meeting') {
+      navigate('/meeting');
     }
   };
 
@@ -301,11 +306,13 @@ const Layout: React.FC<LayoutProps> = () => {
               onResetForm={handleResetForm}
               onUpdateSelectedItem={handleUpdateSelectedItem}
             />
-          ) : (
+          ) : currentPage === 'pipeline-management' ? (
             <PipelineManagementPage 
               selectedPipeline={selectedPipeline}
               onPipelineUpdate={handlePipelineUpdate}
             />
+          ) : (
+            <MeetingPage />
           )}
         </div>
       </div>
