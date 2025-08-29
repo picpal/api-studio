@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { ChatRoom, Message, CreateRoomRequest, User } from '../../../entities/meeting';
 import { chatApi } from '../api/chatApi';
 import { websocketService } from '../api/websocketService';
+import { notificationService } from '../../../shared/lib/notification';
 
 export const useMeetingData = () => {
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
@@ -18,6 +19,11 @@ export const useMeetingData = () => {
     try {
       const user = await chatApi.getCurrentUser();
       setCurrentUser(user);
+      
+      // 사용자 로그인 시 알림 권한 요청
+      if (notificationService.isSupported() && !notificationService.isPermissionGranted()) {
+        await notificationService.requestPermission();
+      }
     } catch (err: any) {
       console.error('Failed to load current user:', err);
     }
@@ -202,6 +208,30 @@ export const useMeetingData = () => {
           ? { ...room, lastMessage: message, unreadCount: 0 }
           : room
       ));
+
+      // 데스크톱 알림 표시 (본인 메시지가 아니고 시스템 메시지가 아닌 경우)
+      // currentUser가 없으면 다시 로드 시도
+      if (!currentUser) {
+        loadCurrentUser();
+      }
+
+      // currentUser가 있거나 senderId가 다른 경우에만 알림 표시
+      const shouldShowNotification = 
+        message.messageType !== 'SYSTEM' &&
+        message.senderId !== 0 &&
+        (!currentUser || message.senderId !== currentUser.id);
+
+      if (shouldShowNotification) {
+        // 현재 채팅방 정보 찾기
+        const currentRoom = chatRooms.find(room => room.id === currentRoomRef.current);
+        const roomName = currentRoom?.name || '채팅방';
+        
+        notificationService.showChatNotification(
+          message.senderName || '알 수 없는 사용자',
+          message.content,
+          roomName
+        );
+      }
     };
 
     // 연결 상태 리스너
@@ -209,13 +239,33 @@ export const useMeetingData = () => {
       setWsConnected(connected);
     };
 
+    // 채팅방 초대 리스너 (실시간 채팅방 목록 업데이트)
+    const handleRoomInvitation = (newRoom: ChatRoom) => {
+      setChatRooms(prev => {
+        // 이미 목록에 있는지 확인
+        const exists = prev.some(room => room.id === newRoom.id);
+        if (exists) {
+          return prev;
+        }
+        // 새 채팅방을 목록 앞에 추가
+        const updatedRooms = [newRoom, ...prev];
+        
+        // 채팅방 초대 알림 표시
+        notificationService.showInvitationNotification(newRoom.name);
+        
+        return updatedRooms;
+      });
+    };
+
     websocketService.onMessage(handleNewMessage);
     websocketService.onConnectionChange(handleConnectionChange);
+    websocketService.onRoomInvitation(handleRoomInvitation);
 
     // Cleanup
     return () => {
       websocketService.offMessage(handleNewMessage);
       websocketService.offConnectionChange(handleConnectionChange);
+      websocketService.offRoomInvitation(handleRoomInvitation);
       websocketService.disconnect();
     };
   }, []);

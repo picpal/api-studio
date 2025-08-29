@@ -14,6 +14,7 @@ import com.example.apitest.repository.MessageRepository;
 import com.example.apitest.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +35,7 @@ public class ChatRoomService {
     private final ChatRoomParticipantRepository participantRepository;
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
+    private final SimpMessagingTemplate messagingTemplate;
     
     // === 채팅방 조회 관련 (단일 책임) ===
     
@@ -78,7 +80,25 @@ public class ChatRoomService {
         addRoomCreator(room.getId(), userId);
         addRoomParticipants(room.getId(), request.getParticipantIds(), userId);
         
-        return convertRoomToDTO(room, userId);
+        ChatRoomDTO roomDTO = convertRoomToDTO(room, userId);
+        
+        // 초대된 참여자들에게 실시간 알림 전송
+        if (request.getParticipantIds() != null) {
+            for (Long participantId : request.getParticipantIds()) {
+                String participantEmail = getUserEmail(participantId);
+                if (participantEmail != null && !participantEmail.equals("unknown@example.com")) {
+                    log.info("채팅방 생성 알림 전송: participantEmail={}, roomId={}", participantEmail, room.getId());
+                    ChatRoomDTO participantRoomDTO = convertRoomToDTO(room, participantId);
+                    messagingTemplate.convertAndSendToUser(
+                        participantEmail,
+                        "/queue/room-invitation",
+                        participantRoomDTO
+                    );
+                }
+            }
+        }
+        
+        return roomDTO;
     }
     
     /**

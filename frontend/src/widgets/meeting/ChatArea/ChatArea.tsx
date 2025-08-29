@@ -136,7 +136,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 formatDate(msg.createdAt) !== formatDate(messages[index - 1].createdAt);
               
               return (
-                <div key={msg.id}>
+                <div key={msg.id || `msg-${index}-${msg.createdAt}`}>
                   {showDate && (
                     <div className="text-center text-xs text-gray-500 my-4">
                       {formatDate(msg.createdAt)}

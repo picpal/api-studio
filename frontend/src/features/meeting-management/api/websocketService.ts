@@ -7,8 +7,10 @@ class WebSocketService {
   private roomId: number | null = null;
   private messageCallbacks: ((message: Message) => void)[] = [];
   private connectionCallbacks: ((connected: boolean) => void)[] = [];
+  private roomInvitationCallbacks: ((room: any) => void)[] = [];
   private messageSubscription: any = null;
   private typingSubscription: any = null;
+  private personalSubscription: any = null;
 
   connect(onConnected?: () => void, onError?: (error: any) => void) {
     // withCredentials 옵션을 추가하여 쿠키를 포함
@@ -22,6 +24,10 @@ class WebSocketService {
       onConnect: () => {
         console.log('WebSocket Connected');
         this.connectionCallbacks.forEach(cb => cb(true));
+        
+        // 개인 채널 구독 (채팅방 초대 알림용)
+        this.subscribeToPersonalChannel();
+        
         if (onConnected) onConnected();
       },
       
@@ -63,6 +69,15 @@ class WebSocketService {
         console.error('Error unsubscribing typing subscription:', e);
       }
       this.typingSubscription = null;
+    }
+    
+    if (this.personalSubscription) {
+      try {
+        this.personalSubscription.unsubscribe();
+      } catch (e) {
+        console.error('Error unsubscribing personal subscription:', e);
+      }
+      this.personalSubscription = null;
     }
     
     // 클라이언트가 활성 상태일 때만 퇴장 알림 및 deactivate
@@ -195,6 +210,31 @@ class WebSocketService {
   // 연결 상태 콜백 제거
   offConnectionChange(callback: (connected: boolean) => void) {
     this.connectionCallbacks = this.connectionCallbacks.filter(cb => cb !== callback);
+  }
+
+  // 개인 채널 구독 (채팅방 초대 알림용)
+  private subscribeToPersonalChannel() {
+    if (!this.client || !this.client.active) {
+      console.error('Cannot subscribe to personal channel - WebSocket not connected');
+      return;
+    }
+
+    // 개인 큐 구독 (사용자별 메시지)
+    this.personalSubscription = this.client.subscribe('/user/queue/room-invitation', (message: IMessage) => {
+      const roomData = JSON.parse(message.body);
+      console.log('Received room invitation:', roomData);
+      this.roomInvitationCallbacks.forEach(callback => callback(roomData));
+    });
+  }
+
+  // 채팅방 초대 콜백 등록
+  onRoomInvitation(callback: (room: any) => void) {
+    this.roomInvitationCallbacks.push(callback);
+  }
+
+  // 채팅방 초대 콜백 제거
+  offRoomInvitation(callback: (room: any) => void) {
+    this.roomInvitationCallbacks = this.roomInvitationCallbacks.filter(cb => cb !== callback);
   }
 
   isConnected(): boolean {

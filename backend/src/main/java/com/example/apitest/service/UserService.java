@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -34,6 +35,13 @@ public class UserService {
             .filter(user -> User.Status.APPROVED.equals(user.getStatus())) // 승인된 사용자만
             .map(this::convertToDTO)
             .collect(Collectors.toList());
+    }
+    
+    /**
+     * ID로 사용자 조회
+     */
+    public Optional<User> findById(Long userId) {
+        return userRepository.findById(userId);
     }
     
     private UserDTO convertToDTO(User user) {

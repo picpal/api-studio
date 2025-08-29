@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
@@ -30,6 +31,7 @@ public class MeetingController {
     private final ChatRoomService chatRoomService;
     private final MessageService messageService;
     private final UserService userService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @GetMapping("/rooms")
     public ResponseEntity<List<ChatRoomDTO>> getUserRooms(@CurrentUser User user) {
@@ -95,6 +97,22 @@ public class MeetingController {
         try {
             log.info("사용자 초대 요청: roomId={}, targetUserId={}, requesterId={}", roomId, targetUserId, user.getId());
             chatRoomService.inviteUser(roomId, targetUserId, user.getId());
+            
+            // 초대된 사용자에게 실시간으로 채팅방 정보 전송
+            ChatRoomDTO updatedRoom = chatRoomService.getRoomById(roomId, targetUserId);
+            String targetUserEmail = userService.findById(targetUserId)
+                    .map(User::getEmail)
+                    .orElse(null);
+            
+            if (targetUserEmail != null) {
+                log.info("초대 알림 전송: targetUserEmail={}, roomId={}", targetUserEmail, roomId);
+                messagingTemplate.convertAndSendToUser(
+                    targetUserEmail,
+                    "/queue/room-invitation",
+                    updatedRoom
+                );
+            }
+            
             return ResponseEntity.ok("사용자가 성공적으로 초대되었습니다.");
         } catch (AccessDeniedException e) {
             log.warn("사용자 초대 권한 없음: roomId={}, requesterId={}", roomId, user.getId());

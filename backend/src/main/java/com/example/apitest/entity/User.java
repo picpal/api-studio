@@ -3,11 +3,12 @@ package com.example.apitest.entity;
 import com.example.apitest.service.PasswordValidationService;
 import jakarta.persistence.*;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import java.security.Principal;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
-public class User {
+public class User implements Principal {
     
     public enum Role {
         ADMIN, USER
@@ -207,6 +208,14 @@ public class User {
 
     public void setRawPassword(String rawPassword) {
         this.rawPassword = rawPassword;
+    }
+    
+    /**
+     * Principal 인터페이스 구현 - WebSocket에서 사용자 식별용
+     */
+    @Override
+    public String getName() {
+        return this.email;
     }
     
     /**

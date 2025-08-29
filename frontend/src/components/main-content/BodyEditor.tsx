@@ -88,8 +88,7 @@ const BodyEditor: React.FC<BodyEditorProps> = ({ request, setRequest }) => {
               whiteSpace: 'pre-wrap',
               boxSizing: 'border-box'
             }}
-            showLineNumbers={stringContent.split('
-').length > 10}
+            showLineNumbers={stringContent.split('\n').length > 10}
           >
             {stringContent}
           </SyntaxHighlighter>
