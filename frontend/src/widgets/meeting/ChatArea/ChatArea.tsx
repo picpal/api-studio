@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '../../../shared/ui';
 import { ChatRoom, Message } from '../../../entities/meeting';
 
@@ -10,6 +10,7 @@ interface ChatAreaProps {
   onLeaveRoom: () => void;
   onDeleteRoom: () => void;
   onInviteUser: () => void;
+  onMarkMessagesAsRead?: (roomId: number, lastReadMessageId: number) => void;
   loading?: boolean;
 }
 
@@ -21,6 +22,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   onLeaveRoom,
   onDeleteRoom,
   onInviteUser,
+  onMarkMessagesAsRead,
   loading = false
 }) => {
   const [message, setMessage] = useState('');
@@ -31,9 +33,46 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // 읽음 처리를 debounce로 처리
+  const debouncedMarkAsRead = useCallback(
+    (() => {
+      let timeoutId: NodeJS.Timeout;
+      return (roomId: number, messageId: number) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          if (onMarkMessagesAsRead) {
+            console.log('Marking message as read:', messageId);
+            onMarkMessagesAsRead(roomId, messageId);
+          }
+        }, 500); // 500ms 지연
+      };
+    })(),
+    [onMarkMessagesAsRead]
+  );
+
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+    
+    // 메시지가 있고 읽음 처리 함수가 제공된 경우
+    if (messages.length > 0 && onMarkMessagesAsRead) {
+      // 마지막 메시지 찾기 (본인 메시지가 아닌 것 중 가장 최신)
+      let lastUnreadMessage = null;
+      for (let i = messages.length - 1; i >= 0; i--) {
+        const message = messages[i];
+        const isMyMessage = Number(message.senderId) === Number(currentUserId);
+        const isSystemMessage = message.messageType === 'SYSTEM' || message.senderId === 0;
+        
+        if (!isMyMessage && !isSystemMessage && message.id) {
+          lastUnreadMessage = message;
+          break;
+        }
+      }
+      
+      if (lastUnreadMessage) {
+        debouncedMarkAsRead(room.id, lastUnreadMessage.id);
+      }
+    }
+  }, [messages, room.id, currentUserId, debouncedMarkAsRead]);
 
   const handleSend = () => {
     if (!message.trim()) return;
@@ -136,7 +175,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 formatDate(msg.createdAt) !== formatDate(messages[index - 1].createdAt);
               
               return (
-                <div key={msg.id || `msg-${index}-${msg.createdAt}`}>
+                <div key={`msg-${index}-${msg.id}-${msg.createdAt}`}>
                   {showDate && (
                     <div className="text-center text-xs text-gray-500 my-4">
                       {formatDate(msg.createdAt)}

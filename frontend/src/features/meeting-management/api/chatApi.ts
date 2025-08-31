@@ -23,10 +23,7 @@ export const chatApi = {
   },
 
   getAvailableUsers: async (): Promise<any[]> => {
-    const response = await axios.get('http://localhost:8080/api/admin/users', {
-      withCredentials: true,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    const response = await api.get('/available-users');
     return response.data;
   },
 
@@ -67,13 +64,37 @@ export const chatApi = {
     return response.data;
   },
 
-  getCurrentUser: async (): Promise<User> => {
-    const response = await axios.get('/api/auth/me', { withCredentials: true });
-    return response.data.user; // user 객체 안에 실제 사용자 데이터가 있음
+  // 읽음 상태 관련 API
+  markMessagesAsRead: async (roomId: number, lastReadMessageId: number): Promise<void> => {
+    await api.post(`/rooms/${roomId}/messages/read`, {
+      lastReadMessageId
+    });
   },
 
-  getAvailableUsers: async (): Promise<User[]> => {
-    const response = await axios.get('/api/chat/available-users', { withCredentials: true });
-    return response.data;
+  getUnreadCount: async (roomId: number): Promise<number> => {
+    const response = await api.get(`/rooms/${roomId}/unread-count`);
+    return response.data.unreadCount;
+  },
+
+  getMessageReadStatus: async (messageId: number): Promise<any[]> => {
+    const response = await api.get(`/messages/${messageId}/read-status`);
+    return response.data.readStatuses;
+  },
+
+  getMessageReadCount: async (messageId: number): Promise<number> => {
+    const response = await api.get(`/messages/${messageId}/read-count`);
+    return response.data.readCount;
+  },
+
+  getMultipleMessageReadCounts: async (messageIds: number[]): Promise<Record<number, number>> => {
+    const response = await api.post('/messages/read-counts', {
+      messageIds
+    });
+    return response.data.readCounts;
+  },
+
+  hasUserReadMessage: async (messageId: number): Promise<boolean> => {
+    const response = await api.get(`/messages/${messageId}/read-by-me`);
+    return response.data.hasRead;
   },
 };

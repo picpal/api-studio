@@ -52,12 +52,21 @@ export const useMeetingData = () => {
   }, []);
 
   // 채팅방 목록 로드
-  const loadChatRooms = useCallback(async () => {
+  const loadChatRooms = useCallback(async (currentRoomId?: number) => {
     try {
       setLoading(true);
       setError(null);
       const rooms = await chatApi.getUserRooms();
-      setChatRooms(rooms);
+      
+      // 현재 채팅방에 있다면 해당 방의 unreadCount를 0으로 설정
+      if (currentRoomId) {
+        const updatedRooms = rooms.map(room => 
+          room.id === currentRoomId ? { ...room, unreadCount: 0 } : room
+        );
+        setChatRooms(updatedRooms);
+      } else {
+        setChatRooms(rooms);
+      }
     } catch (err: any) {
       console.error('Failed to load chat rooms:', err);
       setError(err.response?.data?.message || '채팅방 목록을 불러올 수 없습니다.');
@@ -200,14 +209,27 @@ export const useMeetingData = () => {
 
     // 메시지 수신 리스너
     const handleNewMessage = (message: Message) => {
-      setMessages(prev => [...prev, message]);
+      // 현재 채팅방에 있는 경우에만 메시지 목록에 추가
+      if (currentRoomRef.current === message.roomId) {
+        setMessages(prev => [...prev, message]);
+      }
       
-      // 채팅방 목록의 lastMessage 업데이트
-      setChatRooms(prev => prev.map(room => 
-        room.id === currentRoomRef.current 
-          ? { ...room, lastMessage: message, unreadCount: 0 }
-          : room
-      ));
+      // 채팅방 목록의 lastMessage와 unreadCount 업데이트
+      setChatRooms(prev => prev.map(room => {
+        if (room.id === message.roomId) {
+          // 현재 채팅방에 있고 포커스된 상태라면 unreadCount는 0
+          const isCurrentRoomAndFocused = 
+            currentRoomRef.current === message.roomId && 
+            !document.hidden;
+            
+          return {
+            ...room,
+            lastMessage: message,
+            unreadCount: isCurrentRoomAndFocused ? 0 : room.unreadCount + 1
+          };
+        }
+        return room;
+      }));
 
       // 데스크톱 알림 표시 (본인 메시지가 아니고 시스템 메시지가 아닌 경우)
       // currentUser가 없으면 다시 로드 시도
@@ -215,16 +237,20 @@ export const useMeetingData = () => {
         loadCurrentUser();
       }
 
-      // currentUser가 있거나 senderId가 다른 경우에만 알림 표시
+      // 알림 표시 조건:
+      // 1. 본인이 보낸 메시지가 아님
+      // 2. 시스템 메시지가 아님
+      // 3. 현재 해당 채팅방에 접속하지 않았거나, 접속했어도 페이지가 포커스되지 않은 상태
       const shouldShowNotification = 
         message.messageType !== 'SYSTEM' &&
         message.senderId !== 0 &&
-        (!currentUser || message.senderId !== currentUser.id);
+        (!currentUser || message.senderId !== currentUser.id) &&
+        (currentRoomRef.current !== message.roomId || document.hidden);
 
       if (shouldShowNotification) {
-        // 현재 채팅방 정보 찾기
-        const currentRoom = chatRooms.find(room => room.id === currentRoomRef.current);
-        const roomName = currentRoom?.name || '채팅방';
+        // 해당 채팅방 정보 찾기
+        const messageRoom = chatRooms.find(room => room.id === message.roomId);
+        const roomName = messageRoom?.name || '채팅방';
         
         notificationService.showChatNotification(
           message.senderName || '알 수 없는 사용자',
@@ -257,15 +283,46 @@ export const useMeetingData = () => {
       });
     };
 
+    // 읽음 상태 업데이트 리스너
+    const handleReadStatusUpdate = (readStatus: any) => {
+      console.log('Read status updated:', readStatus);
+      // TODO: 읽음 상태 UI 업데이트 로직 추가
+      // 예: 메시지 목록에서 읽음 표시 업데이트, 안읽은 메시지 수 업데이트 등
+    };
+
     websocketService.onMessage(handleNewMessage);
     websocketService.onConnectionChange(handleConnectionChange);
     websocketService.onRoomInvitation(handleRoomInvitation);
+    websocketService.onReadStatusUpdate(handleReadStatusUpdate);
+
+    // 페이지 포커스 시 현재 채팅방 읽음 처리
+    const handleVisibilityChange = () => {
+      if (!document.hidden && currentRoomRef.current && messages.length > 0) {
+        // 페이지가 다시 포커스되고 현재 채팅방에 있을 때
+        // 마지막 메시지를 읽음 처리
+        const lastMessage = messages[messages.length - 1];
+        if (lastMessage && lastMessage.id) {
+          markMessagesAsRead(currentRoomRef.current, lastMessage.id);
+        }
+        
+        // 로컬 상태에서도 unreadCount를 0으로 설정
+        setChatRooms(prev => prev.map(room => 
+          room.id === currentRoomRef.current 
+            ? { ...room, unreadCount: 0 }
+            : room
+        ));
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // Cleanup
     return () => {
       websocketService.offMessage(handleNewMessage);
       websocketService.offConnectionChange(handleConnectionChange);
       websocketService.offRoomInvitation(handleRoomInvitation);
+      websocketService.offReadStatusUpdate(handleReadStatusUpdate);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       websocketService.disconnect();
     };
   }, []);
@@ -275,6 +332,25 @@ export const useMeetingData = () => {
     loadChatRooms();
     loadAvailableUsers();
   }, [loadChatRooms, loadAvailableUsers]);
+
+  // 메시지 읽음 처리
+  const markMessagesAsRead = useCallback(async (roomId: number, lastReadMessageId: number) => {
+    try {
+      await chatApi.markMessagesAsRead(roomId, lastReadMessageId);
+    } catch (err: any) {
+      console.error('Failed to mark messages as read:', err);
+    }
+  }, []);
+
+  // 안읽은 메시지 수 조회
+  const getUnreadCount = useCallback(async (roomId: number): Promise<number> => {
+    try {
+      return await chatApi.getUnreadCount(roomId);
+    } catch (err: any) {
+      console.error('Failed to get unread count:', err);
+      return 0;
+    }
+  }, []);
 
   // 에러 초기화
   const clearError = useCallback(() => {
@@ -302,6 +378,10 @@ export const useMeetingData = () => {
     inviteUser,
     loadChatRooms,
     loadMessages,
-    clearError
+    clearError,
+    
+    // 읽음 상태 관련
+    markMessagesAsRead,
+    getUnreadCount
   };
 };

@@ -20,12 +20,19 @@ export const MeetingPage: React.FC = () => {
     addMessage,
     inviteUser,
     loadMessages,
-    clearError
+    loadChatRooms,
+    clearError,
+    markMessagesAsRead
   } = useMeetingData();
 
   const handleSelectRoom = async (room: ChatRoom) => {
     setSelectedRoom(room);
     await loadMessages(room.id);
+    
+    // URL에 현재 채팅방 ID 저장 (새로고침 시 상태 복원용)
+    const url = new URL(window.location.href);
+    url.searchParams.set('roomId', room.id.toString());
+    window.history.replaceState({}, '', url.toString());
   };
 
   const handleCreateRoom = async (name: string, participants: User[]) => {
@@ -48,6 +55,11 @@ export const MeetingPage: React.FC = () => {
     if (confirm('정말로 이 채팅방을 나가시겠습니까?')) {
       await leaveRoom(selectedRoom.id);
       setSelectedRoom(null);
+      
+      // URL에서 roomId 제거
+      const url = new URL(window.location.href);
+      url.searchParams.delete('roomId');
+      window.history.replaceState({}, '', url.toString());
     }
   };
 
@@ -57,6 +69,12 @@ export const MeetingPage: React.FC = () => {
     if (confirm('⚠️ 채팅방을 완전히 삭제하시겠습니까?\n모든 메시지와 데이터가 영구적으로 삭제됩니다.')) {
       await deleteRoom(selectedRoom.id);
       setSelectedRoom(null);
+      
+      // URL에서 roomId 제거
+      const url = new URL(window.location.href);
+      url.searchParams.delete('roomId');
+      window.history.replaceState({}, '', url.toString());
+      
       alert('채팅방이 삭제되었습니다.');
     }
   };
@@ -79,6 +97,26 @@ export const MeetingPage: React.FC = () => {
       console.error('Failed to invite user:', error);
     }
   };
+
+  // 페이지 로드 시 URL에서 현재 채팅방 복원
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const roomIdParam = url.searchParams.get('roomId');
+    
+    if (roomIdParam && chatRooms.length > 0) {
+      const roomId = parseInt(roomIdParam, 10);
+      const room = chatRooms.find(r => r.id === roomId);
+      
+      if (room && !selectedRoom) {
+        console.log('Restoring room from URL:', roomId);
+        setSelectedRoom(room);
+        loadMessages(roomId);
+        
+        // 채팅방 목록을 다시 로드하여 현재 방의 unreadCount를 0으로 설정
+        loadChatRooms(roomId);
+      }
+    }
+  }, [chatRooms, selectedRoom, loadMessages, loadChatRooms]);
 
   // 에러 표시
   useEffect(() => {
@@ -119,6 +157,7 @@ export const MeetingPage: React.FC = () => {
           onLeaveRoom={handleLeaveRoom}
           onDeleteRoom={handleDeleteRoom}
           onInviteUser={() => setShowInviteModal(true)}
+          onMarkMessagesAsRead={markMessagesAsRead}
           loading={loading}
         />
       ) : (

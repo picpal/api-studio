@@ -15,6 +15,7 @@ export interface Participant {
 
 export interface Message {
   id: number;
+  roomId: number;
   senderId: number;
   senderName: string;
   content: string;

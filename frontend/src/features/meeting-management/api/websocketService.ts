@@ -8,9 +8,12 @@ class WebSocketService {
   private messageCallbacks: ((message: Message) => void)[] = [];
   private connectionCallbacks: ((connected: boolean) => void)[] = [];
   private roomInvitationCallbacks: ((room: any) => void)[] = [];
+  private readStatusCallbacks: ((readStatus: any) => void)[] = [];
   private messageSubscription: any = null;
   private typingSubscription: any = null;
   private personalSubscription: any = null;
+  private readStatusSubscription: any = null;
+  private globalMessageSubscription: any = null;
 
   connect(onConnected?: () => void, onError?: (error: any) => void) {
     // withCredentials 옵션을 추가하여 쿠키를 포함
@@ -80,6 +83,24 @@ class WebSocketService {
       this.personalSubscription = null;
     }
     
+    if (this.readStatusSubscription) {
+      try {
+        this.readStatusSubscription.unsubscribe();
+      } catch (e) {
+        console.error('Error unsubscribing read status subscription:', e);
+      }
+      this.readStatusSubscription = null;
+    }
+    
+    if (this.globalMessageSubscription) {
+      try {
+        this.globalMessageSubscription.unsubscribe();
+      } catch (e) {
+        console.error('Error unsubscribing global message subscription:', e);
+      }
+      this.globalMessageSubscription = null;
+    }
+    
     // 클라이언트가 활성 상태일 때만 퇴장 알림 및 deactivate
     if (this.client && this.client.active) {
       // 채팅방 퇴장 알림
@@ -126,6 +147,9 @@ class WebSocketService {
     if (this.typingSubscription) {
       this.typingSubscription.unsubscribe();
     }
+    if (this.readStatusSubscription) {
+      this.readStatusSubscription.unsubscribe();
+    }
 
     this.roomId = roomId;
 
@@ -140,6 +164,13 @@ class WebSocketService {
     this.typingSubscription = this.client.subscribe(`/topic/room/${roomId}/typing`, (message: IMessage) => {
       const typingUser = message.body;
       console.log('User typing:', typingUser);
+    });
+
+    // 읽음 상태 구독
+    this.readStatusSubscription = this.client.subscribe(`/topic/room/${roomId}/read-status`, (message: IMessage) => {
+      const readStatusData = JSON.parse(message.body);
+      console.log('Received read status update:', readStatusData);
+      this.readStatusCallbacks.forEach(callback => callback(readStatusData));
     });
 
     // 입장 알림 전송
@@ -225,6 +256,13 @@ class WebSocketService {
       console.log('Received room invitation:', roomData);
       this.roomInvitationCallbacks.forEach(callback => callback(roomData));
     });
+
+    // 전역 채팅 메시지 구독 (모든 채팅방의 메시지 알림용)
+    this.globalMessageSubscription = this.client.subscribe('/user/queue/chat-messages', (message: IMessage) => {
+      const messageData: Message = JSON.parse(message.body);
+      console.log('Received global chat message:', messageData);
+      this.messageCallbacks.forEach(callback => callback(messageData));
+    });
   }
 
   // 채팅방 초대 콜백 등록
@@ -235,6 +273,16 @@ class WebSocketService {
   // 채팅방 초대 콜백 제거
   offRoomInvitation(callback: (room: any) => void) {
     this.roomInvitationCallbacks = this.roomInvitationCallbacks.filter(cb => cb !== callback);
+  }
+
+  // 읽음 상태 콜백 등록
+  onReadStatusUpdate(callback: (readStatus: any) => void) {
+    this.readStatusCallbacks.push(callback);
+  }
+
+  // 읽음 상태 콜백 제거
+  offReadStatusUpdate(callback: (readStatus: any) => void) {
+    this.readStatusCallbacks = this.readStatusCallbacks.filter(cb => cb !== callback);
   }
 
   isConnected(): boolean {

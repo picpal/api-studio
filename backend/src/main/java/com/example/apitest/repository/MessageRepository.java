@@ -98,4 +98,33 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
         @Param("endDate") java.time.LocalDateTime endDate,
         Pageable pageable
     );
+    
+    /**
+     * 특정 사용자가 읽지 않은 메시지 조회 (커서 기반)
+     */
+    @Query("""
+        SELECT m FROM Message m 
+        WHERE m.roomId = :roomId 
+        AND m.senderId != :userId 
+        AND m.id > :lastReadMessageId 
+        AND m.isDeleted = false 
+        ORDER BY m.createdAt ASC
+        """)
+    List<Message> findUnreadMessages(@Param("roomId") Long roomId, 
+                                   @Param("userId") Long userId, 
+                                   @Param("lastReadMessageId") Long lastReadMessageId);
+    
+    /**
+     * 특정 사용자가 읽지 않은 메시지 수 조회 (본인 메시지 제외)
+     */
+    @Query("""
+        SELECT COUNT(m) FROM Message m 
+        WHERE m.roomId = :roomId 
+        AND m.senderId != :userId 
+        AND m.id > :lastReadMessageId 
+        AND m.isDeleted = false
+        """)
+    int countUnreadMessagesForUser(@Param("roomId") Long roomId, 
+                                  @Param("userId") Long userId,
+                                  @Param("lastReadMessageId") Long lastReadMessageId);
 }

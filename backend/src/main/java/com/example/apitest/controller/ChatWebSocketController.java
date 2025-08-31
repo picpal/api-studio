@@ -7,6 +7,8 @@ import com.example.apitest.entity.Message;
 import com.example.apitest.entity.User;
 import com.example.apitest.service.AuthService;
 import com.example.apitest.service.MessageService;
+import com.example.apitest.service.ChatRoomService;
+import com.example.apitest.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
@@ -30,6 +32,8 @@ public class ChatWebSocketController {
 
     private final MessageService messageService;
     private final AuthService authService;
+    private final ChatRoomService chatRoomService;
+    private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
     /**
@@ -51,8 +55,30 @@ public class ChatWebSocketController {
             // 메시지 저장
             MessageDTO savedMessage = messageService.sendMessage(roomId, request.getContent(), user.getId());
             
-            // 해당 채팅방을 구독하는 모든 클라이언트에게 메시지 전송
+            // 해당 채팅방을 구독하는 모든 클라이언트에게 메시지 전송 (기존 방식 유지)
             messagingTemplate.convertAndSend("/topic/room/" + roomId, savedMessage);
+            
+            // 채팅방의 모든 참여자에게 개인 큐로 메시지 전송 (알림용)
+            try {
+                var roomInfo = chatRoomService.getRoomById(roomId, user.getId());
+                for (var participant : roomInfo.getParticipants()) {
+                    String participantEmail = getUserEmail(participant.getUserId());
+                    if (participantEmail != null && !participantEmail.equals("unknown@example.com")) {
+                        // 본인에게는 전송하지 않음
+                        if (!participant.getUserId().equals(user.getId())) {
+                            messagingTemplate.convertAndSendToUser(
+                                participantEmail,
+                                "/queue/chat-messages",
+                                savedMessage
+                            );
+                            log.debug("개인 큐로 메시지 전송: participantEmail={}, messageId={}", 
+                                     participantEmail, savedMessage.getId());
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("개인 큐로 메시지 전송 중 오류 (무시됨): {}", e.getMessage());
+            }
             
             log.info("메시지 브로드캐스트 완료: roomId={}, messageId={}", roomId, savedMessage.getId());
         } catch (Exception e) {
@@ -100,6 +126,12 @@ public class ChatWebSocketController {
         return authService.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + email));
     }
+    
+    private String getUserEmail(Long userId) {
+        return userRepository.findById(userId)
+            .map(User::getEmail)
+            .orElse("unknown@example.com");
+    }
 
     /**
      * 사용자가 채팅방에 입장했음을 알림
@@ -112,6 +144,7 @@ public class ChatWebSocketController {
         log.info("사용자 입장: roomId={}, userId={}, email={}", roomId, user.getId(), user.getEmail());
         
         return MessageDTO.builder()
+                .roomId(roomId)
                 .senderId(0L)
                 .senderName("System")
                 .content(user.getEmail() + "님이 입장하셨습니다.")
@@ -131,6 +164,7 @@ public class ChatWebSocketController {
         log.info("사용자 퇴장: roomId={}, userId={}, email={}", roomId, user.getId(), user.getEmail());
         
         return MessageDTO.builder()
+                .roomId(roomId)
                 .senderId(0L)
                 .senderName("System")
                 .content(user.getEmail() + "님이 퇴장하셨습니다.")

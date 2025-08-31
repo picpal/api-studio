@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 @Builder
 public class MessageDTO {
     private Long id;
+    private Long roomId;
     private Long senderId;
     private String senderName;
     private String content;

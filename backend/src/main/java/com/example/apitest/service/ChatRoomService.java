@@ -36,6 +36,7 @@ public class ChatRoomService {
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final ChatReadStatusService chatReadStatusService;
     
     // === 채팅방 조회 관련 (단일 책임) ===
     
@@ -168,8 +169,22 @@ public class ChatRoomService {
         deactivateParticipant(roomId, userId);
         createUserLeftSystemMessage(roomId, userId);
         
+        // 사용자의 읽음 상태 정리
+        try {
+            chatReadStatusService.cleanupReadStatusForUser(roomId, userId);
+        } catch (Exception e) {
+            log.warn("Failed to cleanup read status for user {} leaving room {}: {}", 
+                     userId, roomId, e.getMessage());
+        }
+        
         if (hasNoActiveParticipants(roomId)) {
             deactivateRoom(roomId);
+            // 채팅방 전체 읽음 상태 정리
+            try {
+                chatReadStatusService.cleanupReadStatusForRoom(roomId);
+            } catch (Exception e) {
+                log.warn("Failed to cleanup read status for room {}: {}", roomId, e.getMessage());
+            }
         } else {
             updateRoomLastActivity(roomId);
         }
@@ -433,20 +448,20 @@ public class ChatRoomService {
     }
     
     private Long calculateUnreadCount(Long roomId, Long userId) {
-        ChatRoomParticipant participant = participantRepository
-            .findByRoomIdAndUserIdAndIsActive(roomId, userId, true)
-            .orElse(null);
-        
-        if (participant == null) {
+        try {
+            int unreadCount = chatReadStatusService.getUnreadMessageCount(roomId, userId);
+            return (long) unreadCount;
+        } catch (Exception e) {
+            log.warn("Failed to calculate unread count for room {} and user {}: {}", 
+                     roomId, userId, e.getMessage());
             return 0L;
         }
-        
-        return messageRepository.countUnreadMessages(roomId, participant.getLastReadMessageId());
     }
     
     private MessageDTO convertMessageToDTO(Message message) {
         return MessageDTO.builder()
             .id(message.getId())
+            .roomId(message.getRoomId())
             .senderId(message.getSenderId())
             .senderName(message.getSenderId() > 0 ? getUserName(message.getSenderId()) : "System")
             .content(message.getContent())

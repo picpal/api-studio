@@ -124,6 +124,7 @@ public class MessageService {
     private MessageDTO convertMessageToDTO(Message message) {
         return MessageDTO.builder()
             .id(message.getId())
+            .roomId(message.getRoomId())
             .senderId(message.getSenderId())
             .senderName(getSenderName(message.getSenderId()))
             .content(message.getContent())
