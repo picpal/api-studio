@@ -53,6 +53,39 @@ interface CreatePipelineRequest {
   folderId: number;
 }
 
+interface PipelineExecutionResponse {
+  id: number;
+  pipelineId: number;
+  pipelineName: string;
+  status: string;
+  startedAt: string;
+  completedAt?: string;
+  errorMessage?: string;
+  totalSteps: number;
+  completedSteps: number;
+  successfulSteps: number;
+  failedSteps: number;
+  sessionCookies?: string;
+}
+
+interface PipelineExecutionResult extends PipelineExecutionResponse {
+  stepResults: PipelineStepResult[];
+}
+
+interface PipelineStepResult {
+  id: string;
+  stepName: string;
+  stepOrder: number;
+  status: string;
+  method: string;
+  url: string;
+  statusCode?: number;
+  responseTime?: number;
+  errorMessage?: string;
+  responseBody?: string;
+  responseHeaders?: string;
+}
+
 export const pipelineApi = {
   // Folder operations
   async getFolders(): Promise<PipelineFolder[]> {
@@ -139,7 +172,43 @@ export const pipelineApi = {
 
   async deletePipeline(id: string): Promise<void> {
     await apiClient.delete(`/pipelines/${id}`);
+  },
+
+  // Pipeline execution operations
+  async executePipeline(pipelineId: string): Promise<PipelineExecutionResponse> {
+    const response = await apiClient.post(`/pipelines/${pipelineId}/execute`);
+    return response.data;
+  },
+
+  async getExecutionResults(executionId: string): Promise<PipelineExecutionResult> {
+    // 실행 상태 조회 (백엔드의 getExecutionStatus API)
+    const executionResponse = await apiClient.get(`/pipelines/executions/${executionId}`);
+    
+    // Step 실행 결과 조회
+    const stepsResponse = await apiClient.get(`/pipelines/executions/${executionId}/steps`);
+    
+    return {
+      ...executionResponse.data,
+      stepResults: stepsResponse.data || []
+    };
+  },
+
+  async getExecutionStatus(executionId: string): Promise<{status: string; completed: boolean}> {
+    const response = await apiClient.get(`/pipelines/executions/${executionId}`);
+    const data = response.data;
+    return {
+      status: data.status,
+      completed: data.status === 'SUCCESS' || data.status === 'FAILED' || data.status === 'CANCELLED'
+    };
   }
 };
 
-export type { PipelineFolder, Pipeline, CreateFolderRequest, CreatePipelineRequest };
+export type { 
+  PipelineFolder, 
+  Pipeline, 
+  CreateFolderRequest, 
+  CreatePipelineRequest,
+  PipelineExecutionResponse,
+  PipelineExecutionResult,
+  PipelineStepResult
+};

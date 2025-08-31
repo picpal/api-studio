@@ -19,10 +19,30 @@ export interface TestExecution {
   requestParams?: any;
   validationResult?: ValidationResult;
   validationEnabled?: boolean;
+  // Pipeline execution fields
+  type?: 'api' | 'pipeline';
+  pipelineId?: string;
+  stepExecutions?: PipelineStepExecution[];
+}
+
+export interface PipelineStepExecution {
+  id: string;
+  stepName: string;
+  stepOrder: number;
+  status: 'pending' | 'running' | 'success' | 'failed';
+  responseTime?: number;
+  statusCode?: number;
+  error?: string;
+  method: string;
+  url: string;
+  responseBody?: string;
+  responseHeaders?: Record<string, string>;
 }
 
 interface TestExecutionProps {
   selectedApis: Set<string>;
+  selectedPipelines: Set<string>;
+  activeTab: 'apis' | 'pipelines';
   isRunning: boolean;
   currentExecution: TestExecution[];
   onExecuteBatch: () => void;
@@ -32,6 +52,8 @@ interface TestExecutionProps {
 
 export const TestExecution: React.FC<TestExecutionProps> = ({
   selectedApis,
+  selectedPipelines,
+  activeTab,
   isRunning,
   currentExecution,
   onExecuteBatch,
@@ -66,17 +88,20 @@ export const TestExecution: React.FC<TestExecutionProps> = ({
 
   return (
     <div className="lg:flex-1 flex flex-col lg:min-h-0">
-      {/* API 선택 및 실행 */}
+      {/* 선택된 항목 및 실행 */}
       <div className="bg-white border-b p-4 lg:flex-shrink-0">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <h2 className="text-lg font-semibold">Current Execution</h2>
           <div className="flex items-center gap-2">
             <button
               onClick={onExecuteBatch}
-              disabled={isRunning || selectedApis.size === 0}
+              disabled={isRunning || (activeTab === 'apis' ? selectedApis.size === 0 : selectedPipelines.size === 0)}
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
             >
-              {isRunning ? 'Running...' : `Run Tests (${selectedApis.size})`}
+              {isRunning ? 'Running...' : activeTab === 'apis' 
+                ? `Run Tests (${selectedApis.size})` 
+                : `Run Pipelines (${selectedPipelines.size})`
+              }
             </button>
           </div>
         </div>
@@ -103,8 +128,20 @@ export const TestExecution: React.FC<TestExecutionProps> = ({
                 <div className="flex items-center gap-3">
                   <span className="text-lg">{getStatusIcon(execution.status)}</span>
                   <div>
-                    <div className="font-medium text-sm">{execution.apiName}</div>
-                    <div className="text-xs text-gray-500">{execution.method} • {execution.url}</div>
+                    <div className="font-medium text-sm flex items-center gap-2">
+                      {execution.type === 'pipeline' && (
+                        <span className="px-1.5 py-0.5 text-xs font-medium rounded bg-purple-100 text-purple-800">
+                          PIPELINE
+                        </span>
+                      )}
+                      {execution.apiName}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {execution.type === 'pipeline' 
+                        ? `${execution.stepExecutions?.length || 0} steps`
+                        : `${execution.method} • ${execution.url}`
+                      }
+                    </div>
                   </div>
                 </div>
                 <div className="text-right">
@@ -144,7 +181,7 @@ export const TestExecution: React.FC<TestExecutionProps> = ({
           </div>
         ) : (
           <div className="text-center text-gray-500 py-8">
-            Select APIs and click "Run Tests" to start
+            Select {activeTab === 'apis' ? 'APIs' : 'Pipelines'} and click "Run Tests" to start
           </div>
         )}
       </div>

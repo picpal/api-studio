@@ -38,17 +38,30 @@ export const TestReportModal: React.FC<TestReportModalProps> = ({
     const failureCount = allExecutions.filter(e => e.status === 'failed').length;
     const successRate = totalTests > 0 ? (successCount / totalTests) * 100 : 0;
     
-    const avgResponseTime = allExecutions
-      .filter(e => e.responseTime)
-      .reduce((sum, e) => sum + (e.responseTime || 0), 0) / allExecutions.filter(e => e.responseTime).length;
+    // 응답 시간 계산 - API와 Pipeline 구분
+    const executionsWithResponseTime = allExecutions.filter(e => e.responseTime);
+    const avgResponseTime = executionsWithResponseTime.length > 0 
+      ? executionsWithResponseTime.reduce((sum, e) => sum + (e.responseTime || 0), 0) / executionsWithResponseTime.length
+      : 0;
 
-    const validationTests = allExecutions.filter(e => e.validationEnabled);
+    // Validation은 API에만 적용
+    const validationTests = allExecutions.filter(e => e.validationEnabled && e.type !== 'pipeline');
     const validationPassed = validationTests.filter(e => e.validationResult?.passed).length;
     const validationRate = validationTests.length > 0 ? (validationPassed / validationTests.length) * 100 : 0;
 
     const failedTests = allExecutions.filter(e => e.status === 'failed');
+    
+    // Status code 통계 - API에서만 가져오거나 Pipeline의 Step에서 가져오기
     const statusCodeStats = allExecutions.reduce((acc: Record<number, number>, e) => {
-      if (e.statusCode) {
+      if (e.type === 'pipeline' && e.stepExecutions) {
+        // Pipeline의 각 Step에서 status code 수집
+        e.stepExecutions.forEach(step => {
+          if (step.statusCode) {
+            acc[step.statusCode] = (acc[step.statusCode] || 0) + 1;
+          }
+        });
+      } else if (e.statusCode) {
+        // 일반 API의 status code
         acc[e.statusCode] = (acc[e.statusCode] || 0) + 1;
       }
       return acc;
@@ -116,39 +129,56 @@ export const TestReportModal: React.FC<TestReportModalProps> = ({
           <h2>Test Results</h2>
           ${reportData.executions.map(execution => `
             <div class="test-result ${execution.status}">
-              <h3>${execution.apiName} (${execution.status.toUpperCase()})</h3>
-              <p><strong>Method:</strong> ${execution.method} | <strong>URL:</strong> ${execution.url}</p>
-              <p><strong>Status Code:</strong> ${execution.statusCode || 'N/A'} | <strong>Response Time:</strong> ${execution.responseTime || 'N/A'}ms</p>
+              <h3>${execution.apiName} ${execution.type === 'pipeline' ? '(PIPELINE)' : ''} (${execution.status.toUpperCase()})</h3>
+              ${execution.type === 'pipeline' ? `
+                <p><strong>Type:</strong> Pipeline | <strong>Total Time:</strong> ${execution.responseTime || 'N/A'}ms</p>
+                <p><strong>Steps:</strong> ${execution.stepExecutions?.length || 0}</p>
+                ${execution.stepExecutions && execution.stepExecutions.length > 0 ? `
+                  <div style="margin: 10px 0;">
+                    <h4 style="margin: 5px 0; font-size: 14px; color: #4b5563;">Step Results:</h4>
+                    ${execution.stepExecutions.map(step => `
+                      <div style="margin: 5px 0; padding: 5px; border-left: 3px solid ${step.status === 'success' ? '#10b981' : '#ef4444'}; background: #f9fafb;">
+                        <strong>${step.stepName}</strong> (${step.status.toUpperCase()})
+                        <br><small>${step.method} ${step.url} | ${step.statusCode || 'N/A'} | ${step.responseTime || 'N/A'}ms</small>
+                        ${step.error ? `<br><span style="color: #ef4444;">Error: ${step.error}</span>` : ''}
+                      </div>
+                    `).join('')}
+                  </div>
+                ` : ''}
+              ` : `
+                <p><strong>Method:</strong> ${execution.method} | <strong>URL:</strong> ${execution.url}</p>
+                <p><strong>Status Code:</strong> ${execution.statusCode || 'N/A'} | <strong>Response Time:</strong> ${execution.responseTime || 'N/A'}ms</p>
+              `}
               
-              ${execution.requestParams ? `
+              ${execution.type !== 'pipeline' && execution.requestParams ? `
                 <div style="margin: 10px 0;">
                   <h4 style="margin: 5px 0; font-size: 14px; color: #4b5563;">Request Parameters:</h4>
                   <pre style="background: #f3f4f6; padding: 8px; border-radius: 4px; font-size: 12px; max-height: 100px; overflow-y: auto;">${typeof execution.requestParams === 'string' ? execution.requestParams : JSON.stringify(execution.requestParams, null, 2)}</pre>
                 </div>
               ` : ''}
               
-              ${execution.requestHeaders && Object.keys(execution.requestHeaders).length > 0 ? `
+              ${execution.type !== 'pipeline' && execution.requestHeaders && Object.keys(execution.requestHeaders).length > 0 ? `
                 <div style="margin: 10px 0;">
                   <h4 style="margin: 5px 0; font-size: 14px; color: #4b5563;">Request Headers:</h4>
                   <pre style="background: #f3f4f6; padding: 8px; border-radius: 4px; font-size: 12px; max-height: 100px; overflow-y: auto;">${JSON.stringify(execution.requestHeaders, null, 2)}</pre>
                 </div>
               ` : ''}
               
-              ${execution.requestBody ? `
+              ${execution.type !== 'pipeline' && execution.requestBody ? `
                 <div style="margin: 10px 0;">
                   <h4 style="margin: 5px 0; font-size: 14px; color: #4b5563;">Request Body:</h4>
                   <pre style="background: #f3f4f6; padding: 8px; border-radius: 4px; font-size: 12px; max-height: 100px; overflow-y: auto;">${execution.requestBody}</pre>
                 </div>
               ` : ''}
               
-              ${execution.responseData ? `
+              ${execution.type !== 'pipeline' && execution.responseData ? `
                 <div style="margin: 10px 0;">
                   <h4 style="margin: 5px 0; font-size: 14px; color: #4b5563;">Response Data:</h4>
                   <pre style="background: #dbeafe; padding: 8px; border-radius: 4px; font-size: 12px; max-height: 100px; overflow-y: auto;">${typeof execution.responseData === 'string' ? execution.responseData : JSON.stringify(execution.responseData, null, 2)}</pre>
                 </div>
               ` : ''}
               
-              ${execution.validationEnabled && execution.validationResult ? `
+              ${execution.type !== 'pipeline' && execution.validationEnabled && execution.validationResult ? `
                 <p><strong>Validation:</strong> ${execution.validationResult.passed ? 'PASSED' : 'FAILED'}</p>
               ` : ''}
               ${execution.error ? `<p style="color: #ef4444;"><strong>Error:</strong> ${execution.error}</p>` : ''}

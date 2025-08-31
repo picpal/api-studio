@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { BaseUrl, ApiItem } from '../types/api';
 import { 
   ApiSelection,
@@ -11,6 +11,7 @@ import {
   useTestHistory
 } from '../features/test-automation';
 import { VariableInputModal } from '../widgets/api-testing/VariableInputModal';
+import { Pipeline } from '../services/pipelineApi';
 
 interface TestAutomationPageProps {
   baseUrls: BaseUrl[];
@@ -25,6 +26,11 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
   onResetForm, 
   onUpdateSelectedItem 
 }) => {
+  // Pipeline state management
+  const [selectedPipelines, setSelectedPipelines] = React.useState<Set<string>>(new Set());
+  const [pipelineList, setPipelineList] = React.useState<Pipeline[]>([]);
+  const [activeTab, setActiveTab] = React.useState<'apis' | 'pipelines'>('apis');
+
   // Test Automation 상태 관리
   const {
     selectedApis,
@@ -66,9 +72,26 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
     handleCloseReport
   } = useTestHistory();
 
-  // 배치 실행 핸들러
+  // Pipeline selection handler
+  const handlePipelineSelection = useCallback((
+    selectedPipelines: Set<string>, 
+    pipelineList: Pipeline[], 
+    activeTab: 'apis' | 'pipelines'
+  ) => {
+    setSelectedPipelines(selectedPipelines);
+    setPipelineList(pipelineList);
+    setActiveTab(activeTab);
+  }, []);
+
+  // 배치 실행 핸들러  
   const handleExecuteBatch = () => {
-    executeBatch(selectedApis, apiList, addBatchResult);
+    console.log('=== BATCH EXECUTION DEBUG ===');
+    console.log('activeTab:', activeTab);
+    console.log('selectedApis:', selectedApis);
+    console.log('selectedPipelines:', selectedPipelines);
+    console.log('pipelineList:', pipelineList);
+    console.log('=== END DEBUG ===');
+    executeBatch(selectedApis, apiList, selectedPipelines, pipelineList, activeTab, addBatchResult);
   };
 
   // 히스토리 선택 핸들러 (확장)
@@ -92,6 +115,7 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
           onApiSelection={handleApiSelection}
           onSelectAll={handleSelectAll}
           onToggleCollapse={handleToggleCollapse}
+          onPipelineSelection={handlePipelineSelection}
         />
 
         {/* 우측/하단: 실행 영역과 결과 */}
@@ -99,6 +123,8 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
           {/* Test Execution */}
           <TestExecution
             selectedApis={selectedApis}
+            selectedPipelines={selectedPipelines}
+            activeTab={activeTab}
             isRunning={isRunning}
             currentExecution={currentExecution}
             onExecuteBatch={handleExecuteBatch}
