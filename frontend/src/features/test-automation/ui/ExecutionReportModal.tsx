@@ -111,33 +111,33 @@ export const ExecutionReportModal: React.FC<ExecutionReportModalProps> = ({
           <title>Test Execution Report - ${new Date().toLocaleString()}</title>
           <style>
             * { box-sizing: border-box; margin: 0; padding: 0; }
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; }
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1e3a8a; background: #f0f9ff; }
             .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px; border-radius: 12px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+            .header { background: #3b82f6; color: white; padding: 40px; border-radius: 12px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(59,130,246,0.2); }
             .header h1 { font-size: 2.5em; margin-bottom: 10px; }
             .header .date { opacity: 0.9; font-size: 1.1em; }
             
             .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
-            .stat-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); transition: transform 0.2s; }
-            .stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
+            .stat-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(59,130,246,0.08); transition: transform 0.2s; border: 1px solid #dbeafe; }
+            .stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(59,130,246,0.15); }
             .stat-value { font-size: 2.5em; font-weight: bold; margin-bottom: 5px; }
-            .stat-label { color: #666; font-size: 0.95em; text-transform: uppercase; letter-spacing: 1px; }
+            .stat-label { color: #6b7280; font-size: 0.95em; text-transform: uppercase; letter-spacing: 1px; }
             
             .success-value { color: #10b981; }
             .error-value { color: #ef4444; }
             .info-value { color: #3b82f6; }
             .warning-value { color: #f59e0b; }
             
-            .section { background: white; border-radius: 12px; padding: 30px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
-            .section-title { font-size: 1.8em; margin-bottom: 20px; color: #1f2937; border-bottom: 3px solid #e5e7eb; padding-bottom: 10px; }
+            .section { background: white; border-radius: 12px; padding: 30px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(59,130,246,0.08); border: 1px solid #dbeafe; }
+            .section-title { font-size: 1.8em; margin-bottom: 20px; color: #1e3a8a; border-bottom: 3px solid #dbeafe; padding-bottom: 10px; }
             
             .progress-bar { width: 100%; height: 30px; background: #e5e7eb; border-radius: 15px; overflow: hidden; margin: 20px 0; }
             .progress-fill { height: 100%; transition: width 0.3s; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
             .progress-success { background: linear-gradient(90deg, #10b981, #34d399); }
             .progress-error { background: linear-gradient(90deg, #ef4444, #f87171); }
             
-            .test-item { border-left: 4px solid #e5e7eb; padding: 20px; margin-bottom: 15px; background: #fafafa; border-radius: 8px; transition: all 0.2s; }
-            .test-item:hover { background: #f3f4f6; border-left-color: #9ca3af; }
+            .test-item { border-left: 4px solid #dbeafe; padding: 20px; margin-bottom: 15px; background: white; border-radius: 8px; transition: all 0.2s; border: 1px solid #e5e7eb; }
+            .test-item:hover { background: #f8fafc; border-left-color: #3b82f6; }
             .test-success { border-left-color: #10b981; }
             .test-failed { border-left-color: #ef4444; background: #fef2f2; }
             
@@ -152,12 +152,12 @@ export const ExecutionReportModal: React.FC<ExecutionReportModalProps> = ({
             .metric { display: flex; align-items: center; gap: 5px; }
             .metric-label { font-weight: 500; }
             
-            .pipeline-section { background: linear-gradient(135deg, #f3e7fc 0%, #e9d5ff 100%); border: 2px solid #c084fc; }
-            .pipeline-header { background: #8b5cf6; color: white; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; }
+            .pipeline-section { background: #eff6ff; border: 2px solid #3b82f6; }
+            .pipeline-header { background: #3b82f6; color: white; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; }
             
             .step-container { margin-left: 20px; margin-top: 15px; }
             .step-item { display: flex; align-items: flex-start; gap: 15px; margin-bottom: 15px; padding: 15px; background: white; border-radius: 8px; border: 1px solid #e5e7eb; }
-            .step-number { min-width: 35px; height: 35px; background: #8b5cf6; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+            .step-number { min-width: 35px; height: 35px; background: #3b82f6; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
             .step-content { flex: 1; }
             .step-name { font-weight: 600; margin-bottom: 5px; }
             .step-details { color: #6b7280; font-size: 0.9em; }
@@ -166,7 +166,7 @@ export const ExecutionReportModal: React.FC<ExecutionReportModalProps> = ({
             .expandable-content { max-height: 0; overflow: hidden; transition: max-height 0.3s; }
             .expandable-content.expanded { max-height: 500px; overflow-y: auto; }
             
-            .code-block { background: #1f2937; color: #f3f4f6; padding: 15px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.9em; overflow-x: auto; margin-top: 10px; }
+            .code-block { background: #f1f5f9; color: #334155; padding: 15px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.9em; overflow-x: auto; margin-top: 10px; border: 1px solid #e2e8f0; }
             
             .variable-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.85em; font-weight: 600; margin-right: 5px; }
             .var-extracted { background: #d1fae5; color: #065f46; }
@@ -175,7 +175,7 @@ export const ExecutionReportModal: React.FC<ExecutionReportModalProps> = ({
             .error-box { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; margin-top: 10px; color: #991b1b; }
             
             .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px; }
-            .chart-box { background: #f9fafb; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; }
+            .chart-box { background: white; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; }
             
             @media print {
               body { background: white; }
@@ -193,7 +193,7 @@ export const ExecutionReportModal: React.FC<ExecutionReportModalProps> = ({
         <body>
           <div class="container">
             <div class="header">
-              <h1>🧪 Test Execution Report</h1>
+              <h1>Testing Report</h1>
               <div class="date">Generated on ${new Date().toLocaleString()}</div>
             </div>
             
@@ -218,7 +218,7 @@ export const ExecutionReportModal: React.FC<ExecutionReportModalProps> = ({
             
             ${reportData.pipelineStats.totalPipelines > 0 ? `
               <div class="section">
-                <h2 class="section-title">📊 Pipeline Statistics</h2>
+                <h2 class="section-title">📊 Pipeline 통계</h2>
                 <div class="summary-grid">
                   <div class="stat-card">
                     <div class="stat-value info-value">${reportData.pipelineStats.totalPipelines}</div>
@@ -243,7 +243,7 @@ export const ExecutionReportModal: React.FC<ExecutionReportModalProps> = ({
             ` : ''}
             
             <div class="section">
-              <h2 class="section-title">📈 Execution Overview</h2>
+              <h2 class="section-title">📈 실행 결과</h2>
               <div class="progress-bar">
                 <div class="progress-fill progress-success" style="width: ${reportData.summary.successRate}%">
                   ${reportData.summary.successRate.toFixed(1)}% Success
@@ -285,7 +285,7 @@ export const ExecutionReportModal: React.FC<ExecutionReportModalProps> = ({
             ` : ''}
             
             <div class="section">
-              <h2 class="section-title">📝 Detailed Test Results</h2>
+              <h2 class="section-title">테스트 결과 상세</h2>
               ${reportData.executions.map((execution, index) => `
                 ${execution.type === 'pipeline' ? `
                   <div class="test-item pipeline-section">
@@ -501,7 +501,7 @@ export const ExecutionReportModal: React.FC<ExecutionReportModalProps> = ({
         <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
           <div className="space-y-6">
             <div className="bg-white rounded-xl p-6 shadow-md">
-              <h3 className="text-xl font-bold mb-4 text-gray-800">Executive Summary</h3>
+              <h3 className="text-xl font-bold mb-4 text-gray-800">실행 요약</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
                   <div className="text-3xl font-bold text-blue-600">{reportData.summary.totalTests}</div>
@@ -524,7 +524,7 @@ export const ExecutionReportModal: React.FC<ExecutionReportModalProps> = ({
 
             {reportData.pipelineStats.totalPipelines > 0 && (
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
-                <h3 className="text-xl font-bold mb-4 text-blue-800">🔄 Pipeline Statistics</h3>
+                <h3 className="text-xl font-bold mb-4 text-blue-800">Pipeline 통계</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-white p-4 rounded-lg shadow-sm">
                     <div className="text-2xl font-bold text-blue-600">{reportData.pipelineStats.totalPipelines}</div>
@@ -549,7 +549,7 @@ export const ExecutionReportModal: React.FC<ExecutionReportModalProps> = ({
             )}
 
             <div className="bg-white rounded-xl p-6 shadow-md">
-              <h3 className="text-xl font-bold mb-4 text-gray-800">Test Results Overview</h3>
+              <h3 className="text-xl font-bold mb-4 text-gray-800">테스트 결과</h3>
               <div className="mb-4">
                 <div className="flex items-center gap-4 mb-2">
                   <div className="flex items-center gap-2">
@@ -598,7 +598,7 @@ export const ExecutionReportModal: React.FC<ExecutionReportModalProps> = ({
             )}
 
             <div className="bg-white rounded-xl p-6 shadow-md">
-              <h3 className="text-xl font-bold mb-4 text-gray-800">📝 Detailed Test Results</h3>
+              <h3 className="text-xl font-bold mb-4 text-gray-800">테스트 결과 상세</h3>
               <div className="space-y-4 max-h-[600px] overflow-y-auto">
                 {reportData.executions.map((execution, index) => (
                   <div 

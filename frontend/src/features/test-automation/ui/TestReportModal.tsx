@@ -94,11 +94,11 @@ export const TestReportModal: React.FC<TestReportModalProps> = ({
         <head>
           <title>Test Report</title>
           <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            .summary { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+            body { font-family: Arial, sans-serif; margin: 20px; color: #1e3a8a; background: #f0f9ff; }
+            .summary { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #dbeafe; box-shadow: 0 4px 15px rgba(59,130,246,0.08); }
             .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
-            .stat-card { background: white; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
-            .test-result { border: 1px solid #ddd; margin-bottom: 10px; padding: 10px; border-radius: 5px; }
+            .stat-card { background: white; padding: 15px; border: 1px solid #dbeafe; border-radius: 5px; box-shadow: 0 2px 8px rgba(59,130,246,0.06); }
+            .test-result { border: 1px solid #e5e7eb; margin-bottom: 10px; padding: 10px; border-radius: 5px; background: white; box-shadow: 0 1px 4px rgba(59,130,246,0.04); }
             .success { border-left: 5px solid #10b981; }
             .failed { border-left: 5px solid #ef4444; }
           </style>
@@ -319,7 +319,7 @@ export const TestReportModal: React.FC<TestReportModalProps> = ({
           <div className="space-y-6">
             {/* 요약 통계 */}
             <div className="bg-gray-50 rounded-lg p-6">
-              <h3 className="text-lg font-semibold mb-4">Executive Summary</h3>
+              <h3 className="text-lg font-semibold mb-4">실행 요약</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-white p-4 rounded border">
                   <div className="text-2xl font-bold text-blue-600">{reportData.summary.totalTests}</div>
@@ -342,7 +342,7 @@ export const TestReportModal: React.FC<TestReportModalProps> = ({
 
             {/* 성공/실패 비율 시각화 */}
             <div className="bg-white border rounded-lg p-6">
-              <h3 className="text-lg font-semibold mb-4">Test Results Overview</h3>
+              <h3 className="text-lg font-semibold mb-4">테스트 결과</h3>
               <div className="flex items-center gap-4 mb-4">
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-green-500 rounded"></div>
