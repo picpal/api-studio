@@ -49,6 +49,9 @@ public class PipelineStep {
     @Column(name = "is_active")
     private Boolean isActive = true;
 
+    @Column(name = "is_skip")
+    private Boolean isSkip = false;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -162,6 +165,14 @@ public class PipelineStep {
 
     public void setIsActive(Boolean isActive) {
         this.isActive = isActive;
+    }
+
+    public Boolean getIsSkip() {
+        return isSkip;
+    }
+
+    public void setIsSkip(Boolean isSkip) {
+        this.isSkip = isSkip;
     }
 
     public LocalDateTime getCreatedAt() {

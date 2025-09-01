@@ -131,6 +131,20 @@ public class PipelineExecutionService {
         
         for (PipelineStep step : steps) {
             
+            // Skip step if it's marked as skip
+            if (step.getIsSkip() != null && step.getIsSkip()) {
+                // Create step execution record but mark it as skipped
+                StepExecution stepExecution = new StepExecution(execution, step);
+                stepExecution.setStatus(StepExecution.StepStatus.SKIPPED);
+                stepExecution.setStartedAt(LocalDateTime.now());
+                stepExecution.setCompletedAt(LocalDateTime.now());
+                stepExecutionRepository.save(stepExecution);
+                
+                // Update counters
+                execution.setCompletedSteps(execution.getCompletedSteps() + 1);
+                continue;
+            }
+            
             // Create step execution record
             StepExecution stepExecution = new StepExecution(execution, step);
             stepExecution.setStatus(StepExecution.StepStatus.RUNNING);

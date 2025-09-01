@@ -111,5 +111,14 @@ export const pipelineApi = {
     } catch (error: any) {
       throw error;
     }
+  },
+
+  async updateStepSkip(stepId: number, isSkip: boolean): Promise<PipelineStep> {
+    try {
+      const response = await pipelineApiClient.put(`/pipelines/steps/${stepId}/skip`, { skip: isSkip });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   }
 };

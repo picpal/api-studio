@@ -18,6 +18,7 @@ export interface PipelineStep {
   executionCondition?: string;
   delayAfter?: number;
   isActive?: boolean;
+  isSkip?: boolean;
   apiItem: ApiItem;
   createdAt?: Date;
   updatedAt?: Date;
@@ -60,7 +61,7 @@ export interface StepExecution {
   executionId: number;
   stepOrder: number;
   stepName: string;
-  status: 'PENDING' | 'RUNNING' | 'SUCCESS' | 'FAILED';
+  status: 'PENDING' | 'RUNNING' | 'SUCCESS' | 'FAILED' | 'SKIPPED';
   httpStatus?: number;
   requestData?: string;
   responseData?: string;

@@ -53,6 +53,7 @@ public class PipelineMapper {
         dto.setExecutionCondition(step.getExecutionCondition());
         dto.setDelayAfter(step.getDelayAfter());
         dto.setIsActive(step.getIsActive());
+        dto.setIsSkip(step.getIsSkip());
         dto.setCreatedAt(step.getCreatedAt());
         dto.setUpdatedAt(step.getUpdatedAt());
         

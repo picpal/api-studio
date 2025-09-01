@@ -35,10 +35,19 @@ export const usePipelineSteps = (pipelineId?: number) => {
     }
   };
 
+  const updateStep = (updatedStep: PipelineStep) => {
+    setSteps(currentSteps => 
+      currentSteps.map(step => 
+        step.id === updatedStep.id ? updatedStep : step
+      )
+    );
+  };
+
   return {
     steps,
     loading,
     error,
-    refetchSteps
+    refetchSteps,
+    updateStep
   };
 };

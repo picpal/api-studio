@@ -12,6 +12,7 @@ public class PipelineStepDTO {
     private String executionCondition;
     private Integer delayAfter;
     private Boolean isActive;
+    private Boolean isSkip;
     private ApiItemDTO apiItem;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -44,6 +45,9 @@ public class PipelineStepDTO {
     
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }
+
+    public Boolean getIsSkip() { return isSkip; }
+    public void setIsSkip(Boolean isSkip) { this.isSkip = isSkip; }
 
     public ApiItemDTO getApiItem() { return apiItem; }
     public void setApiItem(ApiItemDTO apiItem) { this.apiItem = apiItem; }

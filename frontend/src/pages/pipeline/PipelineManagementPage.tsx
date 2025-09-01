@@ -17,15 +17,18 @@ const PipelineManagementPage: React.FC<PipelineManagementPageProps> = ({
   const [showEditPipelineModal, setShowEditPipelineModal] = useState(false);
   const [editingStep, setEditingStep] = useState<any>(null);
   
-  const { steps, loading: stepsLoading, refetchSteps } = usePipelineSteps(selectedPipeline?.id);
+  const { steps, loading: stepsLoading, refetchSteps, updateStep: updateStepInList } = usePipelineSteps(selectedPipeline?.id);
   const { apiItems, loading: apiItemsLoading } = useApiItems();
-  const { addStep, deleteStep, updateStep, updatePipeline, loading: stepManagementLoading } = useStepManagement(
+  const { addStep, deleteStep, updateStep, updatePipeline, toggleStepSkip, loading: stepManagementLoading } = useStepManagement(
     selectedPipeline?.id, 
     () => {
       refetchSteps();
       setShowAddStepModal(false);
       setShowEditStepModal(false);
       setShowEditPipelineModal(false);
+    },
+    (updatedStep) => {
+      updateStepInList(updatedStep);
     }
   );
 
@@ -64,6 +67,10 @@ const PipelineManagementPage: React.FC<PipelineManagementPageProps> = ({
       // Pipeline 업데이트 후 부모 컴포넌트에서 서버 데이터 새로고침 요청
       onPipelineUpdate?.();
     }
+  };
+
+  const handleToggleSkip = async (stepId: number, isSkip: boolean) => {
+    await toggleStepSkip(stepId, isSkip);
   };
 
   const handleReorderSteps = async (reorderedSteps: any[]) => {
@@ -141,6 +148,7 @@ const PipelineManagementPage: React.FC<PipelineManagementPageProps> = ({
                 onDeleteStep={handleDeleteStep}
                 onEditStep={handleEditStep}
                 onReorderSteps={handleReorderSteps}
+                onToggleSkip={handleToggleSkip}
                 loading={stepsLoading}
               />
 

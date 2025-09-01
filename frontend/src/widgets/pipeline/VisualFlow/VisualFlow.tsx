@@ -25,6 +25,7 @@ interface VisualFlowProps {
   onDeleteStep: (stepId: number) => void;
   onEditStep?: (step: PipelineStep) => void;
   onReorderSteps?: (steps: PipelineStep[]) => void;
+  onToggleSkip?: (stepId: number, isSkip: boolean) => void;
   loading?: boolean;
 }
 
@@ -33,6 +34,7 @@ export const VisualFlow: React.FC<VisualFlowProps> = ({
   onDeleteStep, 
   onEditStep,
   onReorderSteps,
+  onToggleSkip,
   loading 
 }) => {
   const sensors = useSensors(
@@ -97,6 +99,7 @@ export const VisualFlow: React.FC<VisualFlowProps> = ({
                 step={step}
                 onDeleteStep={onDeleteStep}
                 onEditStep={onEditStep}
+                onToggleSkip={onToggleSkip}
               />
             ))}
           </div>
@@ -110,12 +113,14 @@ interface SortableStepCardProps {
   step: PipelineStep;
   onDeleteStep: (stepId: number) => void;
   onEditStep?: (step: PipelineStep) => void;
+  onToggleSkip?: (stepId: number, isSkip: boolean) => void;
 }
 
 const SortableStepCard: React.FC<SortableStepCardProps> = ({
   step,
   onDeleteStep,
-  onEditStep
+  onEditStep,
+  onToggleSkip
 }) => {
   const {
     attributes,
@@ -139,8 +144,12 @@ const SortableStepCard: React.FC<SortableStepCardProps> = ({
     >
       {/* 단계 카드 */}
       <div 
-        className={`bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 group cursor-pointer ${
+        className={`rounded-xl shadow-sm border transition-all duration-200 group cursor-pointer ${
           isDragging ? 'opacity-50' : ''
+        } ${
+          step.isSkip 
+            ? 'bg-gray-50 border-gray-300 text-gray-500 hover:shadow-sm' 
+            : 'bg-white border-gray-200 hover:shadow-md'
         }`}
         onClick={() => onEditStep && onEditStep(step)}
       >
@@ -161,21 +170,60 @@ const SortableStepCard: React.FC<SortableStepCardProps> = ({
               </div>
               
               <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
-                <span className="text-xs md:text-sm font-medium text-gray-500">STEP</span>
-                <span className="text-lg font-bold text-blue-600">{step.stepOrder}</span>
+                <span className={`text-xs md:text-sm font-medium ${
+                  step.isSkip ? 'text-gray-400' : 'text-gray-500'
+                }`}>STEP</span>
+                <span className={`text-lg font-bold ${
+                  step.isSkip ? 'text-gray-400' : 'text-blue-600'
+                }`}>{step.stepOrder}</span>
+                {step.isSkip && (
+                  <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded-full font-medium">
+                    SKIPPED
+                  </span>
+                )}
               </div>
               <div className="h-4 w-px bg-gray-300 hidden md:block"></div>
-              <h3 className="font-semibold text-gray-900 truncate text-sm md:text-base">{step.stepName}</h3>
+              <h3 className={`font-semibold truncate text-sm md:text-base ${
+                step.isSkip ? 'text-gray-500 line-through' : 'text-gray-900'
+              }`}>{step.stepName}</h3>
             </div>
             
-            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-              <div className="text-xs text-gray-400 mr-2 hidden lg:block">클릭하여 편집</div>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              {/* Skip Toggle Switch - Always visible when skip is ON, hover visible when OFF */}
+              <div className={`flex items-center gap-2 transition-opacity ${
+                step.isSkip ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+              }`}>
+                <span className={`text-xs font-medium ${
+                  step.isSkip ? 'text-orange-600' : 'text-gray-500'
+                }`}>SKIP</span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    onToggleSkip && onToggleSkip(step.id, !step.isSkip);
+                  }}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${
+                    step.isSkip ? 'bg-orange-500' : 'bg-gray-200'
+                  }`}
+                  title={step.isSkip ? "단계 건너뛰기 비활성화" : "단계 건너뛰기 활성화"}
+                >
+                  <span
+                    className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform duration-200 ease-in-out ${
+                      step.isSkip ? 'translate-x-5' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+              <div className="text-xs text-gray-400 mr-1 hidden lg:block opacity-0 group-hover:opacity-100 transition-opacity">클릭하여 편집</div>
               <button 
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
+                  e.preventDefault();
                   onDeleteStep(step.id);
                 }}
-                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                 title="단계 삭제"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -177,6 +177,16 @@ public class PipelineService {
     }
 
     @Transactional
+    public Optional<PipelineStepDTO> updateStepSkip(Long stepId, boolean isSkip) {
+        return pipelineStepRepository.findById(stepId)
+            .map(step -> {
+                step.setIsSkip(isSkip);
+                PipelineStep savedStep = pipelineStepRepository.save(step);
+                return pipelineMapper.toPipelineStepDTO(savedStep);
+            });
+    }
+
+    @Transactional
     public boolean deleteStep(Long stepId) {
         Optional<PipelineStep> step = pipelineStepRepository.findById(stepId);
         if (step.isPresent()) {

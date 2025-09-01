@@ -228,6 +228,20 @@ public class PipelineController {
         }
     }
 
+    @PutMapping("/steps/{stepId}/skip")
+    @RequireApiAuth
+    public ResponseEntity<PipelineStepDTO> updateStepSkip(@PathVariable Long stepId, @RequestBody UpdateStepSkipRequest request) {
+        try {
+            return pipelineService.updateStepSkip(stepId, request.isSkip())
+                .map(stepDTO -> ResponseEntity.ok(stepDTO))
+                .orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            System.err.println("Error in updateStepSkip: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
     // Pipeline Execution Operations
     @PostMapping("/{pipelineId}/execute")
     @RequireApiAuth

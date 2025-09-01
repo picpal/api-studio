@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { CreateStepRequest } from '@/entities/pipeline';
 import { pipelineApi } from '../api/pipelineApi';
 
-export const useStepManagement = (pipelineId?: number, onStepAdded?: () => void) => {
+export const useStepManagement = (pipelineId?: number, onStepAdded?: () => void, onStepUpdated?: (step: any) => void) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,11 +67,26 @@ export const useStepManagement = (pipelineId?: number, onStepAdded?: () => void)
     }
   };
 
+  const toggleStepSkip = async (stepId: number, isSkip: boolean) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const updatedStep = await pipelineApi.updateStepSkip(stepId, isSkip);
+      onStepUpdated?.(updatedStep); // 개별 step 업데이트 콜백 사용
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update step skip status');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     addStep,
     deleteStep,
     updateStep,
     updatePipeline,
+    toggleStepSkip,
     loading,
     error
   };
