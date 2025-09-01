@@ -153,10 +153,13 @@ public class MeetingController {
     @GetMapping("/rooms/{roomId}/messages")
     public ResponseEntity<List<MessageDTO>> getRoomMessages(
             @PathVariable Long roomId,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) Long beforeMessageId,
             @CurrentUser User user) {
         try {
-            log.info("채팅방 메시지 조회 요청: roomId={}, userId={}", roomId, user.getId());
-            List<MessageDTO> messages = messageService.getRoomMessages(roomId, user.getId());
+            log.info("채팅방 메시지 조회 요청: roomId={}, userId={}, size={}, beforeMessageId={}", 
+                    roomId, user.getId(), size, beforeMessageId);
+            List<MessageDTO> messages = messageService.getRoomMessages(roomId, user.getId(), size, beforeMessageId);
             return ResponseEntity.ok(messages);
         } catch (AccessDeniedException e) {
             log.warn("메시지 조회 권한 없음: roomId={}, userId={}", roomId, user.getId());

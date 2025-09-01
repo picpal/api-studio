@@ -10,6 +10,8 @@ export const useMeetingData = () => {
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [wsConnected, setWsConnected] = useState(false);
   const currentRoomRef = useRef<number | null>(null);
@@ -75,17 +77,27 @@ export const useMeetingData = () => {
     }
   }, []);
 
-  // 특정 채팅방의 메시지 로드 및 WebSocket 연결
-  const loadMessages = useCallback(async (roomId: number) => {
+  // 특정 채팅방의 메시지 로드 및 WebSocket 연결 (페이지네이션 지원)
+  const loadMessages = useCallback(async (roomId: number, size: number = 20) => {
     try {
       setLoading(true);
       setError(null);
-      const roomMessages = await chatApi.getRoomMessages(roomId);
+      setHasMoreMessages(true);
+      
+      // 페이지네이션으로 최신 메시지들 로드
+      const roomMessages = await chatApi.getRoomMessagesWithPagination(roomId, size);
       setMessages(roomMessages);
       
-      // WebSocket으로 채팅방 참가
+      // 로드된 메시지 수가 요청한 크기보다 작으면 더 이상 메시지가 없음
+      if (roomMessages.length < size) {
+        setHasMoreMessages(false);
+      }
+      
+      // 현재 방 설정
       currentRoomRef.current = roomId;
-      websocketService.joinRoom(roomId);
+      
+      // WebSocket 방 참가는 연결 상태 변경 시에만 처리하도록 수정
+      // 즉시 참가 시도하지 않고 연결이 완료되면 자동으로 참가하도록 함
     } catch (err: any) {
       console.error('Failed to load messages:', err);
       setError(err.response?.data?.message || '메시지를 불러올 수 없습니다.');
@@ -93,6 +105,42 @@ export const useMeetingData = () => {
       setLoading(false);
     }
   }, []);
+
+  // 이전 메시지 추가 로드 (위로 스크롤할 때)
+  const loadMoreMessages = useCallback(async (roomId: number, size: number = 20) => {
+    if (loadingMore || !hasMoreMessages || messages.length === 0) return;
+
+    try {
+      setLoadingMore(true);
+      setError(null);
+      
+      // 현재 메시지 중 가장 오래된 메시지의 ID를 기준으로 이전 메시지들 로드
+      const oldestMessage = messages[0];
+      if (!oldestMessage || !oldestMessage.id) return;
+      
+      const olderMessages = await chatApi.getRoomMessagesWithPagination(
+        roomId, 
+        size, 
+        oldestMessage.id
+      );
+      
+      if (olderMessages.length > 0) {
+        // 기존 메시지 앞에 추가
+        setMessages(prev => [...olderMessages, ...prev]);
+      }
+      
+      // 로드된 메시지 수가 요청한 크기보다 작으면 더 이상 메시지가 없음
+      if (olderMessages.length < size) {
+        setHasMoreMessages(false);
+      }
+      
+    } catch (err: any) {
+      console.error('Failed to load more messages:', err);
+      setError(err.response?.data?.message || '이전 메시지를 불러올 수 없습니다.');
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [messages, loadingMore, hasMoreMessages]);
 
   // 채팅방 생성
   const createRoom = useCallback(async (name: string, participants: User[], isGroup = false) => {
@@ -200,6 +248,15 @@ export const useMeetingData = () => {
       () => {
         console.log('WebSocket connected');
         setWsConnected(true);
+        
+        // 연결 성공 시 현재 채팅방에 참가 (안전하게)
+        if (currentRoomRef.current) {
+          try {
+            websocketService.joinRoom(currentRoomRef.current);
+          } catch (err) {
+            console.warn('Failed to join room after WebSocket connection:', err);
+          }
+        }
       },
       (error) => {
         console.error('WebSocket connection error:', error);
@@ -367,6 +424,8 @@ export const useMeetingData = () => {
     
     // 상태
     loading,
+    loadingMore,
+    hasMoreMessages,
     error,
     wsConnected,
     
@@ -378,6 +437,7 @@ export const useMeetingData = () => {
     inviteUser,
     loadChatRooms,
     loadMessages,
+    loadMoreMessages,
     clearError,
     
     // 읽음 상태 관련

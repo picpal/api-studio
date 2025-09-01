@@ -13,6 +13,8 @@ export const MeetingPage: React.FC = () => {
     availableUsers,
     currentUser,
     loading,
+    loadingMore,
+    hasMoreMessages,
     error,
     createRoom,
     deleteRoom,
@@ -20,6 +22,7 @@ export const MeetingPage: React.FC = () => {
     addMessage,
     inviteUser,
     loadMessages,
+    loadMoreMessages,
     loadChatRooms,
     clearError,
     markMessagesAsRead
@@ -157,8 +160,11 @@ export const MeetingPage: React.FC = () => {
           onLeaveRoom={handleLeaveRoom}
           onDeleteRoom={handleDeleteRoom}
           onInviteUser={() => setShowInviteModal(true)}
+          onLoadMoreMessages={loadMoreMessages}
           onMarkMessagesAsRead={markMessagesAsRead}
           loading={loading}
+          loadingMore={loadingMore}
+          hasMoreMessages={hasMoreMessages}
         />
       ) : (
         <div className="flex-1 flex items-center justify-center">

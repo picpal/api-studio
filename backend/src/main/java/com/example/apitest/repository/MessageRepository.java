@@ -127,4 +127,18 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     int countUnreadMessagesForUser(@Param("roomId") Long roomId, 
                                   @Param("userId") Long userId,
                                   @Param("lastReadMessageId") Long lastReadMessageId);
+    
+    /**
+     * 특정 메시지 ID 이전의 메시지들을 페이징으로 조회 (커서 기반 페이지네이션)
+     */
+    @Query("""
+        SELECT m FROM Message m 
+        WHERE m.roomId = :roomId 
+        AND m.id < :beforeMessageId 
+        AND m.isDeleted = false 
+        ORDER BY m.createdAt DESC
+        """)
+    Page<Message> findMessagesByRoomIdBeforeId(@Param("roomId") Long roomId, 
+                                              @Param("beforeMessageId") Long beforeMessageId, 
+                                              Pageable pageable);
 }

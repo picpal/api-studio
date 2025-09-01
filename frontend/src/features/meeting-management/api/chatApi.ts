@@ -59,6 +59,22 @@ export const chatApi = {
     return response.data;
   },
 
+  // 페이지네이션 기반 메시지 조회
+  getRoomMessagesWithPagination: async (
+    roomId: number, 
+    size: number = 20, 
+    beforeMessageId?: number
+  ): Promise<Message[]> => {
+    const params = new URLSearchParams();
+    params.append('size', size.toString());
+    if (beforeMessageId) {
+      params.append('beforeMessageId', beforeMessageId.toString());
+    }
+    
+    const response = await api.get(`/rooms/${roomId}/messages?${params.toString()}`);
+    return response.data;
+  },
+
   sendMessage: async (roomId: number, request: SendMessageRequest): Promise<Message> => {
     const response = await api.post(`/rooms/${roomId}/messages`, request);
     return response.data;

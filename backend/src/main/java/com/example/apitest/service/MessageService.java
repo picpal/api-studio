@@ -8,11 +8,15 @@ import com.example.apitest.repository.MessageRepository;
 import com.example.apitest.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -29,12 +33,44 @@ public class MessageService {
     // === 메시지 조회 관련 (단일 책임) ===
     
     /**
-     * 채팅방 메시지 목록 조회 (권한 체크 포함)
+     * 채팅방 메시지 목록 조회 (권한 체크 포함) - 기존 버전 (하위 호환성)
      */
     @Transactional(readOnly = true)
     public List<MessageDTO> getRoomMessages(Long roomId, Long userId) {
         validateRoomAccessPermission(roomId, userId);
         List<Message> messages = findMessagesByRoomId(roomId);
+        return convertMessagesToDTO(messages);
+    }
+    
+    /**
+     * 채팅방 메시지 목록 조회 (페이지네이션, 커서 기반)
+     * - 최신 메시지부터 역순으로 조회
+     * - 클라이언트에서 시간순으로 뒤집어서 표시
+     */
+    @Transactional(readOnly = true)
+    public List<MessageDTO> getRoomMessages(Long roomId, Long userId, int size, Long beforeMessageId) {
+        validateRoomAccessPermission(roomId, userId);
+        validatePaginationParams(size, beforeMessageId);
+        
+        Pageable pageable = PageRequest.of(0, size);
+        Page<Message> messagePage;
+        
+        if (beforeMessageId != null) {
+            // 특정 메시지 이전의 메시지들을 조회 (lazy loading)
+            messagePage = messageRepository.findMessagesByRoomIdBeforeId(roomId, beforeMessageId, pageable);
+        } else {
+            // 최신 메시지들을 조회 (초기 로딩)
+            messagePage = messageRepository.findMessagesByRoomId(roomId, pageable);
+        }
+        
+        List<Message> messages = messagePage.getContent();
+        
+        // 최신 메시지부터 역순으로 정렬된 상태를 시간순으로 뒤집음
+        Collections.reverse(messages);
+        
+        log.info("메시지 조회 완료: roomId={}, userId={}, size={}, beforeMessageId={}, 조회된메시지수={}", 
+                roomId, userId, size, beforeMessageId, messages.size());
+                
         return convertMessagesToDTO(messages);
     }
 
@@ -87,6 +123,16 @@ public class MessageService {
     private void validateRoomAccessPermission(Long roomId, Long userId) {
         if (!hasRoomAccessPermission(roomId, userId)) {
             throw new AccessDeniedException("채팅방에 접근할 권한이 없습니다.");
+        }
+    }
+    
+    private void validatePaginationParams(int size, Long beforeMessageId) {
+        if (size <= 0 || size > 100) {
+            throw new IllegalArgumentException("페이지 크기는 1~100 사이여야 합니다.");
+        }
+        
+        if (beforeMessageId != null && beforeMessageId <= 0) {
+            throw new IllegalArgumentException("올바르지 않은 메시지 ID입니다.");
         }
     }
 

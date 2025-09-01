@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { Button } from '../../../shared/ui';
 import { ChatRoom, Message } from '../../../entities/meeting';
 
@@ -10,8 +10,11 @@ interface ChatAreaProps {
   onLeaveRoom: () => void;
   onDeleteRoom: () => void;
   onInviteUser: () => void;
+  onLoadMoreMessages?: (roomId: number) => void;
   onMarkMessagesAsRead?: (roomId: number, lastReadMessageId: number) => void;
   loading?: boolean;
+  loadingMore?: boolean;
+  hasMoreMessages?: boolean;
 }
 
 export const ChatArea: React.FC<ChatAreaProps> = ({
@@ -22,16 +25,53 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   onLeaveRoom,
   onDeleteRoom,
   onInviteUser,
+  onLoadMoreMessages,
   onMarkMessagesAsRead,
-  loading = false
+  loading = false,
+  loadingMore = false,
+  hasMoreMessages = true
 }) => {
   const [message, setMessage] = useState('');
   const [showOptions, setShowOptions] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [showMessages, setShowMessages] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const prevScrollHeight = useRef<number>(0);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToBottom = (immediate: boolean = false) => {
+    if (immediate && messagesContainerRef.current) {
+      // 즉시 스크롤 - 애니메이션 없이 바로 이동
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    } else {
+      // 부드러운 스크롤
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   };
+
+  // 스크롤 위치 유지 (새 메시지 로드 후)
+  const maintainScrollPosition = () => {
+    if (messagesContainerRef.current) {
+      const container = messagesContainerRef.current;
+      const newScrollHeight = container.scrollHeight;
+      const heightDifference = newScrollHeight - prevScrollHeight.current;
+      container.scrollTop = container.scrollTop + heightDifference;
+      prevScrollHeight.current = newScrollHeight;
+    }
+  };
+
+  // 위로 스크롤 감지하여 이전 메시지 로드
+  const handleScroll = useCallback(() => {
+    if (!messagesContainerRef.current || loadingMore || !hasMoreMessages || !onLoadMoreMessages) return;
+    
+    const container = messagesContainerRef.current;
+    
+    // 스크롤이 최상단 근처에 있을 때 이전 메시지 로드
+    if (container.scrollTop <= 100) {
+      prevScrollHeight.current = container.scrollHeight;
+      onLoadMoreMessages(room.id);
+    }
+  }, [room.id, loadingMore, hasMoreMessages, onLoadMoreMessages]);
 
   // 읽음 처리를 debounce로 처리
   const debouncedMarkAsRead = useCallback(
@@ -50,9 +90,46 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     [onMarkMessagesAsRead]
   );
 
+  // 초기 로드 시 즉시 스크롤을 위한 useLayoutEffect
+  useLayoutEffect(() => {
+    if (isInitialLoad && messages.length > 0) {
+      // DOM 렌더링 직후 즉시 스크롤 (애니메이션 없음)
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        // 스크롤 완료 후 메시지 표시
+        setShowMessages(true);
+      }
+      setIsInitialLoad(false);
+    }
+  }, [isInitialLoad, messages.length]);
+
+  // 기타 스크롤 처리
   useEffect(() => {
-    scrollToBottom();
-    
+    if (!isInitialLoad && loadingMore) {
+      // 이전 메시지 로드 시 스크롤 위치 유지
+      setTimeout(maintainScrollPosition, 50);
+    } else if (!isInitialLoad && !loadingMore && messages.length > 0) {
+      // 초기 로드가 완료된 후 메시지 표시
+      if (!showMessages) {
+        setShowMessages(true);
+      }
+      
+      // 새 메시지 수신 시 맨 아래로 스크롤 (본인 메시지이거나 현재 하단에 있는 경우)
+      const container = messagesContainerRef.current;
+      if (container) {
+        const isAtBottom = container.scrollHeight - container.clientHeight <= container.scrollTop + 50;
+        const lastMessage = messages[messages.length - 1];
+        const isMyMessage = Number(lastMessage.senderId) === Number(currentUserId);
+        
+        if (isMyMessage || isAtBottom) {
+          scrollToBottom(false); // 새 메시지는 부드럽게 스크롤
+        }
+      }
+    }
+  }, [messages, room.id, currentUserId, isInitialLoad, loadingMore, showMessages]);
+
+  // 읽음 처리를 별도 useEffect로 분리
+  useEffect(() => {
     // 메시지가 있고 읽음 처리 함수가 제공된 경우
     if (messages.length > 0 && onMarkMessagesAsRead) {
       // 마지막 메시지 찾기 (본인 메시지가 아닌 것 중 가장 최신)
@@ -73,6 +150,21 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       }
     }
   }, [messages, room.id, currentUserId, debouncedMarkAsRead]);
+
+  // 새 채팅방 선택 시 초기 로드 상태 리셋
+  useEffect(() => {
+    setIsInitialLoad(true);
+    setShowMessages(false);
+  }, [room.id]);
+
+  // 스크롤 이벤트 리스너 등록
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+      return () => container.removeEventListener('scroll', handleScroll);
+    }
+  }, [handleScroll]);
 
   const handleSend = () => {
     if (!message.trim()) return;
@@ -165,8 +257,47 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         </div>
 
         {/* 채팅 메시지 */}
-        <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
-          <div className="space-y-4">
+        <div 
+          ref={messagesContainerRef}
+          className="flex-1 overflow-y-auto p-4 bg-gray-50 transition-opacity duration-200"
+          style={{ opacity: loading && messages.length === 0 ? 0.8 : 1 }}
+        >
+          {loading && messages.length === 0 ? (
+            /* 초기 로딩 시 스켈레톤 */
+            <div className="space-y-4 animate-pulse">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className={`flex ${i % 3 === 0 ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                    i % 3 === 0 ? 'bg-blue-200' : 'bg-gray-200'
+                  }`}>
+                    <div className="h-4 bg-gray-300 rounded mb-2"></div>
+                    <div className="h-3 bg-gray-300 rounded w-16"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div 
+              className="space-y-4" 
+              style={{ opacity: showMessages ? 1 : 0, transition: 'opacity 0.2s ease-in-out' }}
+            >
+              {/* 이전 메시지 로딩 인디케이터 */}
+              {loadingMore && (
+                <div className="flex justify-center py-2">
+                  <div className="bg-gray-200 text-gray-600 text-sm px-3 py-1 rounded-full">
+                    이전 메시지 로딩 중...
+                  </div>
+                </div>
+              )}
+              
+              {/* 더 이상 메시지가 없을 때 */}
+              {!hasMoreMessages && messages.length > 20 && (
+                <div className="flex justify-center py-2">
+                  <div className="bg-gray-100 text-gray-500 text-xs px-3 py-1 rounded-full">
+                    채팅방의 처음입니다
+                  </div>
+                </div>
+              )}
             {messages.map((msg, index) => {
               // 시스템 메시지가 아닌 경우에만 senderId 비교
               const isSystemMessage = msg.messageType === 'SYSTEM' || msg.senderId === 0;
@@ -213,8 +344,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 </div>
               );
             })}
-            <div ref={messagesEndRef} />
-          </div>
+              <div ref={messagesEndRef} />
+            </div>
+          )}
         </div>
 
         {/* 메시지 입력 */}
