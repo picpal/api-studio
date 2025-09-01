@@ -5,7 +5,7 @@ import {
   TestExecution,
   TestHistory,
   ExecutionDetailModal,
-  TestReportModal,
+  ExecutionReportModal,
   useTestAutomation,
   useTestExecution,
   useTestHistory
@@ -85,12 +85,6 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
 
   // 배치 실행 핸들러  
   const handleExecuteBatch = () => {
-    console.log('=== BATCH EXECUTION DEBUG ===');
-    console.log('activeTab:', activeTab);
-    console.log('selectedApis:', selectedApis);
-    console.log('selectedPipelines:', selectedPipelines);
-    console.log('pipelineList:', pipelineList);
-    console.log('=== END DEBUG ===');
     executeBatch(selectedApis, apiList, selectedPipelines, pipelineList, activeTab, addBatchResult);
   };
 
@@ -101,9 +95,9 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
   };
 
   return (
-    <div className="lg:h-full bg-gray-100 flex flex-col">
+    <div className="h-full bg-gray-100 flex flex-col">
       {/* 데스크톱: 기존 가로 분할, 태블릿: 세로 분할 */}
-      <div className="lg:flex-1 flex flex-col lg:flex-row lg:overflow-hidden">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* 좌측/상단: API Selection */}
         <ApiSelection
           folders={folders}
@@ -119,7 +113,7 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
         />
 
         {/* 우측/하단: 실행 영역과 결과 */}
-        <div className="lg:flex-1 flex flex-col lg:flex-row lg:min-h-0">
+        <div className="flex-1 flex flex-col lg:flex-row min-h-0">
           {/* Test Execution */}
           <TestExecution
             selectedApis={selectedApis}
@@ -149,7 +143,7 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
       />
 
       {/* Test Report Modal */}
-      <TestReportModal
+      <ExecutionReportModal
         currentExecution={currentExecution}
         showModal={showReportModal}
         onClose={handleCloseReport}

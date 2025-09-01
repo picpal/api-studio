@@ -135,12 +135,79 @@ export const TestReportModal: React.FC<TestReportModalProps> = ({
                 <p><strong>Steps:</strong> ${execution.stepExecutions?.length || 0}</p>
                 ${execution.stepExecutions && execution.stepExecutions.length > 0 ? `
                   <div style="margin: 10px 0;">
-                    <h4 style="margin: 5px 0; font-size: 14px; color: #4b5563;">Step Results:</h4>
-                    ${execution.stepExecutions.map(step => `
-                      <div style="margin: 5px 0; padding: 5px; border-left: 3px solid ${step.status === 'success' ? '#10b981' : '#ef4444'}; background: #f9fafb;">
-                        <strong>${step.stepName}</strong> (${step.status.toUpperCase()})
-                        <br><small>${step.method} ${step.url} | ${step.statusCode || 'N/A'} | ${step.responseTime || 'N/A'}ms</small>
-                        ${step.error ? `<br><span style="color: #ef4444;">Error: ${step.error}</span>` : ''}
+                    <h4 style="margin: 5px 0; font-size: 14px; color: #4b5563;">Pipeline Step Details:</h4>
+                    ${execution.stepExecutions.map((step, index) => `
+                      <div style="margin: 10px 0; padding: 10px; border: 1px solid #e5e7eb; border-left: 3px solid ${step.status === 'success' ? '#10b981' : '#ef4444'}; background: #f9fafb; border-radius: 4px;">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                          <span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: #8b5cf6; color: white; border-radius: 50%; font-size: 12px; font-weight: bold;">
+                            ${step.stepOrder || index + 1}
+                          </span>
+                          <strong style="font-size: 14px;">${step.stepName}</strong>
+                          <span style="padding: 2px 8px; font-size: 11px; background: ${step.status === 'success' ? '#d1fae5' : '#fee2e2'}; color: ${step.status === 'success' ? '#065f46' : '#991b1b'}; border-radius: 4px;">
+                            ${step.status.toUpperCase()}
+                          </span>
+                        </div>
+                        
+                        <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">
+                          <strong>Method:</strong> ${step.method} | <strong>URL:</strong> ${step.url || 'N/A'}
+                          <br><strong>Status Code:</strong> ${step.statusCode || 'N/A'} | <strong>Response Time:</strong> ${step.responseTime || 'N/A'}ms
+                        </div>
+                        
+                        ${step.error ? `
+                          <div style="margin: 8px 0; padding: 6px; background: #fee2e2; border: 1px solid #fecaca; border-radius: 4px;">
+                            <span style="color: #991b1b; font-size: 12px;"><strong>Error:</strong> ${step.error}</span>
+                          </div>
+                        ` : ''}
+                        
+                        ${step.requestBody ? `
+                          <details style="margin-top: 8px;">
+                            <summary style="cursor: pointer; font-size: 12px; font-weight: 600; color: #4b5563;">Request Body (Click to expand)</summary>
+                            <pre style="background: #fef3c7; padding: 8px; border-radius: 4px; font-size: 11px; max-height: 150px; overflow-y: auto; margin-top: 4px; white-space: pre-wrap; word-break: break-all;">${
+                              step.requestBody.length > 500 
+                                ? step.requestBody.substring(0, 500) + '... (truncated)' 
+                                : step.requestBody
+                            }</pre>
+                          </details>
+                        ` : ''}
+                        
+                        ${step.requestHeaders && Object.keys(step.requestHeaders).length > 0 ? `
+                          <details style="margin-top: 8px;">
+                            <summary style="cursor: pointer; font-size: 12px; font-weight: 600; color: #4b5563;">Request Headers (Click to expand)</summary>
+                            <pre style="background: #fef3c7; padding: 8px; border-radius: 4px; font-size: 11px; max-height: 100px; overflow-y: auto; margin-top: 4px;">${JSON.stringify(step.requestHeaders, null, 2)}</pre>
+                          </details>
+                        ` : ''}
+                        
+                        ${step.responseBody ? `
+                          <details style="margin-top: 8px;">
+                            <summary style="cursor: pointer; font-size: 12px; font-weight: 600; color: #4b5563;">Response Data (Click to expand)</summary>
+                            <pre style="background: #f3f4f6; padding: 8px; border-radius: 4px; font-size: 11px; max-height: 200px; overflow-y: auto; margin-top: 4px; white-space: pre-wrap; word-break: break-all;">${
+                              step.responseBody.length > 1000 
+                                ? step.responseBody.substring(0, 1000) + '... (truncated)' 
+                                : step.responseBody
+                            }</pre>
+                          </details>
+                        ` : ''}
+                        
+                        ${step.responseHeaders && Object.keys(step.responseHeaders).length > 0 ? `
+                          <details style="margin-top: 8px;">
+                            <summary style="cursor: pointer; font-size: 12px; font-weight: 600; color: #4b5563;">Response Headers (Click to expand)</summary>
+                            <pre style="background: #f3f4f6; padding: 8px; border-radius: 4px; font-size: 11px; max-height: 150px; overflow-y: auto; margin-top: 4px;">${JSON.stringify(step.responseHeaders, null, 2)}</pre>
+                          </details>
+                        ` : ''}
+                        
+                        ${step.extractedData && Object.keys(step.extractedData).length > 0 ? `
+                          <details style="margin-top: 8px;">
+                            <summary style="cursor: pointer; font-size: 12px; font-weight: 600; color: #059669;">🔽 Extracted Variables (Click to expand)</summary>
+                            <pre style="background: #d1fae5; border: 1px solid #a7f3d0; padding: 8px; border-radius: 4px; font-size: 11px; max-height: 150px; overflow-y: auto; margin-top: 4px; color: #065f46;">${JSON.stringify(step.extractedData, null, 2)}</pre>
+                          </details>
+                        ` : ''}
+                        
+                        ${step.injectedData && Object.keys(step.injectedData).length > 0 ? `
+                          <details style="margin-top: 8px;">
+                            <summary style="cursor: pointer; font-size: 12px; font-weight: 600; color: #2563eb;">🔼 Injected Variables (Click to expand)</summary>
+                            <pre style="background: #dbeafe; border: 1px solid #93c5fd; padding: 8px; border-radius: 4px; font-size: 11px; max-height: 150px; overflow-y: auto; margin-top: 4px; color: #1d4ed8;">${JSON.stringify(step.injectedData, null, 2)}</pre>
+                          </details>
+                        ` : ''}
                       </div>
                     `).join('')}
                   </div>

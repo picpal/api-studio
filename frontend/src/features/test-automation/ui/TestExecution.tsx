@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ValidationResult } from '../../../utils/responseValidation';
 
 export interface TestExecution {
@@ -35,8 +35,21 @@ export interface PipelineStepExecution {
   error?: string;
   method: string;
   url: string;
+  requestBody?: string;
+  requestHeaders?: Record<string, string>;
   responseBody?: string;
   responseHeaders?: Record<string, string>;
+  extractedData?: Record<string, any>;  // 추출된 변수들
+  injectedData?: Record<string, any>;   // 주입된 변수들
+  requestData?: string; // 실제 실행된 요청 데이터 (JSON 문자열)
+  responseData?: string; // 실제 실행된 응답 데이터
+  apiItem?: {
+    id: string;
+    name: string;
+    method: string;
+    url: string;
+    baseUrl?: string;
+  };
 }
 
 interface TestExecutionProps {
@@ -112,25 +125,25 @@ export const TestExecution: React.FC<TestExecutionProps> = ({
         {currentExecution.length > 0 ? (
           <div className="space-y-2 lg:flex-1 lg:overflow-y-auto lg:min-h-0 max-h-96 lg:max-h-none overflow-y-auto">
             {currentExecution.map(execution => (
-              <div 
-                key={execution.id} 
-                className={`flex items-center justify-between p-3 bg-gray-50 rounded border transition-colors ${
-                  (execution.status === 'success' || execution.status === 'failed') 
-                    ? 'hover:bg-gray-100 cursor-pointer' 
-                    : ''
-                }`}
-                onClick={() => {
-                  if (execution.status === 'success' || execution.status === 'failed') {
-                    onShowExecutionDetail(execution);
-                  }
-                }}
-              >
+              <div key={execution.id} className="bg-gray-50 rounded border">
+                <div 
+                  className={`flex items-center justify-between p-3 transition-colors ${
+                    (execution.status === 'success' || execution.status === 'failed') 
+                      ? 'hover:bg-gray-100 cursor-pointer' 
+                      : ''
+                  }`}
+                  onClick={() => {
+                    if (execution.status === 'success' || execution.status === 'failed') {
+                      onShowExecutionDetail(execution);
+                    }
+                  }}
+                >
                 <div className="flex items-center gap-3">
                   <span className="text-lg">{getStatusIcon(execution.status)}</span>
                   <div>
                     <div className="font-medium text-sm flex items-center gap-2">
                       {execution.type === 'pipeline' && (
-                        <span className="px-1.5 py-0.5 text-xs font-medium rounded bg-purple-100 text-purple-800">
+                        <span className="px-1.5 py-0.5 text-xs font-medium rounded bg-blue-100 text-blue-800">
                           PIPELINE
                         </span>
                       )}
@@ -176,6 +189,7 @@ export const TestExecution: React.FC<TestExecutionProps> = ({
                     <div className="text-xs text-blue-500 mt-1 hidden sm:block">Click to view details</div>
                   )}
                 </div>
+              </div>
               </div>
             ))}
           </div>

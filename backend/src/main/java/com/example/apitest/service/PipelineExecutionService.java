@@ -278,16 +278,25 @@ public class PipelineExecutionService {
             if ("get".equals(method) && apiItem.getRequestParams() != null && !apiItem.getRequestParams().trim().isEmpty()) {
                 JsonNode paramsNode = objectMapper.readTree(apiItem.getRequestParams());
                 StringBuilder urlWithParams = new StringBuilder(url);
-                urlWithParams.append("?");
                 
-                paramsNode.fields().forEachRemaining(entry -> {
+                // Only add parameters if there are any
+                boolean hasParams = false;
+                Iterator<Map.Entry<String, JsonNode>> fields = paramsNode.fields();
+                
+                while (fields.hasNext()) {
+                    Map.Entry<String, JsonNode> entry = fields.next();
                     String value = processTemplate(entry.getValue().asText(), executionContext);
-                    urlWithParams.append(entry.getKey()).append("=").append(value).append("&");
-                });
-                
-                // Remove trailing &
-                if (urlWithParams.charAt(urlWithParams.length() - 1) == '&') {
-                    urlWithParams.setLength(urlWithParams.length() - 1);
+                    
+                    // Skip empty parameters
+                    if (value != null && !value.trim().isEmpty()) {
+                        if (!hasParams) {
+                            urlWithParams.append("?");
+                            hasParams = true;
+                        } else {
+                            urlWithParams.append("&");
+                        }
+                        urlWithParams.append(entry.getKey()).append("=").append(value);
+                    }
                 }
                 
                 url = urlWithParams.toString();
@@ -318,6 +327,10 @@ public class PipelineExecutionService {
                 "headers", headerMap,
                 "body", bodyString != null ? bodyString : ""
             ));
+            logger.info("=== STORING REQUEST DATA ===");
+            logger.info("Final URL being stored: " + url);
+            logger.info("Request data JSON: " + requestData);
+            logger.info("=== END STORING REQUEST DATA ===");
             stepExecution.setRequestData(requestData);
             
             // Make API call with session HttpClient
@@ -330,6 +343,11 @@ public class PipelineExecutionService {
             stepExecution.setHttpStatus(response.statusCode());
             stepExecution.setResponseData(response.body());
             stepExecution.setResponseTime(responseTime);
+            
+            logger.info("=== STORING RESPONSE DATA ===");
+            logger.info("HTTP Status Code: " + response.statusCode());
+            logger.info("Response Time: " + responseTime + "ms");
+            logger.info("=== END STORING RESPONSE DATA ===");
             
             // Check HTTP status code to determine success/failure
             if (response.statusCode() >= 400) {
@@ -493,7 +511,7 @@ public class PipelineExecutionService {
     }
 
     public List<StepExecution> getStepExecutions(Long executionId) {
-        return stepExecutionRepository.findByExecutionIdOrderByStepOrder(executionId);
+        return stepExecutionRepository.findByExecutionIdWithApiItemOrderByStepOrder(executionId);
     }
 
     public List<PipelineExecution> getExecutionHistory(Long pipelineId) {

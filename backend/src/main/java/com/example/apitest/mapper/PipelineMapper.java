@@ -70,6 +70,8 @@ public class PipelineMapper {
         dto.setMethod(apiItem.getMethod().toString());
         dto.setUrl(apiItem.getUrl());
         dto.setDescription(apiItem.getDescription());
+        
+        
         return dto;
     }
 
@@ -108,13 +110,25 @@ public class PipelineMapper {
         dto.setResponseData(stepExecution.getResponseData());
         dto.setExtractedData(stepExecution.getExtractedData());
         
+        // stepName과 stepOrder를 우선 설정
+        dto.setStepName(stepExecution.getStepName());
+        
         if (stepExecution.getPipelineStep() != null) {
             PipelineStep step = stepExecution.getPipelineStep();
-            dto.setStepName(step.getStepName());
+            if (step.getStepName() != null) {
+                dto.setStepName(step.getStepName());
+            }
             dto.setStepDescription(step.getDescription());
             
+            // ApiItem 정보 매핑
             if (step.getApiItem() != null) {
-                dto.setApiItem(toApiItemDTO(step.getApiItem()));
+                try {
+                    ApiItem apiItem = step.getApiItem();
+                    dto.setApiItem(toApiItemDTO(apiItem));
+                } catch (Exception e) {
+                    // Lazy loading 문제로 실패할 경우 로그 출력
+                    System.err.println("Failed to load ApiItem: " + e.getMessage());
+                }
             }
         }
         

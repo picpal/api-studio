@@ -51,10 +51,18 @@ export const ExecutionDetailModal: React.FC<ExecutionDetailModalProps> = ({
             <div>
               <h2 className="text-lg font-medium flex items-center gap-2">
                 <span>{getStatusIcon(selectedExecution.status)}</span>
+                {selectedExecution.type === 'pipeline' && (
+                  <span className="px-2 py-1 text-xs font-medium rounded bg-purple-100 text-purple-800">
+                    PIPELINE
+                  </span>
+                )}
                 {selectedExecution.apiName}
               </h2>
               <p className="text-sm text-gray-500">
-                {selectedExecution.method} • {selectedExecution.url}
+                {selectedExecution.type === 'pipeline' 
+                  ? `${selectedExecution.stepExecutions?.length || 0} steps executed`
+                  : `${selectedExecution.method} • ${selectedExecution.url}`
+                }
               </p>
             </div>
             <button
@@ -119,6 +127,119 @@ export const ExecutionDetailModal: React.FC<ExecutionDetailModalProps> = ({
                 <h3 className="text-md font-semibold text-red-600 mb-2">Error</h3>
                 <div className="bg-red-50 border border-red-200 rounded p-3">
                   <code className="text-sm text-red-700">{selectedExecution.error}</code>
+                </div>
+              </div>
+            )}
+
+            {/* Pipeline Steps (Pipeline인 경우에만 표시) */}
+            {selectedExecution.type === 'pipeline' && selectedExecution.stepExecutions && selectedExecution.stepExecutions.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-md font-semibold mb-4">Pipeline Steps</h3>
+                <div className="space-y-3">
+                  {selectedExecution.stepExecutions.map((step, index) => (
+                    <div key={step.id} className="border rounded-lg p-4 bg-gray-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-800 font-medium text-sm">
+                            {step.stepOrder}
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-sm">{step.stepName}</h4>
+                            <div className="text-xs text-gray-500">
+                              {step.method} • {step.url}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className={`text-sm font-medium ${
+                            step.status === 'success' ? 'text-green-600' : 
+                            step.status === 'failed' ? 'text-red-600' : 
+                            step.status === 'running' ? 'text-blue-600' : 
+                            'text-gray-500'
+                          }`}>
+                            {step.status === 'success' ? '✅' : 
+                             step.status === 'failed' ? '❌' : 
+                             step.status === 'running' ? '🔄' : '⏳'}
+                            {step.status.toUpperCase()}
+                          </div>
+                          {step.responseTime && (
+                            <div className="text-xs text-gray-500">{step.responseTime}ms</div>
+                          )}
+                          {step.statusCode && (
+                            <div className={`text-xs ${step.statusCode >= 200 && step.statusCode < 300 ? 'text-green-600' : 'text-red-600'}`}>
+                              {step.statusCode}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Step 에러 메시지 */}
+                      {step.error && (
+                        <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs">
+                          <div className="font-medium text-red-600">Error:</div>
+                          <div className="text-red-700">{step.error}</div>
+                        </div>
+                      )}
+                      
+                      {/* Step 요청 내용 */}
+                      {step.requestBody && (
+                        <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                          <div className="text-xs font-medium text-gray-600 mb-1">Request Body:</div>
+                          <div className="text-xs text-gray-700 max-h-20 overflow-y-auto">
+                            <pre className="whitespace-pre-wrap">{
+                              step.requestBody.length > 200 
+                                ? step.requestBody.substring(0, 200) + '...' 
+                                : step.requestBody
+                            }</pre>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Step 요청 헤더 */}
+                      {step.requestHeaders && Object.keys(step.requestHeaders).length > 0 && (
+                        <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                          <div className="text-xs font-medium text-gray-600 mb-1">Request Headers:</div>
+                          <div className="text-xs text-gray-700 max-h-16 overflow-y-auto">
+                            <pre className="whitespace-pre-wrap">{JSON.stringify(step.requestHeaders, null, 2)}</pre>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Step 응답 내용 (간단하게 표시) */}
+                      {step.responseBody && (
+                        <div className="mt-2 p-2 bg-white border rounded">
+                          <div className="text-xs font-medium text-gray-600 mb-1">Response:</div>
+                          <div className="text-xs text-gray-700 max-h-20 overflow-y-auto">
+                            <pre className="whitespace-pre-wrap">{
+                              step.responseBody.length > 200 
+                                ? step.responseBody.substring(0, 200) + '...' 
+                                : step.responseBody
+                            }</pre>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 변수 추출 정보 */}
+                      {step.extractedData && Object.keys(step.extractedData).length > 0 && (
+                        <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
+                          <div className="text-xs font-medium text-green-700 mb-1">🔽 Extracted Variables:</div>
+                          <div className="text-xs text-green-800">
+                            <pre className="whitespace-pre-wrap">{JSON.stringify(step.extractedData, null, 2)}</pre>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 변수 주입 정보 */}
+                      {step.injectedData && Object.keys(step.injectedData).length > 0 && (
+                        <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
+                          <div className="text-xs font-medium text-blue-700 mb-1">🔼 Injected Variables:</div>
+                          <div className="text-xs text-blue-800">
+                            <pre className="whitespace-pre-wrap">{JSON.stringify(step.injectedData, null, 2)}</pre>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

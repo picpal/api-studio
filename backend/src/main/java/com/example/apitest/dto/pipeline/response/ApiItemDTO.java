@@ -6,6 +6,7 @@ public class ApiItemDTO {
     private String method;
     private String url;
     private String description;
+    private String baseUrl;
 
     public ApiItemDTO() {}
 
@@ -23,4 +24,7 @@ public class ApiItemDTO {
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+    public String getBaseUrl() { return baseUrl; }
+    public void setBaseUrl(String baseUrl) { this.baseUrl = baseUrl; }
 }

@@ -77,14 +77,12 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
 
   // Pipeline selection handlers
   const handlePipelineSelection = (pipelineId: string, selected: boolean) => {
-    console.log('Pipeline selection:', pipelineId, selected);
     const newSelected = new Set(selectedPipelines);
     if (selected) {
       newSelected.add(pipelineId);
     } else {
       newSelected.delete(pipelineId);
     }
-    console.log('Updated selectedPipelines:', newSelected);
     setSelectedPipelines(newSelected);
   };
 
@@ -153,7 +151,7 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
   }, [filteredApiList, filteredPipelineList, apiSectionCollapsed, folders, pipelineFolders, activeTab]);
 
   return (
-    <div className="w-full lg:w-64 bg-white border-r lg:border-r border-b lg:border-b-0 border-gray-200 flex flex-col lg:h-full lg:max-h-none">
+    <div className="w-full lg:w-80 bg-white border-r lg:border-r border-b lg:border-b-0 border-gray-200 flex flex-col lg:h-full lg:max-h-none">
       {/* Header with tabs */}
       <div className="border-b border-gray-200">
         <div className="p-4 pb-0">
@@ -181,7 +179,7 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
           </div>
           
           {/* Tabs */}
-          <div className="flex border-b border-gray-200">
+          <div className="flex">
             <button
               onClick={() => setActiveTab('apis')}
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${

@@ -66,6 +66,50 @@ const PipelineManagementPage: React.FC<PipelineManagementPageProps> = ({
     }
   };
 
+  const handleReorderSteps = async (reorderedSteps: any[]) => {
+    if (!selectedPipeline) return;
+    
+    console.log('handleReorderSteps called with:', reorderedSteps);
+    
+    try {
+      const requestData = {
+        steps: reorderedSteps.map(step => ({
+          stepId: step.id,
+          newOrder: step.stepOrder
+        }))
+      };
+      
+      console.log('Sending batch reorder request:', requestData);
+      
+      // batch API를 사용해서 step 순서를 한번에 업데이트
+      const response = await fetch(`/api/pipelines/${selectedPipeline.id}/steps/batch-reorder`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+      });
+      
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        throw new Error('Failed to reorder steps: ' + errorText);
+      }
+      
+      const result = await response.json();
+      console.log('Reorder result:', result);
+      
+      // 성공 후 데이터 새로고침
+      refetchSteps();
+    } catch (error) {
+      console.error('Failed to reorder steps:', error);
+      // 에러 발생 시 원래 데이터로 되돌림
+      refetchSteps();
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-gray-50">
       <div className="bg-white border-b border-gray-200 px-6 py-4">
@@ -96,6 +140,7 @@ const PipelineManagementPage: React.FC<PipelineManagementPageProps> = ({
                 steps={steps} 
                 onDeleteStep={handleDeleteStep}
                 onEditStep={handleEditStep}
+                onReorderSteps={handleReorderSteps}
                 loading={stepsLoading}
               />
 

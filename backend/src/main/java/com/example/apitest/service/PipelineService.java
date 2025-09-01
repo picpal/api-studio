@@ -1,6 +1,7 @@
 package com.example.apitest.service;
 
 import com.example.apitest.dto.pipeline.request.*;
+import com.example.apitest.dto.pipeline.request.BatchUpdateStepOrderRequest;
 import com.example.apitest.dto.pipeline.response.*;
 import com.example.apitest.entity.*;
 import com.example.apitest.mapper.PipelineMapper;
@@ -252,5 +253,35 @@ public class PipelineService {
         }
         
         return Optional.of(pipelineStepRepository.saveAll(steps));
+    }
+
+    @Transactional
+    public List<PipelineStepDTO> batchUpdateStepOrder(Long pipelineId, BatchUpdateStepOrderRequest request) {
+        // 파이프라인이 존재하는지 확인
+        Optional<Pipeline> pipelineOptional = pipelineRepository.findById(pipelineId);
+        if (!pipelineOptional.isPresent()) {
+            throw new IllegalArgumentException("Pipeline not found");
+        }
+
+        // 현재 파이프라인의 모든 step들 가져오기
+        List<PipelineStep> allSteps = pipelineStepRepository.findByIsActiveTrueAndPipelineIdOrderByStepOrderAsc(pipelineId);
+        
+        // 요청에 포함된 step들의 순서를 업데이트
+        for (BatchUpdateStepOrderRequest.StepOrderItem item : request.getSteps()) {
+            PipelineStep step = allSteps.stream()
+                .filter(s -> s.getId().equals(item.getStepId()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Step not found: " + item.getStepId()));
+            
+            step.setStepOrder(item.getNewOrder());
+        }
+        
+        // 업데이트된 step들 저장
+        List<PipelineStep> savedSteps = pipelineStepRepository.saveAll(allSteps);
+        
+        // DTO로 변환하여 반환
+        return savedSteps.stream()
+            .map(pipelineMapper::toPipelineStepDTO)
+            .collect(Collectors.toList());
     }
 }

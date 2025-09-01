@@ -17,6 +17,13 @@ public interface StepExecutionRepository extends JpaRepository<StepExecution, Lo
     @Query("SELECT se FROM StepExecution se WHERE se.pipelineExecution.id = :executionId ORDER BY se.stepOrder")
     List<StepExecution> findByExecutionIdOrderByStepOrder(@Param("executionId") Long executionId);
     
+    @Query("SELECT se FROM StepExecution se " +
+           "LEFT JOIN FETCH se.pipelineStep ps " +
+           "LEFT JOIN FETCH ps.apiItem ai " +
+           "WHERE se.pipelineExecution.id = :executionId " +
+           "ORDER BY se.stepOrder")
+    List<StepExecution> findByExecutionIdWithApiItemOrderByStepOrder(@Param("executionId") Long executionId);
+    
     @Query("SELECT se FROM StepExecution se WHERE se.pipelineExecution.id = :executionId AND se.stepOrder <= :stepOrder ORDER BY se.stepOrder")
     List<StepExecution> findPreviousSteps(@Param("executionId") Long executionId, @Param("stepOrder") Integer stepOrder);
     

@@ -2,6 +2,7 @@ package com.example.apitest.controller;
 
 import com.example.apitest.annotation.RequireApiAuth;
 import com.example.apitest.dto.pipeline.request.*;
+import com.example.apitest.dto.pipeline.request.BatchUpdateStepOrderRequest;
 import com.example.apitest.dto.pipeline.response.*;
 import com.example.apitest.entity.ApiKey;
 import com.example.apitest.entity.Pipeline;
@@ -209,6 +210,21 @@ public class PipelineController {
                 .orElse(ResponseEntity.notFound().build());
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PutMapping("/{pipelineId}/steps/batch-reorder")
+    @RequireApiAuth
+    public ResponseEntity<List<PipelineStepDTO>> batchUpdateStepOrder(@PathVariable Long pipelineId, @RequestBody BatchUpdateStepOrderRequest request) {
+        try {
+            List<PipelineStepDTO> updatedSteps = pipelineService.batchUpdateStepOrder(pipelineId, request);
+            return ResponseEntity.ok(updatedSteps);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            System.err.println("Error in batchUpdateStepOrder: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
         }
     }
 

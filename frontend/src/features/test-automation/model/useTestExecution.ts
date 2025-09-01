@@ -157,14 +157,10 @@ export const useTestExecution = () => {
     error?: string;
   }> => {
     try {
-      console.log('=== EXECUTE PIPELINE FUNCTION START ===');
-      console.log('pipeline:', pipeline);
       const startTime = Date.now();
       
       // Pipeline execution API 호출
-      console.log('Calling pipelineApi.executePipeline...');
       const response = await pipelineApi.executePipeline(pipeline.id.toString());
-      console.log('API response:', response);
       
       // 실행 완료까지 대기
       let executionResult: PipelineExecutionResult;
@@ -195,6 +191,27 @@ export const useTestExecution = () => {
       // Step executions 변환
       const stepExecutions: PipelineStepExecution[] = (executionResult.stepResults || []).map((step: any) => {
         const stepStatus = step.status?.toLowerCase();
+        
+        // 추출된 데이터 파싱
+        let extractedData = {};
+        if (step.extractedData) {
+          try {
+            extractedData = typeof step.extractedData === 'string' ? JSON.parse(step.extractedData) : step.extractedData;
+          } catch (e) {
+            extractedData = {};
+          }
+        }
+        
+        // 주입된 데이터 파싱
+        let injectedData = {};
+        if (step.injectedData) {
+          try {
+            injectedData = typeof step.injectedData === 'string' ? JSON.parse(step.injectedData) : step.injectedData;
+          } catch (e) {
+            injectedData = {};
+          }
+        }
+        
         return {
           id: step.id || `step-${step.stepOrder}`,
           stepName: step.stepName || `Step ${step.stepOrder}`,
@@ -203,12 +220,19 @@ export const useTestExecution = () => {
                    (stepStatus === 'failed' || stepStatus === 'error') ? 'failed' :
                    (stepStatus === 'running') ? 'running' : 'pending',
           responseTime: step.responseTime || 0,
-          statusCode: step.statusCode,
+          statusCode: step.httpStatus || step.statusCode,
           error: step.errorMessage,
           method: step.method || 'POST',
           url: step.url || '',
-          responseBody: step.responseBody || '',
-          responseHeaders: step.responseHeaders ? (typeof step.responseHeaders === 'string' ? JSON.parse(step.responseHeaders) : step.responseHeaders) : {}
+          requestBody: step.requestData || step.requestBody || '',
+          requestHeaders: step.requestHeaders ? (typeof step.requestHeaders === 'string' ? JSON.parse(step.requestHeaders) : step.requestHeaders) : {},
+          responseBody: step.responseBody || step.responseData || '',
+          responseHeaders: step.responseHeaders ? (typeof step.responseHeaders === 'string' ? JSON.parse(step.responseHeaders) : step.responseHeaders) : {},
+          extractedData: extractedData,
+          injectedData: injectedData,
+          requestData: step.requestData, // 실제 요청 데이터 별도 필드로 추가
+          responseData: step.responseData, // 실제 응답 데이터 별도 필드로 추가
+          apiItem: step.apiItem
         };
       });
 
@@ -248,9 +272,6 @@ export const useTestExecution = () => {
     activeTab: 'apis' | 'pipelines',
     onBatchComplete: (batchResult: TestBatchResult) => void
   ) => {
-    console.log('=== CHECK TEMPLATE VARIABLES START ===');
-    console.log('activeTab:', activeTab);
-    console.log('selectedPipelines:', selectedPipelines);
     if (activeTab === 'apis' && selectedApis.size === 0) {
       alert('테스트할 API를 선택해주세요.');
       return;
@@ -318,11 +339,6 @@ export const useTestExecution = () => {
     onBatchComplete: (batchResult: TestBatchResult) => void, 
     templateVariablesMap: Record<string, string> = {}
   ) => {
-    console.log('=== EXECUTE BATCH INTERNAL START ===');
-    console.log('activeTab:', activeTab);
-    console.log('selectedPipelines:', selectedPipelines);
-    console.log('pipelineList.length:', pipelineList.length);
-
     setIsRunning(true);
     let executions: TestExecution[] = [];
 
@@ -488,26 +504,18 @@ export const useTestExecution = () => {
       }
     } else {
       // Pipeline execution
-      console.log('=== PIPELINE EXECUTION BRANCH ===');
       const selectedPipelineList = pipelineList.filter(pipeline => selectedPipelines.has(pipeline.id.toString()));
-      console.log('selectedPipelineList:', selectedPipelineList);
       
       for (let i = 0; i < selectedPipelineList.length; i++) {
         const pipeline = selectedPipelineList[i];
         const execution = executions[i];
-
-        console.log(`=== EXECUTING PIPELINE ${i} ===`);
-        console.log('pipeline:', pipeline);
-        console.log('execution:', execution);
 
         // 실행 상태로 변경
         execution.status = 'running';
         setCurrentExecution([...executions]);
 
         try {
-          console.log('Calling executePipeline...');
           const pipelineResult = await executePipeline(pipeline);
-          console.log('Pipeline result:', pipelineResult);
           
           execution.status = pipelineResult.status;
           execution.responseTime = pipelineResult.totalTime;
