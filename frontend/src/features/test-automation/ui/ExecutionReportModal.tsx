@@ -267,7 +267,7 @@ export const ExecutionReportModal: React.FC<ExecutionReportModalProps> = ({
             
             ${reportData.failedTests.length > 0 ? `
               <div class="section" style="background: #fef2f2; border: 2px solid #fecaca;">
-                <h2 class="section-title" style="color: #991b1b; border-bottom-color: #fecaca;">⚠️ Failed Tests</h2>
+                <h2 class="section-title" style="color: #991b1b; border-bottom-color: #fecaca;">⚠️ 테스트 실패 내역</h2>
                 ${reportData.failedTests.map((test, index) => `
                   <div class="test-item test-failed">
                     <div class="test-header">
@@ -483,9 +483,10 @@ export const ExecutionReportModal: React.FC<ExecutionReportModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={exportReport}
-              className="px-4 py-2 text-sm bg-white text-blue-600 rounded hover:bg-gray-100 transition-colors font-medium"
+              className="px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm bg-white text-blue-600 rounded hover:bg-gray-100 transition-colors font-medium"
             >
-              📥 Export HTML
+              <span className="sm:hidden">📥</span>
+              <span className="hidden sm:inline">📥 Export HTML</span>
             </button>
             <button
               onClick={onClose}
@@ -574,7 +575,7 @@ export const ExecutionReportModal: React.FC<ExecutionReportModalProps> = ({
 
             {reportData.failedTests.length > 0 && (
               <div className="bg-red-50 border-2 border-red-200 rounded-xl p-6">
-                <h3 className="text-xl font-bold text-red-800 mb-4">⚠️ Failed Tests Analysis</h3>
+                <h3 className="text-xl font-bold text-red-800 mb-4">🚨 테스트 실패 내역</h3>
                 <div className="space-y-3">
                   {reportData.failedTests.slice(0, 5).map((test, index) => (
                     <div key={index} className="bg-white p-4 rounded-lg border border-red-200 shadow-sm">
@@ -791,7 +792,7 @@ export const ExecutionReportModal: React.FC<ExecutionReportModalProps> = ({
                     ) : (
                       <details className="mt-3">
                         <summary className="cursor-pointer text-sm text-blue-600 hover:text-blue-800 font-medium">
-                          View Details ▼
+                          View Details
                         </summary>
                         <div className="mt-3 space-y-3 p-3 bg-white rounded-lg">
                           <div className="text-sm">

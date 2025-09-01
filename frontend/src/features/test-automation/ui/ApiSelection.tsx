@@ -151,7 +151,7 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
   }, [filteredApiList, filteredPipelineList, apiSectionCollapsed, folders, pipelineFolders, activeTab]);
 
   return (
-    <div className="w-full lg:w-80 bg-white border-r lg:border-r border-b lg:border-b-0 border-gray-200 flex flex-col lg:h-full lg:max-h-none">
+    <div className="w-full lg:w-80 bg-white border-r lg:border-r border-b lg:border-b-0 border-gray-200 flex flex-col lg:h-full">
       {/* Header with tabs */}
       <div className="border-b border-gray-200">
         <div className="p-4 pb-0">
@@ -209,7 +209,7 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
         {!apiSectionCollapsed && (
           <div 
             ref={folderScrollRef}
-            className="px-4 pb-4 pt-4 lg:overflow-y-auto lg:max-h-[calc(100%-4rem)]"
+            className="px-4 pb-4 pt-4 lg:overflow-y-auto lg:max-h-[calc(100%)]"
           >
             {activeTab === 'apis' ? (
               <div className="space-y-1">
@@ -307,9 +307,10 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
         
         <div 
           ref={desktopScrollRef}
-          className="px-4 pb-4 overflow-y-auto flex-1"
+          className="px-4 overflow-y-auto min-h-0"
+          style={{ height: 'calc(100% - 150px)' }}
         >
-          <div className="space-y-2">
+          <div className="space-y-2 pb-4">
           {activeTab === 'apis' ? (
             filteredApiList.map(api => (
               <label key={api.id} className="flex items-start p-2 border rounded hover:bg-gray-50 cursor-pointer">
