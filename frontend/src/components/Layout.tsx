@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './sidebar/SidebarRefactored';
-import PipelineSidebar from './pipeline/PipelineSidebar';
+import { PipelineSidebar } from '../widgets/pipeline';
 import MainContent from './MainContent';
 import AdminPage from '../pages/AdminPage';
 import TestAutomationPage from '../pages/TestAutomationPage';

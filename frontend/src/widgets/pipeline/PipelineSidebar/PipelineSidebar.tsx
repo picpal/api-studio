@@ -1,22 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { pipelineApi, PipelineFolder, Pipeline } from '../../services/pipelineApi';
+import { Pipeline } from '../../../entities/pipeline';
+import { usePipelineFolder } from '../../../features/pipeline-management/hooks/usePipelineFolder';
 
 interface PipelineSidebarProps {
   collapsed?: boolean;
   onToggleCollapse?: () => void;
-  onSelectPipeline?: (pipeline: Pipeline) => void;
+  onSelectPipeline?: (pipeline: Pipeline | null) => void;
   selectedPipeline?: Pipeline | null;
 }
 
-const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
+export const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
   collapsed = false,
   onToggleCollapse,
   onSelectPipeline,
   selectedPipeline
 }) => {
-  const [folders, setFolders] = useState<PipelineFolder[]>([]);
-  const [expandedFolders, setExpandedFolders] = useState<Set<number>>(new Set());
-  const [searchTerm, setSearchTerm] = useState('');
+  const {
+    filteredFolders,
+    expandedFolders,
+    searchTerm,
+    loading,
+    setSearchTerm,
+    toggleFolder,
+    expandAll,
+    collapseAll,
+    createFolder,
+    deleteFolder,
+    updateFolder,
+    createPipeline,
+    deletePipeline
+  } = usePipelineFolder();
+
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
@@ -24,6 +38,7 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
   const [newPipelineName, setNewPipelineName] = useState('');
   const [newPipelineDescription, setNewPipelineDescription] = useState('');
   const [selectedFolderForPipeline, setSelectedFolderForPipeline] = useState<number | null>(null);
+  
   const [contextMenu, setContextMenu] = useState<{
     show: boolean;
     x: number;
@@ -66,64 +81,17 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
   const [isScrollable, setIsScrollable] = useState(false);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
-  // Load folders from API
-  useEffect(() => {
-    let isMounted = true;
-    const fetchFolders = async () => {
-      try {
-        const foldersData = await pipelineApi.getFolders();
-        if (isMounted) {
-          setFolders(foldersData);
-          // 기본적으로 모든 폴더 확장
-          setExpandedFolders(new Set(foldersData.map(f => f.id)));
-        }
-      } catch (error) {
-        if (isMounted) {
-          setFolders([]);
-        }
-      }
-    };
-    
-    fetchFolders();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const toggleFolder = (folderId: number) => {
-    const newExpanded = new Set(expandedFolders);
-    if (newExpanded.has(folderId)) {
-      newExpanded.delete(folderId);
-    } else {
-      newExpanded.add(folderId);
-    }
-    setExpandedFolders(newExpanded);
-  };
-
-  const expandAll = () => {
-    setExpandedFolders(new Set(folders.map(f => f.id)));
-  };
-
-  const collapseAll = () => {
-    setExpandedFolders(new Set());
-  };
-
   const handleCreateFolder = async () => {
     if (newFolderName.trim() && !isCreatingFolder) {
       setIsCreatingFolder(true);
       try {
-        const newFolder = await pipelineApi.createFolder({
+        await createFolder({
           name: newFolderName.trim(),
           description: ''
         });
-        setFolders([...folders, newFolder]);
         setNewFolderName('');
         setShowNewFolderModal(false);
-        // 새로 생성된 폴더를 확장
-        setExpandedFolders(prev => new Set([...prev, newFolder.id]));
       } catch (error) {
-        console.error('Failed to create folder:', error);
         alert('폴더 생성에 실패했습니다.');
       } finally {
         setIsCreatingFolder(false);
@@ -186,20 +154,11 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
   const handleCreatePipeline = async () => {
     if (newPipelineName.trim() && selectedFolderForPipeline) {
       try {
-        const newPipeline = await pipelineApi.createPipeline({
+        await createPipeline({
           name: newPipelineName.trim(),
           description: newPipelineDescription.trim(),
           folderId: selectedFolderForPipeline
         });
-        
-        // 폴더 목록에서 해당 폴더를 찾아 파이프라인 추가
-        setFolders(prevFolders => 
-          prevFolders.map(folder => 
-            folder.id === selectedFolderForPipeline 
-              ? { ...folder, pipelines: [...folder.pipelines, newPipeline] }
-              : folder
-          )
-        );
         
         // 모달 닫기 및 입력값 초기화
         setNewPipelineName('');
@@ -207,7 +166,6 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
         setSelectedFolderForPipeline(null);
         setShowNewPipelineModal(false);
       } catch (error) {
-        console.error('Failed to create pipeline:', error);
         alert('파이프라인 생성에 실패했습니다.');
       }
     }
@@ -223,15 +181,8 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
   const handleRemoveFolder = async () => {
     if (contextMenu.folderId && confirm(`"${contextMenu.folderName}" 폴더를 삭제하시겠습니까?`)) {
       try {
-        await pipelineApi.deleteFolder(contextMenu.folderId);
-        setFolders(folders.filter(f => f.id !== contextMenu.folderId));
-        setExpandedFolders(prev => {
-          const newExpanded = new Set(prev);
-          newExpanded.delete(contextMenu.folderId!);
-          return newExpanded;
-        });
+        await deleteFolder(contextMenu.folderId);
       } catch (error) {
-        console.error('Failed to delete folder:', error);
         alert('폴더 삭제에 실패했습니다.');
       }
     }
@@ -241,23 +192,13 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
   const handleRemovePipeline = async () => {
     if (pipelineContextMenu.pipelineId && confirm(`"${pipelineContextMenu.pipelineName}" 파이프라인을 삭제하시겠습니까?`)) {
       try {
-        await pipelineApi.deletePipeline(pipelineContextMenu.pipelineId.toString());
-        
-        // Update the folders state to remove the pipeline
-        setFolders(prevFolders => 
-          prevFolders.map(folder => 
-            folder.id === pipelineContextMenu.folderId
-              ? { ...folder, pipelines: folder.pipelines.filter(p => p.id !== pipelineContextMenu.pipelineId) }
-              : folder
-          )
-        );
+        await deletePipeline(pipelineContextMenu.pipelineId, pipelineContextMenu.folderId);
         
         // If the deleted pipeline was selected, clear selection
         if (selectedPipeline?.id === pipelineContextMenu.pipelineId) {
           onSelectPipeline?.(null);
         }
       } catch (error) {
-        console.error('Failed to delete pipeline:', error);
         alert('파이프라인 삭제에 실패했습니다.');
       }
     }
@@ -284,22 +225,12 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
   const handleConfirmRename = async () => {
     if (renamingFolder.id && renamingFolder.newName.trim()) {
       try {
-        const updatedFolder = await pipelineApi.updateFolder(renamingFolder.id, {
+        await updateFolder(renamingFolder.id, {
           name: renamingFolder.newName.trim()
         });
         
-        // Update the folders state with the new name
-        setFolders(prevFolders => 
-          prevFolders.map(folder => 
-            folder.id === renamingFolder.id 
-              ? { ...folder, name: updatedFolder.name }
-              : folder
-          )
-        );
-        
         handleCancelRename();
       } catch (error) {
-        console.error('Failed to rename folder:', error);
         alert('폴더 이름 변경에 실패했습니다.');
       }
     }
@@ -314,7 +245,7 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
   };
 
   // Close context menu when clicking outside
-  React.useEffect(() => {
+  useEffect(() => {
     const handleClickOutside = () => {
       if (contextMenu.show) {
         handleContextMenuClose();
@@ -345,24 +276,12 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
     }
 
     return () => resizeObserver.disconnect();
-  }, [folders, expandedFolders, searchTerm]);
+  }, [filteredFolders, expandedFolders, searchTerm]);
 
   const handleCancelCreateFolder = () => {
     setNewFolderName('');
     setShowNewFolderModal(false);
   };
-
-  const filteredFolders = folders.map(folder => ({
-    ...folder,
-    pipelines: folder.pipelines.filter(pipeline =>
-      pipeline.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      pipeline.description.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  })).filter(folder => 
-    searchTerm === '' || 
-    folder.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    folder.pipelines.length > 0
-  );
 
   if (collapsed) {
     return (
@@ -410,7 +329,6 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
       
       {/* Search Bar */}
       <div className="px-4 py-3 border-b border-gray-100">
-
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <input
@@ -458,7 +376,6 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
             </button>
           </div>
         </div>
-
       </div>
 
       {/* Content */}
@@ -467,126 +384,133 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
           ref={scrollContainerRef}
           className="overflow-y-auto h-full p-4"
         >
-
-        {/* Folders and Pipelines */}
-        <div className="space-y-2">
-          {filteredFolders.map(folder => (
-            <div key={folder.id} className="space-y-1">
-              {/* Folder Header */}
-              {renamingFolder.id === folder.id ? (
-                <div className="flex items-center gap-2 p-2">
-                  <svg 
-                    className={`w-4 h-4 text-gray-500 transition-transform ${
-                      expandedFolders.has(folder.id) ? 'rotate-90' : ''
-                    }`} 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                  </svg>
-                  <input
-                    type="text"
-                    value={renamingFolder.newName}
-                    onChange={(e) => setRenamingFolder(prev => ({ ...prev, newName: e.target.value }))}
-                    onKeyDown={handleRenameKeyDown}
-                    onBlur={(e) => {
-                      // Don't cancel if clicking on the save/cancel buttons
-                      if (!e.relatedTarget || (!e.relatedTarget.closest('[data-rename-buttons]'))) {
-                        handleCancelRename();
-                      }
-                    }}
-                    className="flex-1 px-2 py-1 text-sm border border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-                    autoFocus
-                  />
-                  <div className="flex gap-1" data-rename-buttons>
-                    <button
-                      onMouseDown={(e) => e.preventDefault()} // Prevent blur
-                      onClick={handleConfirmRename}
-                      className="p-1 text-green-600 hover:text-green-700 hover:bg-green-50 rounded transition-colors"
-                      title="저장"
-                    >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </button>
-                    <button
-                      onMouseDown={(e) => e.preventDefault()} // Prevent blur
-                      onClick={handleCancelRename}
-                      className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
-                      title="취소"
-                    >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                  <span className="text-xs text-gray-500">({folder.pipelines.length})</span>
-                </div>
-              ) : (
-                <button
-                  onClick={() => toggleFolder(folder.id)}
-                  onContextMenu={(e) => handleFolderRightClick(e, folder.id, folder.name)}
-                  className="w-full flex items-center gap-2 p-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-100 rounded transition-colors"
-                >
-                  <svg 
-                    className={`w-4 h-4 text-gray-500 transition-transform ${
-                      expandedFolders.has(folder.id) ? 'rotate-90' : ''
-                    }`} 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                  </svg>
-                  <span>{folder.name}</span>
-                  <span className="ml-auto text-xs text-gray-500">({folder.pipelines.length})</span>
-                </button>
-              )}
-
-              {/* Pipelines */}
-              {expandedFolders.has(folder.id) && (
-                <div className="ml-6 space-y-1">
-                  {folder.pipelines.map(pipeline => (
-                    <button
-                      key={pipeline.id}
-                      onClick={() => onSelectPipeline?.(pipeline)}
-                      onContextMenu={(e) => handlePipelineRightClick(e, pipeline.id, pipeline.name, folder.id)}
-                      className={`w-full text-left p-2 rounded text-sm transition-colors ${
-                        selectedPipeline?.id === pipeline.id
-                          ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                          : 'hover:bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <svg className="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                        </svg>
-                        <span className="font-medium">{pipeline.name}</span>
-                        <span className="ml-auto text-xs text-gray-500">단계</span>
-                      </div>
-                      <div className="text-xs text-gray-500 truncate">
-                        {pipeline.description}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
+          {loading ? (
+            <div className="text-center text-gray-500 text-sm py-8">
+              로딩 중...
             </div>
-          ))}
-        </div>
+          ) : (
+            <>
+              {/* Folders and Pipelines */}
+              <div className="space-y-2">
+                {filteredFolders.map(folder => (
+                  <div key={folder.id} className="space-y-1">
+                    {/* Folder Header */}
+                    {renamingFolder.id === folder.id ? (
+                      <div className="flex items-center gap-2 p-2">
+                        <svg 
+                          className={`w-4 h-4 text-gray-500 transition-transform ${
+                            expandedFolders.has(folder.id) ? 'rotate-90' : ''
+                          }`} 
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                        <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                        </svg>
+                        <input
+                          type="text"
+                          value={renamingFolder.newName}
+                          onChange={(e) => setRenamingFolder(prev => ({ ...prev, newName: e.target.value }))}
+                          onKeyDown={handleRenameKeyDown}
+                          onBlur={(e) => {
+                            // Don't cancel if clicking on the save/cancel buttons
+                            if (!e.relatedTarget || (!e.relatedTarget.closest('[data-rename-buttons]'))) {
+                              handleCancelRename();
+                            }
+                          }}
+                          className="flex-1 px-2 py-1 text-sm border border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                          autoFocus
+                        />
+                        <div className="flex gap-1" data-rename-buttons>
+                          <button
+                            onMouseDown={(e) => e.preventDefault()} // Prevent blur
+                            onClick={handleConfirmRename}
+                            className="p-1 text-green-600 hover:text-green-700 hover:bg-green-50 rounded transition-colors"
+                            title="저장"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </button>
+                          <button
+                            onMouseDown={(e) => e.preventDefault()} // Prevent blur
+                            onClick={handleCancelRename}
+                            className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                            title="취소"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                        <span className="text-xs text-gray-500">({folder.pipelines.length})</span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => toggleFolder(folder.id)}
+                        onContextMenu={(e) => handleFolderRightClick(e, folder.id, folder.name)}
+                        className="w-full flex items-center gap-2 p-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                      >
+                        <svg 
+                          className={`w-4 h-4 text-gray-500 transition-transform ${
+                            expandedFolders.has(folder.id) ? 'rotate-90' : ''
+                          }`} 
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                        <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                        </svg>
+                        <span>{folder.name}</span>
+                        <span className="ml-auto text-xs text-gray-500">({folder.pipelines.length})</span>
+                      </button>
+                    )}
 
-        {filteredFolders.length === 0 && (
-          <div className="text-center text-gray-500 text-sm py-8">
-            {searchTerm ? '검색 결과가 없습니다.' : '파이프라인이 없습니다.'}
-          </div>
-        )}
+                    {/* Pipelines */}
+                    {expandedFolders.has(folder.id) && (
+                      <div className="ml-6 space-y-1">
+                        {folder.pipelines.map(pipeline => (
+                          <button
+                            key={pipeline.id}
+                            onClick={() => onSelectPipeline?.(pipeline)}
+                            onContextMenu={(e) => handlePipelineRightClick(e, pipeline.id, pipeline.name, folder.id)}
+                            className={`w-full text-left p-2 rounded text-sm transition-colors ${
+                              selectedPipeline?.id === pipeline.id
+                                ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                                : 'hover:bg-gray-100 text-gray-700'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <svg className="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                              </svg>
+                              <span className="font-medium">{pipeline.name}</span>
+                              <span className="ml-auto text-xs text-gray-500">단계</span>
+                            </div>
+                            <div className="text-xs text-gray-500 truncate">
+                              {pipeline.description}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {filteredFolders.length === 0 && (
+                <div className="text-center text-gray-500 text-sm py-8">
+                  {searchTerm ? '검색 결과가 없습니다.' : '파이프라인이 없습니다.'}
+                </div>
+              )}
+            </>
+          )}
         </div>
         
         {/* 하단 그라이데이션 */}
@@ -594,7 +518,6 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
           <div className="absolute bottom-0 left-0 right-0 h-8 pointer-events-none bg-gradient-to-t from-white via-white/80 to-transparent" />
         )}
       </div>
-
 
       {/* New Folder Modal */}
       {showNewFolderModal && (
@@ -772,5 +695,3 @@ const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
     </div>
   );
 };
-
-export default PipelineSidebar;

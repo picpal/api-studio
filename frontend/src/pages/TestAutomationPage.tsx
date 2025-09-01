@@ -2,15 +2,15 @@ import React, { useCallback } from 'react';
 import { BaseUrl, ApiItem } from '../types/api';
 import { 
   ApiSelection,
-  TestExecution,
+  TestExecutionPanel,
   TestHistory,
   ExecutionDetailModal,
-  ExecutionReportModal,
   useTestAutomation,
   useTestExecution,
   useTestHistory
 } from '../features/test-automation';
 import { VariableInputModal } from '../widgets/api-testing/VariableInputModal';
+import { ExecutionReportModal } from '../widgets/test-execution';
 import { Pipeline } from '../services/pipelineApi';
 
 interface TestAutomationPageProps {
@@ -115,7 +115,7 @@ const TestAutomationPage: React.FC<TestAutomationPageProps> = ({
         {/* 우측/하단: 실행 영역과 결과 */}
         <div className="flex-1 flex flex-col lg:flex-row lg:min-h-0">
           {/* Test Execution */}
-          <TestExecution
+          <TestExecutionPanel
             selectedApis={selectedApis}
             selectedPipelines={selectedPipelines}
             activeTab={activeTab}

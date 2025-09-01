@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChatRoom, User } from '../entities/meeting';
+import { ChatRoom, User } from '../entities/meeting/types';
 import { useMeetingData } from '../features/meeting-management';
 import { ChatSidebar, ChatArea, InviteModal } from '../widgets/meeting';
 

@@ -8,6 +8,16 @@ export interface Pipeline {
   updatedAt: Date;
 }
 
+export interface PipelineFolder {
+  id: number;
+  name: string;
+  description?: string;
+  pipelines: Pipeline[];
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface PipelineStep {
   id: number;
   stepOrder: number;

@@ -5,7 +5,7 @@ interface VariableInputModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (variables: Record<string, string>) => void;
-  variableNames?: string[];
+  variableNames?: (string | TemplateVariable)[];
   templateVariables?: TemplateVariable[];
   title?: string;
 }
@@ -44,12 +44,13 @@ export const VariableInputModal: React.FC<VariableInputModalProps> = ({
             value: '',
             defaultValue: undefined
           };
-        } else if (typeof item === 'object' && item.name) {
+        } else if (typeof item === 'object' && item !== null && 'name' in item) {
           // 이미 TemplateVariable 객체인 경우
+          const templateVar = item as TemplateVariable;
           return {
-            name: item.name,
-            value: item.value || '',
-            defaultValue: item.defaultValue
+            name: templateVar.name,
+            value: templateVar.value || '',
+            defaultValue: templateVar.defaultValue
           };
         } else {
           return {

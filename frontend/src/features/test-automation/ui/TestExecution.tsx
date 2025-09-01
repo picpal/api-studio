@@ -1,56 +1,5 @@
 import React, { useState } from 'react';
-import { ValidationResult } from '../../../utils/responseValidation';
-
-export interface TestExecution {
-  id: string;
-  apiName: string;
-  method: string;
-  url: string;
-  status: 'pending' | 'running' | 'success' | 'failed';
-  responseTime?: number;
-  statusCode?: number;
-  error?: string;
-  timestamp: Date;
-  responseBody?: string;
-  responseHeaders?: Record<string, string>;
-  responseData?: any;
-  requestBody?: string;
-  requestHeaders?: Record<string, string>;
-  requestParams?: any;
-  validationResult?: ValidationResult;
-  validationEnabled?: boolean;
-  // Pipeline execution fields
-  type?: 'api' | 'pipeline';
-  pipelineId?: string;
-  stepExecutions?: PipelineStepExecution[];
-}
-
-export interface PipelineStepExecution {
-  id: string;
-  stepName: string;
-  stepOrder: number;
-  status: 'pending' | 'running' | 'success' | 'failed';
-  responseTime?: number;
-  statusCode?: number;
-  error?: string;
-  method: string;
-  url: string;
-  requestBody?: string;
-  requestHeaders?: Record<string, string>;
-  responseBody?: string;
-  responseHeaders?: Record<string, string>;
-  extractedData?: Record<string, any>;  // 추출된 변수들
-  injectedData?: Record<string, any>;   // 주입된 변수들
-  requestData?: string; // 실제 실행된 요청 데이터 (JSON 문자열)
-  responseData?: string; // 실제 실행된 응답 데이터
-  apiItem?: {
-    id: string;
-    name: string;
-    method: string;
-    url: string;
-    baseUrl?: string;
-  };
-}
+import { TestExecution, PipelineStepExecution } from '../../../entities/test-execution';
 
 interface TestExecutionProps {
   selectedApis: Set<string>;
@@ -63,7 +12,7 @@ interface TestExecutionProps {
   onShowReport: () => void;
 }
 
-export const TestExecution: React.FC<TestExecutionProps> = ({
+export const TestExecutionPanel: React.FC<TestExecutionProps> = ({
   selectedApis,
   selectedPipelines,
   activeTab,

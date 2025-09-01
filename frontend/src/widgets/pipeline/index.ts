@@ -1,4 +1,5 @@
 export { PipelineHeader } from './PipelineHeader';
+export { PipelineSidebar } from './PipelineSidebar';
 export { StepsList } from './StepsList';
 export { AddStepModal } from './AddStepModal';
 export { EditStepModal } from './EditStepModal';
