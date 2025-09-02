@@ -31,7 +31,7 @@ export const createFetchOptions = (options: RequestInit = {}): RequestInit => {
   const token = localStorage.getItem('token');
   
   return {
-    timeout: API_CONFIG.TIMEOUT,
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       ...(token && { 'Authorization': `Bearer ${token}` }),

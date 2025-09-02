@@ -442,7 +442,7 @@ public class ChatRoomService {
     }
     
     private MessageDTO getLastMessage(Long roomId) {
-        return messageRepository.findLastMessageByRoomId(roomId)
+        return messageRepository.findFirstByRoomIdAndIsDeletedFalseOrderByCreatedAtDesc(roomId)
             .map(this::convertMessageToDTO)
             .orElse(null);
     }

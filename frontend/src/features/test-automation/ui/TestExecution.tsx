@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { TestExecution, PipelineStepExecution } from '../../../entities/test-execution';
 
+export type { TestExecution, PipelineStepExecution };
+
 interface TestExecutionProps {
   selectedApis: Set<string>;
   selectedPipelines: Set<string>;

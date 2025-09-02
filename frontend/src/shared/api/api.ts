@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { BackendApiFolder, BackendApiItem, ApiFolder, ApiItem } from '../types/api';
+import { BackendApiFolder, BackendApiItem, ApiFolder, ApiItem } from '../../types/api';
 import { API_CONFIG } from '../config/api';
 
 const API_BASE_URL = API_CONFIG.API_URL;

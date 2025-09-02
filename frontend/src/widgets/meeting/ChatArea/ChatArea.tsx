@@ -38,6 +38,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const prevScrollHeight = useRef<number>(0);
+  const prevMessageCountRef = useRef<number>(0);
 
   const scrollToBottom = (immediate: boolean = false) => {
     if (immediate && messagesContainerRef.current) {
@@ -114,17 +115,31 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         setShowMessages(true);
       }
       
-      // 새 메시지 수신 시 맨 아래로 스크롤 (본인 메시지이거나 현재 하단에 있는 경우)
-      const container = messagesContainerRef.current;
-      if (container) {
-        const isAtBottom = container.scrollHeight - container.clientHeight <= container.scrollTop + 50;
-        const lastMessage = messages[messages.length - 1];
-        const isMyMessage = Number(lastMessage.senderId) === Number(currentUserId);
-        
-        if (isMyMessage || isAtBottom) {
-          scrollToBottom(false); // 새 메시지는 부드럽게 스크롤
+      // 새 메시지가 추가되었는지 확인
+      const hasNewMessage = messages.length > prevMessageCountRef.current;
+      
+      if (hasNewMessage) {
+        // 새 메시지 수신 시 맨 아래로 스크롤
+        const container = messagesContainerRef.current;
+        if (container) {
+          const isAtBottom = container.scrollHeight - container.clientHeight <= container.scrollTop + 100;
+          const lastMessage = messages[messages.length - 1];
+          const isMyMessage = lastMessage && Number(lastMessage.senderId) === Number(currentUserId);
+          
+          // 본인 메시지이거나 현재 하단 근처에 있으면 스크롤
+          if (isMyMessage || isAtBottom) {
+            // setTimeout으로 DOM 업데이트 이후 스크롤
+            setTimeout(() => {
+              if (messagesContainerRef.current) {
+                messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+              }
+            }, 100);
+          }
         }
       }
+      
+      // 현재 메시지 수 저장
+      prevMessageCountRef.current = messages.length;
     }
   }, [messages, room.id, currentUserId, isInitialLoad, loadingMore, showMessages]);
 

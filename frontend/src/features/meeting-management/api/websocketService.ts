@@ -9,17 +9,17 @@ class WebSocketService {
   private connectionCallbacks: ((connected: boolean) => void)[] = [];
   private roomInvitationCallbacks: ((room: any) => void)[] = [];
   private readStatusCallbacks: ((readStatus: any) => void)[] = [];
+  private notificationCallbacks: ((notification: any) => void)[] = [];
   private messageSubscription: any = null;
   private typingSubscription: any = null;
   private personalSubscription: any = null;
   private readStatusSubscription: any = null;
   private globalMessageSubscription: any = null;
+  private notificationSubscription: any = null;
 
   connect(onConnected?: () => void, onError?: (error: any) => void) {
     // withCredentials 옵션을 추가하여 쿠키를 포함
-    const socket = new SockJS('http://localhost:8080/ws', null, {
-      withCredentials: true
-    });
+    const socket = new SockJS('http://localhost:8080/ws');
     
     this.client = new Client({
       webSocketFactory: () => socket as any,
@@ -100,6 +100,15 @@ class WebSocketService {
       }
       this.globalMessageSubscription = null;
     }
+
+    if (this.notificationSubscription) {
+      try {
+        this.notificationSubscription.unsubscribe();
+      } catch (e) {
+        console.error('Error unsubscribing notification subscription:', e);
+      }
+      this.notificationSubscription = null;
+    }
     
     // 클라이언트가 활성 상태일 때만 퇴장 알림 및 deactivate
     if (this.client && this.client.active) {
@@ -125,7 +134,7 @@ class WebSocketService {
 
   joinRoom(roomId: number) {
     if (!this.client || !this.client.active) {
-      console.error('WebSocket is not connected');
+      console.warn('WebSocket is not connected, cannot join room:', roomId);
       return;
     }
 
@@ -263,6 +272,15 @@ class WebSocketService {
       console.log('Received global chat message:', messageData);
       this.messageCallbacks.forEach(callback => callback(messageData));
     });
+
+    // 시스템 알림 구독
+    console.log('🔔 Subscribing to /user/queue/notifications');
+    this.notificationSubscription = this.client.subscribe('/user/queue/notifications', (message: IMessage) => {
+      const notificationData = JSON.parse(message.body);
+      console.log('🔔 WebSocket received system notification:', notificationData);
+      console.log('🔔 Notification callbacks count:', this.notificationCallbacks.length);
+      this.notificationCallbacks.forEach(callback => callback(notificationData));
+    });
   }
 
   // 채팅방 초대 콜백 등록
@@ -283,6 +301,16 @@ class WebSocketService {
   // 읽음 상태 콜백 제거
   offReadStatusUpdate(callback: (readStatus: any) => void) {
     this.readStatusCallbacks = this.readStatusCallbacks.filter(cb => cb !== callback);
+  }
+
+  // 시스템 알림 콜백 등록
+  onNotification(callback: (notification: any) => void) {
+    this.notificationCallbacks.push(callback);
+  }
+
+  // 시스템 알림 콜백 제거
+  offNotification(callback: (notification: any) => void) {
+    this.notificationCallbacks = this.notificationCallbacks.filter(cb => cb !== callback);
   }
 
   isConnected(): boolean {

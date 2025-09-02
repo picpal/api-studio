@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Editor from '@monaco-editor/react';
+import LazyMonacoEditor from '../common/LazyMonacoEditor';
 import ParamsTable, { ParamItem } from './ParamsTable';
 import HeadersTable, { HeaderItem } from './HeadersTable';
 import ValidationTab, { ExpectedValue } from './ValidationTab';
@@ -184,11 +184,11 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
             </div>
             
             <div className="flex-1 border border-gray-300 rounded overflow-hidden">
-              <Editor
+              <LazyMonacoEditor
                 height="300px"
                 language={getMonacoLanguage(request.body)}
                 value={request.body}
-                onChange={(value) => onRequestChange(prev => ({...prev, body: value || ''}))}
+                onChange={(value) => onRequestChange({...request, body: value || ''})}
                 theme="light"
                 options={{
                   minimap: { enabled: false },

@@ -64,6 +64,9 @@ class GlobalNotificationService {
     // 전역 메시지 리스너 설정
     websocketService.onMessage(this.handleGlobalMessage.bind(this));
     websocketService.onRoomInvitation(this.handleRoomInvitation.bind(this));
+    
+    // 시스템 알림 리스너 추가
+    websocketService.onNotification(this.handleSystemNotification.bind(this));
   }
 
   private handleGlobalMessage(message: Message) {
@@ -86,6 +89,25 @@ class GlobalNotificationService {
 
   private handleRoomInvitation(room: any) {
     notificationService.showInvitationNotification(room.name);
+  }
+
+  private handleSystemNotification(notification: any) {
+    console.log('🔔 Global notification service received system notification:', notification);
+    
+    // 알림 타입에 따라 처리
+    if (notification.type === 'CHAT_MESSAGE') {
+      // Meeting 페이지에 있는지 확인
+      const isOnMeetingPage = window.location.pathname.includes('/meeting');
+      
+      // Meeting 페이지에 있지 않거나, 페이지가 포커스되지 않은 경우 알림 표시
+      if (!isOnMeetingPage || document.hidden) {
+        notificationService.showChatNotification(
+          notification.senderName || '알 수 없는 사용자',
+          notification.content,
+          notification.roomName || '채팅방'
+        );
+      }
+    }
   }
 
   private async showDesktopNotification(message: Message) {

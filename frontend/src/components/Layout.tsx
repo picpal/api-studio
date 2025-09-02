@@ -1,15 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './sidebar/SidebarRefactored';
 import { PipelineSidebar } from '../widgets/pipeline';
 import MainContent from './MainContent';
-import AdminPage from '../pages/AdminPage';
-import TestAutomationPage from '../pages/TestAutomationPage';
-import { PipelineManagementPage } from '../pages/pipeline';
-import { MeetingPage } from '../pages/MeetingPage';
 import { BaseUrl, ApiItem } from '../types/api';
 import { createApiUrl, createFetchOptions } from '../config/api';
+
+// 페이지 컴포넌트들을 동적 임포트
+const AdminPage = lazy(() => import('../pages/AdminPage'));
+const TestAutomationPage = lazy(() => import('../pages/TestAutomationPage'));
+const PipelineManagementPage = lazy(() => import('../pages/pipeline').then(module => ({ default: module.PipelineManagementPage })));
+const MeetingPage = lazy(() => import('../pages/MeetingPage').then(module => ({ default: module.MeetingPage })));
 
 interface LayoutProps {
   children?: React.ReactNode;
@@ -292,28 +294,31 @@ const Layout: React.FC<LayoutProps> = () => {
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-y-auto md:ml-0">
-          {currentPage === 'api-testing' ? (
-            <MainContent
-              baseUrls={baseUrls}
-              selectedItem={selectedItem}
-              onResetForm={handleResetForm}
-              onUpdateSelectedItem={handleUpdateSelectedItem}
-            />
-          ) : currentPage === 'test-automation' ? (
-            <TestAutomationPage
-              baseUrls={baseUrls}
-              selectedItem={selectedItem}
-              onResetForm={handleResetForm}
-              onUpdateSelectedItem={handleUpdateSelectedItem}
-            />
-          ) : currentPage === 'pipeline-management' ? (
-            <PipelineManagementPage 
-              selectedPipeline={selectedPipeline}
-              onPipelineUpdate={handlePipelineUpdate}
-            />
-          ) : (
-            <MeetingPage />
-          )}
+          <Suspense fallback={
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading...</p>
+              </div>
+            </div>
+          }>
+            {currentPage === 'api-testing' ? (
+              <MainContent
+                selectedItem={selectedItem}
+                onResetForm={handleResetForm}
+                onUpdateSelectedItem={handleUpdateSelectedItem}
+              />
+            ) : currentPage === 'test-automation' ? (
+              <TestAutomationPage />
+            ) : currentPage === 'pipeline-management' ? (
+              <PipelineManagementPage 
+                selectedPipeline={selectedPipeline}
+                onPipelineUpdate={handlePipelineUpdate}
+              />
+            ) : (
+              <MeetingPage />
+            )}
+          </Suspense>
         </div>
       </div>
 
@@ -336,7 +341,13 @@ const Layout: React.FC<LayoutProps> = () => {
                 </button>
               </div>
               <div className="max-h-[80vh] overflow-y-auto">
-                <AdminPage />
+                <Suspense fallback={
+                  <div className="flex items-center justify-center p-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>
+                }>
+                  <AdminPage />
+                </Suspense>
               </div>
             </div>
           </div>

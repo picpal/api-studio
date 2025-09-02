@@ -76,7 +76,10 @@ export const usePipelineFolder = () => {
 
   const updateFolder = async (folderId: number, updates: { name?: string; description?: string }) => {
     try {
-      const updatedFolder = await pipelineApi.updateFolder(folderId, updates);
+      if (!updates.name) {
+        throw new Error('Name is required for updating folder');
+      }
+      const updatedFolder = await pipelineApi.updateFolder(folderId, { name: updates.name, description: updates.description });
       setFolders(prev => 
         prev.map(folder => 
           folder.id === folderId 

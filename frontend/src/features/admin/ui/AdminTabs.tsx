@@ -1,6 +1,5 @@
 import React from 'react';
-
-export type AdminTab = 'users' | 'permissions' | 'activities' | 'api-keys';
+import { AdminTab } from '../model/useAdminTabs';
 
 interface AdminTabsProps {
   activeTab: AdminTab;

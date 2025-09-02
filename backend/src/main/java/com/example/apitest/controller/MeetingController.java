@@ -168,7 +168,7 @@ public class MeetingController {
             log.warn("메시지 조회 요청 데이터 오류: roomId={}, userId={}, error={}", roomId, user.getId(), e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         } catch (Exception e) {
-            log.error("메시지 조회 중 오류 발생: roomId={}, userId={}, error={}", roomId, user.getId(), e.getMessage());
+            log.error("메시지 조회 중 오류 발생: roomId={}, userId={}", roomId, user.getId(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

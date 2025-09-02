@@ -49,7 +49,7 @@ interface CreateFolderRequest {
 
 interface CreatePipelineRequest {
   name: string;
-  description: string;
+  description?: string;
   folderId: number;
 }
 

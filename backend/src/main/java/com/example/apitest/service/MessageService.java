@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -63,7 +64,7 @@ public class MessageService {
             messagePage = messageRepository.findMessagesByRoomId(roomId, pageable);
         }
         
-        List<Message> messages = messagePage.getContent();
+        List<Message> messages = new ArrayList<>(messagePage.getContent());
         
         // 최신 메시지부터 역순으로 정렬된 상태를 시간순으로 뒤집음
         Collections.reverse(messages);

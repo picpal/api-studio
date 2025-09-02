@@ -30,7 +30,7 @@ const HistorySelector: React.FC<HistorySelectorProps> = ({ selectedHistoryId, ha
               },
               ...historyList.map((history) => ({
                 value: history.id,
-                label: `${history.historyName} (${new Date(history.savedAt).toLocaleDateString()})`
+                label: `${history.name} (${new Date(history.savedAt).toLocaleDateString()})`
               }))
             ]}
           />

@@ -40,7 +40,7 @@ const AppContent: React.FC = () => {
   }
 
   if (!isAuthenticated) {
-    return <Login onLoginSuccess={login} />;
+    return <Login onLoginSuccess={() => {}} />;
   }
 
   return <Layout />;

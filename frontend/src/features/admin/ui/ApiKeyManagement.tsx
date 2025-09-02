@@ -52,19 +52,16 @@ export const ApiKeyManagement: React.FC<ApiKeyManagementProps> = ({
     
     setLoading(true);
     try {
-      const response = await fetch(createApiUrl('/admin/api-keys'), {
-        ...createFetchOptions({
-          method: 'POST',
-          credentials: 'include',
-          body: JSON.stringify({
-            userId: selectedUser,
-            keyName,
-            description,
-            allowedFolderIds: selectedFolders,
-            expiresAt: expiresAt || null
-          })
+      const response = await fetch(createApiUrl('/admin/api-keys'), createFetchOptions({
+        method: 'POST',
+        body: JSON.stringify({
+          userId: selectedUser,
+          keyName,
+          description,
+          allowedFolderIds: selectedFolders,
+          expiresAt: expiresAt || null
         })
-      });
+      }));
 
       if (response.ok) {
         const data = await response.json();
@@ -81,11 +78,7 @@ export const ApiKeyManagement: React.FC<ApiKeyManagementProps> = ({
 
   const loadApiKeys = async () => {
     try {
-      const response = await fetch(createApiUrl('/admin/api-keys'), {
-        ...createFetchOptions({
-          credentials: 'include'
-        })
-      });
+      const response = await fetch(createApiUrl('/admin/api-keys'), createFetchOptions());
       if (response.ok) {
         const data = await response.json();
         setApiKeys(data);
@@ -101,12 +94,9 @@ export const ApiKeyManagement: React.FC<ApiKeyManagementProps> = ({
     }
     
     try {
-      const response = await fetch(createApiUrl(`/admin/api-keys/${keyId}`), {
-        ...createFetchOptions({
-          method: 'DELETE',
-          credentials: 'include'
-        })
-      });
+      const response = await fetch(createApiUrl(`/admin/api-keys/${keyId}`), createFetchOptions({
+        method: 'DELETE'
+      }));
       if (response.ok) {
         loadApiKeys();
       }

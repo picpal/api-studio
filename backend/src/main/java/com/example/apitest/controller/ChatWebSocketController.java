@@ -58,26 +58,30 @@ public class ChatWebSocketController {
             // 해당 채팅방을 구독하는 모든 클라이언트에게 메시지 전송 (기존 방식 유지)
             messagingTemplate.convertAndSend("/topic/room/" + roomId, savedMessage);
             
-            // 채팅방의 모든 참여자에게 개인 큐로 메시지 전송 (알림용)
+            // 채팅방의 모든 참여자에게 개인 큐로 메시지 전송 (시스템 알림용)
+            // 현재 채팅방에 접속하지 않은 사용자들에게만 알림 전송
             try {
                 var roomInfo = chatRoomService.getRoomById(roomId, user.getId());
+                log.info("채팅방 참여자 수: {}, 채팅방 ID: {}", roomInfo.getParticipants().size(), roomId);
+                
                 for (var participant : roomInfo.getParticipants()) {
                     String participantEmail = getUserEmail(participant.getUserId());
                     if (participantEmail != null && !participantEmail.equals("unknown@example.com")) {
                         // 본인에게는 전송하지 않음
                         if (!participant.getUserId().equals(user.getId())) {
+                            // 시스템 알림: 로그인되어 있지만 현재 채팅방에 접속하지 않은 사용자들에게 전송
                             messagingTemplate.convertAndSendToUser(
                                 participantEmail,
-                                "/queue/chat-messages",
-                                savedMessage
+                                "/queue/notifications",
+                                createNotificationMessage(savedMessage, roomInfo.getName())
                             );
-                            log.debug("개인 큐로 메시지 전송: participantEmail={}, messageId={}", 
-                                     participantEmail, savedMessage.getId());
+                            log.info("시스템 알림 전송: participantEmail={}, messageId={}, roomName={}", 
+                                     participantEmail, savedMessage.getId(), roomInfo.getName());
                         }
                     }
                 }
             } catch (Exception e) {
-                log.warn("개인 큐로 메시지 전송 중 오류 (무시됨): {}", e.getMessage());
+                log.error("시스템 알림 전송 중 오류: ", e);
             }
             
             log.info("메시지 브로드캐스트 완료: roomId={}, messageId={}", roomId, savedMessage.getId());
@@ -131,6 +135,19 @@ public class ChatWebSocketController {
         return userRepository.findById(userId)
             .map(User::getEmail)
             .orElse("unknown@example.com");
+    }
+    
+    // 시스템 알림 메시지 생성
+    private java.util.Map<String, Object> createNotificationMessage(MessageDTO message, String roomName) {
+        java.util.Map<String, Object> notification = new java.util.HashMap<>();
+        notification.put("type", "CHAT_MESSAGE");
+        notification.put("roomId", message.getRoomId());
+        notification.put("roomName", roomName);
+        notification.put("senderName", message.getSenderName());
+        notification.put("content", message.getContent());
+        notification.put("messageId", message.getId());
+        notification.put("timestamp", java.time.LocalDateTime.now());
+        return notification;
     }
 
     /**

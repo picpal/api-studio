@@ -1,10 +1,10 @@
 import React from 'react';
-import ActivityLogs from '../components/ActivityLogs';
 import {
   AdminTabs,
   UserManagement,
   FolderPermissions,
   ApiKeyManagement,
+  ActivityLogs,
   useAdminTabs,
   useAdminUsers,
   useAdminPermissions
@@ -12,7 +12,10 @@ import {
 
 const AdminPage: React.FC = () => {
   // Tab 상태 관리
-  const { activeTab, handleTabChange } = useAdminTabs();
+  const { activeTab, handleTabChange }: {
+    activeTab: 'users' | 'permissions' | 'activities' | 'api-keys';
+    handleTabChange: (tab: 'users' | 'permissions' | 'activities' | 'api-keys') => void;
+  } = useAdminTabs();
 
   // Users 상태 관리
   const {

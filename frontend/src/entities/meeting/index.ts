@@ -1,1 +1,1 @@
-export type { User, Message, ChatRoom, Participant, DMRoom } from './types';
+export type { User, Message, ChatRoom, Participant, DMRoom, CreateRoomRequest, SendMessageRequest } from './types';

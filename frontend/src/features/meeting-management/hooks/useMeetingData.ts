@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { ChatRoom, Message, CreateRoomRequest, User } from '../../../entities/meeting';
 import { chatApi } from '../api/chatApi';
 import { websocketService } from '../api/websocketService';
-import { notificationService } from '../../../shared/lib/notification';
+import { notificationService } from '../../../shared/services/notificationService';
 
 export const useMeetingData = () => {
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
@@ -96,11 +96,26 @@ export const useMeetingData = () => {
       // 현재 방 설정
       currentRoomRef.current = roomId;
       
-      // WebSocket 방 참가는 연결 상태 변경 시에만 처리하도록 수정
-      // 즉시 참가 시도하지 않고 연결이 완료되면 자동으로 참가하도록 함
+      // WebSocket이 연결되어 있으면 즉시 참가, 아니면 연결 대기
+      if (websocketService.isConnected()) {
+        try {
+          websocketService.joinRoom(roomId);
+        } catch (err) {
+          console.warn('Failed to join room, will retry when WebSocket connects:', err);
+          // WebSocket 연결 후 자동으로 참가됨
+        }
+      } else {
+        console.log('WebSocket not connected yet, will join room when connected');
+        // currentRoomRef.current이 설정되어 있으므로 연결 완료 시 자동으로 참가됨
+      }
     } catch (err: any) {
       console.error('Failed to load messages:', err);
-      setError(err.response?.data?.message || '메시지를 불러올 수 없습니다.');
+      if (err.response?.status === 403) {
+        setError('이 채팅방에 접근 권한이 없습니다. 초대를 받아야 참여할 수 있습니다.');
+        setMessages([]);
+      } else {
+        setError(err.response?.data?.message || '메시지를 불러올 수 없습니다.');
+      }
     } finally {
       setLoading(false);
     }
@@ -243,32 +258,57 @@ export const useMeetingData = () => {
 
   // WebSocket 연결 및 메시지 리스너 설정
   useEffect(() => {
-    // WebSocket 연결
-    websocketService.connect(
-      () => {
-        console.log('WebSocket connected');
-        setWsConnected(true);
-        
-        // 연결 성공 시 현재 채팅방에 참가 (안전하게)
-        if (currentRoomRef.current) {
-          try {
-            websocketService.joinRoom(currentRoomRef.current);
-          } catch (err) {
-            console.warn('Failed to join room after WebSocket connection:', err);
-          }
+    // WebSocket이 이미 연결되어 있는지 확인 (globalNotificationService에서 연결했을 수 있음)
+    if (websocketService.isConnected()) {
+      console.log('WebSocket already connected by global service');
+      setWsConnected(true);
+      
+      // 이미 연결되어 있으면 현재 채팅방에 참가
+      if (currentRoomRef.current) {
+        try {
+          console.log('Joining room with existing connection:', currentRoomRef.current);
+          websocketService.joinRoom(currentRoomRef.current);
+        } catch (err) {
+          console.warn('Failed to join room:', err);
         }
-      },
-      (error) => {
-        console.error('WebSocket connection error:', error);
-        setWsConnected(false);
       }
-    );
+    } else {
+      // WebSocket이 연결되어 있지 않으면 연결 (백업용, 실제로는 globalNotificationService가 처리해야 함)
+      console.log('WebSocket not connected, connecting from useMeetingData (backup)');
+      websocketService.connect(
+        () => {
+          console.log('WebSocket connected from useMeetingData');
+          setWsConnected(true);
+          
+          // 연결 성공 시 현재 채팅방에 참가 (안전하게)
+          if (currentRoomRef.current) {
+            try {
+              console.log('Auto-joining room after WebSocket connection:', currentRoomRef.current);
+              websocketService.joinRoom(currentRoomRef.current);
+            } catch (err) {
+              console.warn('Failed to join room after WebSocket connection:', err);
+            }
+          }
+        },
+        (error) => {
+          console.error('WebSocket connection error:', error);
+          setWsConnected(false);
+        }
+      );
+    }
 
     // 메시지 수신 리스너
     const handleNewMessage = (message: Message) => {
       // 현재 채팅방에 있는 경우에만 메시지 목록에 추가
       if (currentRoomRef.current === message.roomId) {
-        setMessages(prev => [...prev, message]);
+        setMessages(prev => {
+          // 중복 체크 (같은 메시지가 이미 있는지 확인)
+          const exists = prev.some(m => m.id === message.id);
+          if (exists) {
+            return prev;
+          }
+          return [...prev, message];
+        });
       }
       
       // 채팅방 목록의 lastMessage와 unreadCount 업데이트
@@ -320,6 +360,17 @@ export const useMeetingData = () => {
     // 연결 상태 리스너
     const handleConnectionChange = (connected: boolean) => {
       setWsConnected(connected);
+      console.log('WebSocket connection changed:', connected);
+      
+      // 연결이 완료되고 현재 채팅방이 있으면 자동으로 참가
+      if (connected && currentRoomRef.current) {
+        console.log('WebSocket connected, auto-joining room:', currentRoomRef.current);
+        try {
+          websocketService.joinRoom(currentRoomRef.current);
+        } catch (err) {
+          console.warn('Failed to auto-join room after connection:', err);
+        }
+      }
     };
 
     // 채팅방 초대 리스너 (실시간 채팅방 목록 업데이트)
@@ -347,10 +398,48 @@ export const useMeetingData = () => {
       // 예: 메시지 목록에서 읽음 표시 업데이트, 안읽은 메시지 수 업데이트 등
     };
 
+    // 시스템 알림 리스너
+    const handleNotification = (notification: any) => {
+      console.log('🔔 Received system notification:', notification);
+      console.log('Current room:', currentRoomRef.current);
+      console.log('Notification room:', notification.roomId);
+      
+      if (notification.type === 'CHAT_MESSAGE') {
+        // 테스트를 위해 알림을 항상 표시 (조건 제거)
+        console.log('Showing notification...');
+        notificationService.showChatNotification(
+          notification.senderName || '알 수 없는 사용자',
+          notification.content,
+          notification.roomName || '채팅방'
+        );
+        
+        // 채팅방 목록의 unreadCount 업데이트
+        setChatRooms(prev => prev.map(room => {
+          if (room.id === notification.roomId) {
+            return {
+              ...room,
+              unreadCount: room.unreadCount + 1,
+              lastMessage: {
+                id: notification.messageId,
+                roomId: notification.roomId,
+                senderId: 0, // 실제 senderId는 서버에서 전송하지 않음
+                senderName: notification.senderName,
+                content: notification.content,
+                messageType: 'TEXT' as const,
+                createdAt: notification.timestamp
+              }
+            };
+          }
+          return room;
+        }));
+      }
+    };
+
     websocketService.onMessage(handleNewMessage);
     websocketService.onConnectionChange(handleConnectionChange);
     websocketService.onRoomInvitation(handleRoomInvitation);
     websocketService.onReadStatusUpdate(handleReadStatusUpdate);
+    websocketService.onNotification(handleNotification);
 
     // 페이지 포커스 시 현재 채팅방 읽음 처리
     const handleVisibilityChange = () => {
@@ -373,16 +462,53 @@ export const useMeetingData = () => {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // Cleanup
+    // Cleanup - 리스너만 제거하고 WebSocket 연결은 유지 (전역 관리)
     return () => {
       websocketService.offMessage(handleNewMessage);
       websocketService.offConnectionChange(handleConnectionChange);
       websocketService.offRoomInvitation(handleRoomInvitation);
       websocketService.offReadStatusUpdate(handleReadStatusUpdate);
+      websocketService.offNotification(handleNotification);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      websocketService.disconnect();
+      
+      // 현재 채팅방에서 나가기 (연결은 유지)
+      if (currentRoomRef.current) {
+        websocketService.leaveRoom(currentRoomRef.current);
+        currentRoomRef.current = null;
+      }
+      // websocketService.disconnect(); // 제거 - 전역에서 관리
     };
   }, []);
+
+  // chatRooms 변경 시 WebSocket 메시지 핸들러 재등록 (알림용)
+  useEffect(() => {
+    const handleNewMessageForNotification = (message: Message) => {
+      // 데스크톱 알림 표시 (본인 메시지가 아니고 시스템 메시지가 아닌 경우)
+      const shouldShowNotification = 
+        message.messageType !== 'SYSTEM' &&
+        message.senderId !== 0 &&
+        (!currentUser || message.senderId !== currentUser.id) &&
+        (currentRoomRef.current !== message.roomId || document.hidden);
+
+      if (shouldShowNotification) {
+        // 해당 채팅방 정보 찾기
+        const messageRoom = chatRooms.find(room => room.id === message.roomId);
+        const roomName = messageRoom?.name || '채팅방';
+        
+        notificationService.showChatNotification(
+          message.senderName || '알 수 없는 사용자',
+          message.content,
+          roomName
+        );
+      }
+    };
+
+    websocketService.onMessage(handleNewMessageForNotification);
+
+    return () => {
+      websocketService.offMessage(handleNewMessageForNotification);
+    };
+  }, [chatRooms, currentUser]);
 
   // 컴포넌트 마운트 시 데이터 로드
   useEffect(() => {

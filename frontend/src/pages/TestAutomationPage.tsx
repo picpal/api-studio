@@ -13,19 +13,7 @@ import { VariableInputModal } from '../widgets/api-testing/VariableInputModal';
 import { ExecutionReportModal } from '../widgets/test-execution';
 import { Pipeline } from '../services/pipelineApi';
 
-interface TestAutomationPageProps {
-  baseUrls: BaseUrl[];
-  selectedItem: ApiItem | null;
-  onResetForm: () => void;
-  onUpdateSelectedItem: (updatedItem: Partial<ApiItem>) => void;
-}
-
-const TestAutomationPage: React.FC<TestAutomationPageProps> = ({ 
-  baseUrls, 
-  selectedItem, 
-  onResetForm, 
-  onUpdateSelectedItem 
-}) => {
+const TestAutomationPage: React.FC = () => {
   // Pipeline state management
   const [selectedPipelines, setSelectedPipelines] = React.useState<Set<string>>(new Set());
   const [pipelineList, setPipelineList] = React.useState<Pipeline[]>([]);

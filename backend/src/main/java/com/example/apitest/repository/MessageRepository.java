@@ -39,14 +39,7 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     /**
      * 특정 채팅방의 마지막 메시지 조회
      */
-    @Query("""
-        SELECT m FROM Message m 
-        WHERE m.roomId = :roomId 
-        AND m.isDeleted = false 
-        ORDER BY m.createdAt DESC 
-        LIMIT 1
-        """)
-    Optional<Message> findLastMessageByRoomId(@Param("roomId") Long roomId);
+    Optional<Message> findFirstByRoomIdAndIsDeletedFalseOrderByCreatedAtDesc(Long roomId);
     
     /**
      * 특정 사용자가 마지막으로 읽은 메시지 이후의 읽지 않은 메시지 수 조회

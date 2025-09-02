@@ -39,7 +39,7 @@ export const ApiRequestPanel: React.FC<ApiRequestPanelProps> = ({
       <div className="flex items-center">
         <Select
           value={request.method}
-          onChange={(e) => onMethodChange(e.target.value)}
+          onChange={(e) => onMethodChange(e.target.value as "GET" | "POST" | "PUT" | "DELETE" | "PATCH")}
           className={`border-0 text-xs font-bold ${getMethodColor(request.method)}`}
           options={[
             { value: 'GET', label: 'GET' },
