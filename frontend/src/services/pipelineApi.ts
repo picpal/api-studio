@@ -160,8 +160,13 @@ export const pipelineApi = {
     };
   },
 
-  async updatePipeline(id: string, pipelineData: Partial<CreatePipelineRequest>): Promise<Pipeline> {
-    const response = await apiClient.put(`/pipelines/${id}`, pipelineData);
+  async updatePipeline(id: number, pipelineData: Partial<CreatePipelineRequest>): Promise<Pipeline> {
+    // 백엔드에서 folderId는 받지 않으므로 제외하고 전송
+    const updateData = {
+      name: pipelineData.name,
+      description: pipelineData.description
+    };
+    const response = await apiClient.put(`/pipelines/${id}`, updateData);
     const pipeline = response.data;
     return {
       ...pipeline,

@@ -176,9 +176,10 @@ const Layout: React.FC<LayoutProps> = () => {
   };
 
   const handlePipelineUpdate = async () => {
-    // 서버에서 최신 Pipeline 데이터를 가져와서 상태 업데이트
+    // 파이프라인 업데이트 후 전체 데이터 새로고침
     if (selectedPipeline) {
       try {
+        // 1. 메인 화면용 selectedPipeline 업데이트
         const response = await fetch(createApiUrl(`/pipelines/${selectedPipeline.id}`), {
           ...createFetchOptions({
             credentials: 'include'
@@ -186,12 +187,16 @@ const Layout: React.FC<LayoutProps> = () => {
         });
         if (response.ok) {
           const updatedPipeline = await response.json();
-          setSelectedPipeline(updatedPipeline); // 서버에서 가져온 최신 데이터로 업데이트
+          setSelectedPipeline(updatedPipeline);
         }
       } catch (error) {
         // Error refreshing pipeline data
       }
     }
+    
+    // 2. 사이드바 파이프라인 목록도 새로고침 (전역 이벤트로 알림)
+    console.log('Dispatching pipeline-updated event');
+    window.dispatchEvent(new CustomEvent('pipeline-updated'));
   };
 
   return (

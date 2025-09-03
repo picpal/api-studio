@@ -43,7 +43,7 @@ export const usePipelineFolder = () => {
     }
   }, [isAuthenticated, authLoading, authReady]);
 
-  // auth-error 이벤트 리스너
+  // auth-error 및 pipeline-updated 이벤트 리스너
   useEffect(() => {
     const handleAuthError = () => {
       setFolders([]);
@@ -51,12 +51,22 @@ export const usePipelineFolder = () => {
       setLoading(false);
     };
 
+    const handlePipelineUpdated = () => {
+      // 파이프라인 업데이트 시 사이드바 데이터 새로고침
+      console.log('Received pipeline-updated event, refreshing sidebar data');
+      if (isAuthenticated && !authLoading && authReady) {
+        loadFolders();
+      }
+    };
+
     window.addEventListener('auth-error', handleAuthError);
+    window.addEventListener('pipeline-updated', handlePipelineUpdated);
 
     return () => {
       window.removeEventListener('auth-error', handleAuthError);
+      window.removeEventListener('pipeline-updated', handlePipelineUpdated);
     };
-  }, []);
+  }, [isAuthenticated, authLoading, authReady]);
 
   const toggleFolder = (folderId: number) => {
     const newExpanded = new Set(expandedFolders);
@@ -109,16 +119,29 @@ export const usePipelineFolder = () => {
       if (!updates.name) {
         throw new Error('Name is required for updating folder');
       }
-      const updatedFolder = await pipelineApi.updateFolder(folderId, { name: updates.name, description: updates.description });
+      
+      // 1. 낙관적 업데이트 (즉시 UI 반영)
       setFolders(prev => 
         prev.map(folder => 
           folder.id === folderId 
-            ? { ...folder, ...updatedFolder }
+            ? { ...folder, name: updates.name || folder.name, description: updates.description || folder.description }
             : folder
         )
       );
-      return updatedFolder;
+      
+      // 2. 백그라운드에서 서버 업데이트
+      await pipelineApi.updateFolder(folderId, { name: updates.name, description: updates.description });
+      
+      // 3. 조용한 백그라운드 새로고침 (pipelines 포함한 최신 데이터)
+      const foldersData = await pipelineApi.getFolders();
+      setFolders(foldersData);
+      // 확장 상태도 유지
+      setExpandedFolders(new Set(foldersData.map(f => f.id)));
+      
+      return { name: updates.name, description: updates.description };
     } catch (error) {
+      // 4. 실패 시 원복 (전체 데이터 새로고침)
+      await loadFolders();
       console.error('Failed to update folder:', error);
       throw error;
     }

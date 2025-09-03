@@ -1,5 +1,6 @@
 package com.example.apitest.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
@@ -20,7 +21,7 @@ public class Pipeline {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "folder_id", insertable = false, updatable = false)
-    @JsonIgnoreProperties("pipelines")
+    @JsonIgnore
     private PipelineFolder folder;
 
     @Column(name = "folder_id")

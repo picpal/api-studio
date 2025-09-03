@@ -88,10 +88,13 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
   // 모달 상태
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+  const [createFolderError, setCreateFolderError] = useState<string | null>(null);
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [renameFolderName, setRenameFolderName] = useState('');
+  const [renameFolderError, setRenameFolderError] = useState<string | null>(null);
   const [showRenameItemModal, setShowRenameItemModal] = useState(false);
   const [renameItemName, setRenameItemName] = useState('');
+  const [renameItemError, setRenameItemError] = useState<string | null>(null);
 
   // 컨텍스트 메뉴 상태
   const [contextMenu, setContextMenu] = useState<{
@@ -189,12 +192,13 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
   // 폴더 생성 핸들러
   const handleNewFolder = () => {
     setNewFolderName('');
+    setCreateFolderError(null);
     setShowCreateFolderModal(true);
   };
 
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) {
-      setError('폴더 이름을 입력해주세요.');
+      setCreateFolderError('폴더 이름을 입력해주세요.');
       return;
     }
 
@@ -202,14 +206,16 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
       await createFolder(newFolderName);
       setShowCreateFolderModal(false);
       setNewFolderName('');
+      setCreateFolderError(null);
     } catch (error) {
-      // 에러는 useSidebar에서 처리됨
+      setCreateFolderError('폴더 생성에 실패했습니다.');
     }
   };
 
   const cancelCreateFolder = () => {
     setShowCreateFolderModal(false);
     setNewFolderName('');
+    setCreateFolderError(null);
   };
 
   // 새 아이템 생성
@@ -375,6 +381,7 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
   const handleRename = () => {
     if (contextMenu) {
       setRenameFolderName(contextMenu.folderName);
+      setRenameFolderError(null);
       setShowRenameModal(true);
       setRenamingFolder({
         folderId: contextMenu.folderId,
@@ -386,13 +393,13 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
 
   const handleRenameFolderConfirm = async () => {
     if (!renameFolderName.trim()) {
-      setError('폴더 이름을 입력해주세요.');
+      setRenameFolderError('폴더 이름을 입력해주세요.');
       return;
     }
 
     const folderId = renamingFolder?.folderId;
     if (!folderId) {
-      setError('폴더 정보를 찾을 수 없습니다.');
+      setRenameFolderError('폴더 정보를 찾을 수 없습니다.');
       return;
     }
 
@@ -400,6 +407,7 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
       await renameFolder(folderId, renameFolderName);
       setShowRenameModal(false);
       setRenameFolderName('');
+      setRenameFolderError(null);
       setRenamingFolder(null);
       
       // Layout 컴포넌트에 폴더 업데이트 알림
@@ -407,13 +415,14 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
         onFolderUpdate(folderId, renameFolderName.trim());
       }
     } catch (error) {
-      // 에러는 useSidebar에서 처리됨
+      setRenameFolderError('폴더 이름 변경에 실패했습니다.');
     }
   };
 
   const cancelRename = () => {
     setShowRenameModal(false);
     setRenameFolderName('');
+    setRenameFolderError(null);
     setRenamingFolder(null);
   };
 
@@ -421,6 +430,7 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
   const handleItemRename = () => {
     if (itemContextMenu) {
       setRenameItemName(itemContextMenu.itemName);
+      setRenameItemError(null);
       setShowRenameItemModal(true);
       setRenamingItem({
         itemId: itemContextMenu.itemId,
@@ -433,13 +443,13 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
 
   const handleRenameItemConfirm = async () => {
     if (!renameItemName.trim()) {
-      setError('아이템 이름을 입력해주세요.');
+      setRenameItemError('아이템 이름을 입력해주세요.');
       return;
     }
 
     const itemId = renamingItem?.itemId;
     if (!itemId) {
-      setError('아이템 정보를 찾을 수 없습니다.');
+      setRenameItemError('아이템 정보를 찾을 수 없습니다.');
       return;
     }
 
@@ -447,6 +457,7 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
       await renameItem(itemId, renameItemName);
       setShowRenameItemModal(false);
       setRenameItemName('');
+      setRenameItemError(null);
       setRenamingItem(null);
       
       // Layout 컴포넌트에 아이템 업데이트 알림
@@ -454,13 +465,14 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
         onItemUpdate(itemId, renameItemName.trim());
       }
     } catch (error) {
-      // 에러는 useSidebar에서 처리됨
+      setRenameItemError('아이템 이름 변경에 실패했습니다.');
     }
   };
 
   const cancelRenameItem = () => {
     setShowRenameItemModal(false);
     setRenameItemName('');
+    setRenameItemError(null);
     setRenamingItem(null);
   };
 
@@ -673,7 +685,7 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
               onConfirm={handleCreateFolder}
               onCancel={cancelCreateFolder}
               confirmText="Create"
-              error={error}
+              error={createFolderError}
             />
 
             <Modal
@@ -685,7 +697,7 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
               onConfirm={handleRenameFolderConfirm}
               onCancel={cancelRename}
               confirmText="Rename"
-              error={error}
+              error={renameFolderError}
             />
 
             <Modal
@@ -697,7 +709,7 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
               onConfirm={handleRenameItemConfirm}
               onCancel={cancelRenameItem}
               confirmText="Rename"
-              error={error}
+              error={renameItemError}
             />
 
             {/* Context Menus */}
@@ -870,7 +882,7 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
             onConfirm={handleCreateFolder}
             onCancel={cancelCreateFolder}
             confirmText="Create"
-            error={error}
+            error={createFolderError}
           />
 
           <Modal
@@ -882,7 +894,7 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
             onConfirm={handleRenameFolderConfirm}
             onCancel={cancelRename}
             confirmText="Rename"
-            error={error}
+            error={renameFolderError}
           />
 
           <Modal
@@ -894,7 +906,7 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
             onConfirm={handleRenameItemConfirm}
             onCancel={cancelRenameItem}
             confirmText="Rename"
-            error={error}
+            error={renameItemError}
           />
 
           {/* Context Menus */}
