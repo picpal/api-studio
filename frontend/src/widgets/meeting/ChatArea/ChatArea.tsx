@@ -380,7 +380,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               onClick={handleSend}
               disabled={!message.trim() || loading}
             >
-              {loading ? '전송중...' : '전송'}
+              {loading ? 'Loading...' : '전송'}
             </Button>
           </div>
         </div>

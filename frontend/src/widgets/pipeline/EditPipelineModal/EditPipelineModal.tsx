@@ -123,7 +123,7 @@ export const EditPipelineModal: React.FC<EditPipelineModalProps> = ({
             disabled={!name.trim() || loading || isUpdating}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
           >
-            {loading || isUpdating ? '저장 중...' : '저장'}
+            {loading || isUpdating ? 'Loading...' : '저장'}
           </button>
         </div>
       </div>

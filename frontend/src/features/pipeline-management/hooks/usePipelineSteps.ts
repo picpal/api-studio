@@ -14,7 +14,13 @@ export const usePipelineSteps = (pipelineId?: number) => {
     try {
       const data = await pipelineApi.fetchSteps(id);
       setSteps(data);
-    } catch (err) {
+    } catch (err: any) {
+      console.error('Failed to fetch steps:', err);
+      // 403 에러는 인증 문제일 수 있으므로 별도 처리하지 않음 (인터셉터에서 처리됨)
+      if (err.response?.status === 403) {
+        setLoading(false);
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Failed to fetch steps');
     } finally {
       setLoading(false);

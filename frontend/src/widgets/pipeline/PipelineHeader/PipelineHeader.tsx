@@ -63,7 +63,7 @@ export const PipelineHeader: React.FC<PipelineHeaderProps> = ({ pipeline, actual
               {stepsLoading ? (
                 <span className="flex items-center gap-1">
                   <div className="animate-spin w-3 h-3 border border-gray-400 border-t-transparent rounded-full"></div>
-                  로딩 중...
+                  Loading...
                 </span>
               ) : (
                 `${actualStepCount ?? pipeline.stepCount}개 단계`
@@ -80,7 +80,7 @@ export const PipelineHeader: React.FC<PipelineHeaderProps> = ({ pipeline, actual
             {stepsLoading ? (
               <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg">
                 <div className="animate-spin w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full"></div>
-                <span className="text-sm text-gray-600">로딩 중...</span>
+                <span className="text-sm text-gray-600">Loading...</span>
               </div>
             ) : (
               <div className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg font-semibold">

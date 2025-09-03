@@ -287,7 +287,7 @@ export const ApiKeyManagement: React.FC<ApiKeyManagementProps> = ({
                 disabled={loading || !selectedUser || !keyName.trim()}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
               >
-                {loading ? '생성 중...' : 'API 키 생성'}
+                {loading ? 'Loading...' : 'API 키 생성'}
               </button>
             </div>
           </div>

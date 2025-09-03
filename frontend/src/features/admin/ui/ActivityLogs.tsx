@@ -208,7 +208,10 @@ export const ActivityLogs: React.FC = () => {
       {/* 활동 로그 테이블 */}
       {loading ? (
         <div className="flex justify-center items-center py-12">
-          <div className="text-gray-600">로딩 중...</div>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <div className="text-gray-600">Loading...</div>
+          </div>
         </div>
       ) : totalElements === 0 && !loading ? (
         <div className="flex justify-center items-center py-12">

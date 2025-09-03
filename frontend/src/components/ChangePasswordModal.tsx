@@ -151,7 +151,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen, onClo
               className="flex-1 px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
               disabled={loading}
             >
-              {loading ? '변경 중...' : '변경'}
+              {loading ? 'Loading...' : '변경'}
             </button>
           </div>
         </form>

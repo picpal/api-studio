@@ -28,6 +28,10 @@ export const useMeetingData = () => {
       }
     } catch (err: any) {
       console.error('Failed to load current user:', err);
+      // 401/403 에러는 인증 문제이므로 별도 처리하지 않음 (인터셉터에서 처리됨)
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        return;
+      }
     }
   }, []);
 
@@ -49,6 +53,10 @@ export const useMeetingData = () => {
       setCurrentUser(currentUserData);
     } catch (err: any) {
       console.error('Failed to load available users:', err);
+      // 401/403 에러는 인증 문제이므로 별도 처리하지 않음 (인터셉터에서 처리됨)
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        return;
+      }
       // 사용자 목록 로드 실패 시에는 에러 상태를 설정하지 않음 (채팅은 여전히 가능해야 함)
     }
   }, []);
@@ -71,6 +79,11 @@ export const useMeetingData = () => {
       }
     } catch (err: any) {
       console.error('Failed to load chat rooms:', err);
+      // 401/403 에러는 인증 문제이므로 별도 처리하지 않음 (인터셉터에서 처리됨)
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        setLoading(false);
+        return;
+      }
       setError(err.response?.data?.message || '채팅방 목록을 불러올 수 없습니다.');
     } finally {
       setLoading(false);
@@ -509,6 +522,30 @@ export const useMeetingData = () => {
       websocketService.offMessage(handleNewMessageForNotification);
     };
   }, [chatRooms, currentUser]);
+
+  // 인증 에러 발생 시 데이터 정리
+  useEffect(() => {
+    const handleAuthError = () => {
+      setChatRooms([]);
+      setMessages([]);
+      setAvailableUsers([]);
+      setCurrentUser(null);
+      setError(null);
+      setLoading(false);
+      setLoadingMore(false);
+      currentRoomRef.current = null;
+      if (wsConnected) {
+        websocketService.disconnect();
+        setWsConnected(false);
+      }
+    };
+
+    window.addEventListener('auth-error', handleAuthError);
+
+    return () => {
+      window.removeEventListener('auth-error', handleAuthError);
+    };
+  }, [wsConnected]);
 
   // 컴포넌트 마운트 시 데이터 로드
   useEffect(() => {

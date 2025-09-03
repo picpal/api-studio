@@ -776,7 +776,7 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
         {loading ? (
           <div className="p-4 text-center text-gray-500">
             <div className="text-2xl mb-2">⏳</div>
-            <div className="text-sm">Loading folders...</div>
+            <div className="text-sm">Loading...</div>
           </div>
         ) : error ? (
           <div className="p-4 text-center text-red-500">

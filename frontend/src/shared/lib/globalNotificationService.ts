@@ -1,6 +1,7 @@
 import { websocketService } from '../../features/meeting-management/api/websocketService';
 import { notificationService } from './notification';
 import { Message } from '../../entities/meeting';
+import { authApi, api } from '../../services/api';
 
 class GlobalNotificationService {
   private isConnected = false;
@@ -16,16 +17,8 @@ class GlobalNotificationService {
 
     try {
       // 현재 사용자 정보 가져오기
-      const response = await fetch('/api/auth/me', {
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        console.log('User not authenticated, skipping global notification setup');
-        return;
-      }
-      
-      this.currentUser = await response.json();
+      const data = await authApi.me();
+      this.currentUser = data.user;
       console.log('Global notification service: User authenticated', this.currentUser.email);
       
       // 알림 권한 요청
@@ -37,7 +30,7 @@ class GlobalNotificationService {
       this.connectWebSocket();
       
     } catch (error) {
-      console.error('Failed to initialize global notification service:', error);
+      console.log('User not authenticated, skipping global notification setup');
     }
   }
 
@@ -115,15 +108,11 @@ class GlobalNotificationService {
       // 채팅방 정보 가져오기 (옵션)
       let roomName = '채팅방';
       try {
-        const response = await fetch(`/api/chat/rooms`, {
-          credentials: 'include'
-        });
-        if (response.ok) {
-          const rooms = await response.json();
-          const room = rooms.find((r: any) => r.id === message.roomId);
-          if (room) {
-            roomName = room.name;
-          }
+        const response = await api.get('/chat/rooms');
+        const rooms = response.data;
+        const room = rooms.find((r: any) => r.id === message.roomId);
+        if (room) {
+          roomName = room.name;
         }
       } catch (error) {
         // 채팅방 정보 가져오기 실패는 무시

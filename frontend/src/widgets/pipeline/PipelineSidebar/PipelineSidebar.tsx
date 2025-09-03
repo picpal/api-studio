@@ -386,7 +386,7 @@ export const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
         >
           {loading ? (
             <div className="text-center text-gray-500 text-sm py-8">
-              로딩 중...
+              Loading...
             </div>
           ) : (
             <>

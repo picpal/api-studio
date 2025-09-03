@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { ApiFolder, ApiItem } from '../types/api';
 import { folderApi, itemApi, convertBackendToFrontendFolder } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 export const useSidebar = () => {
+  const { isAuthenticated, isLoading: authLoading, authReady } = useAuth();
   const [folders, setFolders] = useState<ApiFolder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -13,6 +15,7 @@ export const useSidebar = () => {
   // 백엔드에서 데이터 로드
   const loadFolders = async () => {
     try {
+      console.log('📁 Starting to load folders...');
       setLoading(true);
       setError(null);
       
@@ -26,16 +29,55 @@ export const useSidebar = () => {
       );
 
       setFolders(convertedFolders);
-    } catch (error) {
+      console.log('📁 Folders loaded successfully');
+    } catch (error: any) {
+      console.error('📁 Failed to load folders:', error);
+      // 403 에러는 인증 문제일 수 있으므로 별도 처리하지 않음 (인터셉터에서 처리됨)
+      if (error.response?.status === 403) {
+        setLoading(false);
+        return;
+      }
       setError('데이터를 로드하는 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
   };
 
-  // 초기 로드
+  // 인증 상태와 authReady에 따른 데이터 로드/정리
   useEffect(() => {
-    loadFolders();
+    console.log('📁 Auth state changed:', { isAuthenticated, authLoading, authReady });
+    
+    if (isAuthenticated && !authLoading && authReady) {
+      console.log('📁 All conditions met, loading folders...');
+      loadFolders();
+    } else if (!isAuthenticated && !authLoading) {
+      // 로그아웃 시 데이터 정리
+      console.log('📁 Not authenticated, clearing data');
+      setFolders([]);
+      setError(null);
+      setLoading(false);
+      setSelectedFolderId(null);
+      setSelectedItemId(null);
+    } else {
+      console.log('📁 Waiting for authentication to be ready...');
+    }
+  }, [isAuthenticated, authLoading, authReady]);
+
+  // auth-error 이벤트 리스너
+  useEffect(() => {
+    const handleAuthError = () => {
+      setFolders([]);
+      setError(null);
+      setLoading(false);
+      setSelectedFolderId(null);
+      setSelectedItemId(null);
+    };
+
+    window.addEventListener('auth-error', handleAuthError);
+
+    return () => {
+      window.removeEventListener('auth-error', handleAuthError);
+    };
   }, []);
 
   // 검색 필터링된 폴더들

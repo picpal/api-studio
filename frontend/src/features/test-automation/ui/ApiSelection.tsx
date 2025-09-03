@@ -49,15 +49,29 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
   const mobileScrollRef = useRef<HTMLDivElement>(null);
   const folderScrollRef = useRef<HTMLDivElement>(null);
 
-  // 폴더별 필터링된 API 목록
+  // 폴더별 필터링된 API 목록 - 첫 번째 폴더가 기본 선택
   const filteredApiList = selectedFolder 
     ? apiList.filter(api => (api as any).folderId === selectedFolder)
-    : apiList;
+    : folders.length > 0 ? apiList.filter(api => (api as any).folderId === folders[0].id) : [];
 
-  // 폴더별 필터링된 Pipeline 목록
+  // 폴더별 필터링된 Pipeline 목록 - 첫 번째 폴더가 기본 선택
   const filteredPipelineList = selectedPipelineFolder
     ? pipelineFolders.find(folder => folder.id === selectedPipelineFolder)?.pipelines || []
-    : pipelineFolders.flatMap(folder => folder.pipelines);
+    : pipelineFolders.length > 0 ? pipelineFolders[0].pipelines : [];
+
+  // API 폴더가 로드되면 첫 번째 폴더를 자동 선택
+  useEffect(() => {
+    if (folders.length > 0 && selectedFolder === null) {
+      onFolderSelect(folders[0].id);
+    }
+  }, [folders, selectedFolder, onFolderSelect]);
+
+  // Pipeline 폴더가 로드되면 첫 번째 폴더를 자동 선택
+  useEffect(() => {
+    if (pipelineFolders.length > 0 && selectedPipelineFolder === null && activeTab === 'pipelines') {
+      setSelectedPipelineFolder(pipelineFolders[0].id);
+    }
+  }, [pipelineFolders, selectedPipelineFolder, activeTab]);
 
   // Load pipeline folders
   useEffect(() => {
@@ -213,52 +227,45 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
           >
             {activeTab === 'apis' ? (
               <div className="space-y-1">
-                <button
-                  onClick={() => {
-                    onFolderSelect(null);
-                  }}
-                  className={`w-full text-left p-2 rounded text-sm flex items-center gap-2 ${
-                    selectedFolder === null ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
-                  }`}
-                >
-                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                  </svg>
-                  All APIs ({apiList.length})
-                </button>
-                {folders.map(folder => (
-                  <button
-                    key={folder.id}
-                    onClick={() => {
-                      onFolderSelect(folder.id);
-                    }}
-                    className={`w-full text-left p-2 rounded text-sm flex items-center gap-2 ${
-                      selectedFolder === folder.id ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
-                    }`}
-                  >
-                    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                {folders.length === 0 ? (
+                  <div className="text-center py-8">
+                    <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
-                    {folder.name} ({apiList.filter(api => (api as any).folderId === folder.id).length})
-                  </button>
-                ))}
+                    <p className="text-sm text-gray-500">접근 가능한 API 폴더가 없습니다</p>
+                    <p className="text-xs text-gray-400 mt-1">관리자에게 권한을 요청하세요</p>
+                  </div>
+                ) : (
+                  folders.map(folder => (
+                    <button
+                      key={folder.id}
+                      onClick={() => {
+                        onFolderSelect(folder.id);
+                      }}
+                      className={`w-full text-left p-2 rounded text-sm flex items-center gap-2 ${
+                        selectedFolder === folder.id ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+                      }`}
+                    >
+                      <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                      </svg>
+                      {folder.name} ({apiList.filter(api => (api as any).folderId === folder.id).length})
+                    </button>
+                  ))
+                )}
               </div>
             ) : (
               <div className="space-y-1">
-                <button
-                  onClick={() => {
-                    handlePipelineFolderSelect(null);
-                  }}
-                  className={`w-full text-left p-2 rounded text-sm flex items-center gap-2 ${
-                    selectedPipelineFolder === null ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
-                  }`}
-                >
-                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                  </svg>
-                  All Pipelines ({pipelineFolders.reduce((acc, folder) => acc + folder.pipelines.length, 0)})
-                </button>
-                {pipelineFolders.map(folder => (
+                {pipelineFolders.length === 0 ? (
+                  <div className="text-center py-8">
+                    <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <p className="text-sm text-gray-500">접근 가능한 Pipeline 폴더가 없습니다</p>
+                    <p className="text-xs text-gray-400 mt-1">관리자에게 권한을 요청하세요</p>
+                  </div>
+                ) : (
+                  pipelineFolders.map(folder => (
                   <button
                     key={folder.id}
                     onClick={() => {
@@ -273,7 +280,8 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
                     </svg>
                     {folder.name} ({folder.pipelines.length})
                   </button>
-                ))}
+                  ))
+                )}
               </div>
             )}
           </div>
@@ -312,7 +320,15 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
         >
           <div className="space-y-2 pb-4">
           {activeTab === 'apis' ? (
-            filteredApiList.map(api => (
+            filteredApiList.length === 0 ? (
+              <div className="text-center py-8">
+                <svg className="w-10 h-10 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p className="text-sm text-gray-500">이 폴더에 API가 없습니다</p>
+              </div>
+            ) : (
+              filteredApiList.map(api => (
               <label key={api.id} className="flex items-start p-2 border rounded hover:bg-gray-50 cursor-pointer">
                 <input
                   type="checkbox"
@@ -338,9 +354,17 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
                   )}
                 </div>
               </label>
-            ))
+            )))
           ) : (
-            filteredPipelineList.map(pipeline => (
+            filteredPipelineList.length === 0 ? (
+              <div className="text-center py-8">
+                <svg className="w-10 h-10 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p className="text-sm text-gray-500">이 폴더에 Pipeline이 없습니다</p>
+              </div>
+            ) : (
+              filteredPipelineList.map(pipeline => (
               <label key={pipeline.id} className="flex items-start p-2 border rounded hover:bg-gray-50 cursor-pointer">
                 <input
                   type="checkbox"
@@ -360,7 +384,7 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
                   )}
                 </div>
               </label>
-            ))
+            )))
           )}
           </div>
         </div>
@@ -396,7 +420,15 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
           className="px-4 pb-4 space-y-2 max-h-60 overflow-y-auto"
         >
           {activeTab === 'apis' ? (
-            filteredApiList.map(api => (
+            filteredApiList.length === 0 ? (
+              <div className="text-center py-8">
+                <svg className="w-10 h-10 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p className="text-sm text-gray-500">이 폴더에 API가 없습니다</p>
+              </div>
+            ) : (
+              filteredApiList.map(api => (
               <label key={api.id} className="flex items-start p-2 border rounded hover:bg-gray-50 cursor-pointer">
                 <input
                   type="checkbox"
@@ -422,9 +454,17 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
                   )}
                 </div>
               </label>
-            ))
+            )))
           ) : (
-            filteredPipelineList.map(pipeline => (
+            filteredPipelineList.length === 0 ? (
+              <div className="text-center py-8">
+                <svg className="w-10 h-10 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p className="text-sm text-gray-500">이 폴더에 Pipeline이 없습니다</p>
+              </div>
+            ) : (
+              filteredPipelineList.map(pipeline => (
               <label key={pipeline.id} className="flex items-start p-2 border rounded hover:bg-gray-50 cursor-pointer">
                 <input
                   type="checkbox"
@@ -444,7 +484,7 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
                   )}
                 </div>
               </label>
-            ))
+            )))
           )}
         </div>
         

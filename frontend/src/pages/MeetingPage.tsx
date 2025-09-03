@@ -137,7 +137,7 @@ export const MeetingPage: React.FC = () => {
           <div className="bg-white rounded-lg p-4">
             <div className="flex items-center gap-2">
               <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-              <span>로딩중...</span>
+              <span>Loading...</span>
             </div>
           </div>
         </div>

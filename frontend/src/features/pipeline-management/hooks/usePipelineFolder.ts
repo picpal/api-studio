@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { PipelineFolder, Pipeline } from '../../../entities/pipeline';
 import { pipelineApi } from '../../../services/pipelineApi';
+import { useAuth } from '../../../contexts/AuthContext';
 
 export const usePipelineFolder = () => {
+  const { isAuthenticated, isLoading: authLoading, authReady } = useAuth();
   const [folders, setFolders] = useState<PipelineFolder[]>([]);
   const [expandedFolders, setExpandedFolders] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
@@ -16,16 +18,44 @@ export const usePipelineFolder = () => {
       setFolders(foldersData);
       // 기본적으로 모든 폴더 확장
       setExpandedFolders(new Set(foldersData.map(f => f.id)));
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load folders:', error);
+      // 403 에러는 인증 문제일 수 있으므로 별도 처리하지 않음 (인터셉터에서 처리됨)
+      if (error.response?.status === 403) {
+        setLoading(false);
+        return;
+      }
       setFolders([]);
     } finally {
       setLoading(false);
     }
   };
 
+  // 인증 상태에 따른 데이터 로드/정리
   useEffect(() => {
-    loadFolders();
+    if (isAuthenticated && !authLoading && authReady) {
+      loadFolders();
+    } else if (!isAuthenticated && !authLoading) {
+      // 로그아웃 시 데이터 정리
+      setFolders([]);
+      setExpandedFolders(new Set());
+      setLoading(false);
+    }
+  }, [isAuthenticated, authLoading, authReady]);
+
+  // auth-error 이벤트 리스너
+  useEffect(() => {
+    const handleAuthError = () => {
+      setFolders([]);
+      setExpandedFolders(new Set());
+      setLoading(false);
+    };
+
+    window.addEventListener('auth-error', handleAuthError);
+
+    return () => {
+      window.removeEventListener('auth-error', handleAuthError);
+    };
   }, []);
 
   const toggleFolder = (folderId: number) => {

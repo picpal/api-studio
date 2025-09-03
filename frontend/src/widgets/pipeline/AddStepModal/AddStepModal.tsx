@@ -331,7 +331,7 @@ export const AddStepModal: React.FC<AddStepModalProps> = ({
             disabled={!selectedApiItem || !stepName.trim() || loading}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
           >
-            {loading ? '추가 중...' : '단계 추가'}
+            {loading ? 'Loading...' : '단계 추가'}
           </button>
         </div>
       </div>
