@@ -123,72 +123,84 @@ const ParamsEditor: React.FC<ParamsEditorProps> = ({ paramsList, updateParam, re
             </div>
 
             {/* Mobile Table Layout */}
-            <div className="md:hidden overflow-y-auto" style={{maxHeight: 'calc(100vh - 480px)', minHeight: '250px'}}>
-              <div className="bg-gray-50 border-b border-gray-300 sticky top-0 z-10">
-                <div className="flex text-xs font-medium text-gray-600">
-                  <div className="px-3 py-2 border-r border-gray-300" style={{width: '40%'}}>Description</div>
-                  <div className="px-3 py-2 text-center border-r border-gray-300" style={{width: '30%'}}>Key</div>
-                  <div className="px-3 py-2 text-center border-r border-gray-300" style={{width: '30%'}}>Value</div>
-                  <div className="w-12 px-3 py-2 text-center">Del</div>
-                </div>
-              </div>
-              <div className="bg-white">
-                {paramsList.map((param) => (
-                  <div key={param.id} className="flex items-center border-b border-gray-300">
-                    <div className="px-3 py-2 border-r border-gray-300" style={{width: '40%'}}>
-                      <input
-                        className="w-full px-2 py-1 border-0 bg-transparent text-xs focus:outline-none focus:ring-1 focus:ring-blue-400 rounded"
-                        placeholder="Description"
-                        value={param.description}
-                        onChange={(e) => updateParam(param.id, 'description', e.target.value)}
-                        data-param-id={param.id}
-                        data-field="description"
-                      />
-                    </div>
-                    <div className="px-3 py-2 border-r border-gray-300" style={{width: '30%'}}>
-                      <input
-                        className="w-full px-2 py-1 border-0 bg-transparent text-xs focus:outline-none focus:ring-1 focus:ring-blue-400 rounded text-center"
-                        placeholder="Key"
-                        value={param.key}
-                        onChange={(e) => updateParam(param.id, 'key', e.target.value)}
-                      />
-                    </div>
-                    <div className="px-3 py-2 border-r border-gray-300" style={{width: '30%'}}>
-                      <input
-                        className="w-full px-2 py-1 border-0 bg-transparent text-xs focus:outline-none focus:ring-1 focus:ring-blue-400 rounded text-center"
-                        placeholder="Value"
-                        value={param.value}
-                        onChange={(e) => updateParam(param.id, 'value', e.target.value)}
-                      />
-                    </div>
-                    <div className="w-12 px-3 py-2 flex justify-center">
-                      <button
-                        onClick={() => removeParam(param.id)}
-                        className="text-gray-400 hover:text-red-600 text-sm transition-colors duration-200 w-6 h-6 flex items-center justify-center rounded hover:bg-red-50"
-                        title="Del"
+            <div className="md:hidden overflow-x-auto overflow-y-auto" style={{maxHeight: 'calc(100vh - 480px)', minHeight: '250px'}}>
+              <table className="w-full border-collapse" style={{minWidth: '320px'}}>
+                <thead className="bg-gray-50 border-b border-gray-300 sticky top-0 z-10">
+                  <tr>
+                    <th className="px-2 py-2 text-left text-xs font-medium text-gray-600 border-r border-gray-300" style={{width: '112px'}}>
+                      Description
+                    </th>
+                    <th className="px-2 py-2 text-center text-xs font-medium text-gray-600 border-r border-gray-300" style={{width: '80px'}}>
+                      Key
+                    </th>
+                    <th className="px-2 py-2 text-center text-xs font-medium text-gray-600 border-r border-gray-300" style={{width: '80px'}}>
+                      Value
+                    </th>
+                    <th className="px-1 py-2 text-center text-xs font-medium text-gray-600" style={{width: '40px'}}>
+                      Del
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white">
+                  {paramsList.map((param) => (
+                    <tr key={param.id} className="hover:bg-gray-50 border-b border-gray-300">
+                      <td className="px-2 py-2 border-r border-gray-300" style={{width: '112px'}}>
+                        <input
+                          className="w-full px-1 py-1 border-0 bg-transparent text-xs focus:outline-none focus:ring-1 focus:ring-blue-400 rounded"
+                          placeholder="Description"
+                          value={param.description}
+                          onChange={(e) => updateParam(param.id, 'description', e.target.value)}
+                          data-param-id={param.id}
+                          data-field="description"
+                        />
+                      </td>
+                      <td className="px-2 py-2 border-r border-gray-300" style={{width: '80px'}}>
+                        <input
+                          className="w-full px-1 py-1 border-0 bg-transparent text-xs focus:outline-none focus:ring-1 focus:ring-blue-400 rounded text-center"
+                          placeholder="Key"
+                          value={param.key}
+                          onChange={(e) => updateParam(param.id, 'key', e.target.value)}
+                        />
+                      </td>
+                      <td className="px-2 py-2 border-r border-gray-300" style={{width: '80px'}}>
+                        <input
+                          className="w-full px-1 py-1 border-0 bg-transparent text-xs focus:outline-none focus:ring-1 focus:ring-blue-400 rounded text-center"
+                          placeholder="Value"
+                          value={param.value}
+                          onChange={(e) => updateParam(param.id, 'value', e.target.value)}
+                        />
+                      </td>
+                      <td className="px-1 py-2 text-center" style={{width: '40px'}}>
+                        <button
+                          onClick={() => removeParam(param.id)}
+                          className="text-gray-400 hover:text-red-600 text-sm transition-colors duration-200 w-6 h-6 flex items-center justify-center rounded hover:bg-red-50 mx-auto"
+                          title="Del"
+                        >
+                          ×
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {/* Add Parameter Row for Mobile */}
+                  <tr className="bg-gray-50">
+                    <td colSpan={4} className="px-2 py-3 border-t border-gray-300">
+                      <Button
+                        onClick={addParam}
+                        variant="ghost"
+                        size="sm"
+                        className="w-full bg-blue-600 bg-opacity-10 hover:bg-opacity-100 text-blue-700 hover:text-white border-blue-200 hover:border-blue-600"
+                        title="Add Parameter"
+                        data-add-param-button
                       >
-                        ×
-                      </button>
-                    </div>
-                  </div>
-                ))}
-                {/* Add Parameter Row for Mobile */}
-                <div className="bg-gray-50 px-3 py-3">
-                  <Button
-                    onClick={addParam}
-                    variant="ghost"
-                    size="sm"
-                    className="w-full bg-blue-600 bg-opacity-10 hover:bg-opacity-100 text-blue-700 hover:text-white border-blue-200 hover:border-blue-600"
-                    title="Add Parameter"
-                    data-add-param-button
-                  >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Add Parameter
-                  </Button>
-                </div>
-              </div>
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Add Parameter
+                      </Button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
         </div>
     );

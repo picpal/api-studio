@@ -13,12 +13,16 @@ const apiClient = axios.create({
   withCredentials: true,
 });
 
-// 응답 인터셉터 설정 - 401 에러 시 인증 실패 처리
+// 응답 인터셉터 설정 - 401, 403 에러 시 인증 실패 처리
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // 401 에러 시 로그아웃 이벤트 발생
+    // API Item 실행 관련 요청은 403 처리에서 제외 (테스트 대상 API의 정상 응답이므로)
+    const isApiItemExecution = error.config?.url?.includes('/execute') || 
+                               error.config?.url?.includes('/test');
+    
+    if ((error.response?.status === 401 || error.response?.status === 403) && !isApiItemExecution) {
+      // 401, 403 에러 시 로그아웃 이벤트 발생
       window.dispatchEvent(new CustomEvent('auth-error'));
     }
     return Promise.reject(error);

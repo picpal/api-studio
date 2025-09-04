@@ -185,17 +185,17 @@ const ParamsTable: React.FC<ParamsTableProps> = ({
           style={{maxHeight: 'calc(100vh - 480px)', minHeight: '250px'}}
         >
         <div className="bg-gray-50 border-b border-gray-300 sticky top-0 z-10">
-          <div className="flex text-xs font-medium text-gray-600">
-            <div className="px-3 py-2 border-r border-gray-300" style={{width: '40%'}}>Description</div>
-            <div className="px-3 py-2 text-center border-r border-gray-300" style={{width: '30%'}}>Key</div>
-            <div className="px-3 py-2 text-center border-r border-gray-300" style={{width: '30%'}}>Value</div>
-            <div className="w-12 px-3 py-2 text-center">Del</div>
+          <div className="grid text-xs font-medium text-gray-600" style={{gridTemplateColumns: '2fr 1fr 1fr 48px'}}>
+            <div className="px-3 py-2 border-r border-gray-300">Description</div>
+            <div className="px-3 py-2 text-center border-r border-gray-300">Key</div>
+            <div className="px-3 py-2 text-center border-r border-gray-300">Value</div>
+            <div className="px-3 py-2 text-center">Del</div>
           </div>
         </div>
         <div className="bg-white">
           {paramsList.map((param) => (
-            <div key={param.id} className="flex items-center border-b border-gray-300">
-              <div className="px-3 py-2 border-r border-gray-300" style={{width: '40%'}}>
+            <div key={param.id} className="grid items-center border-b border-gray-300" style={{gridTemplateColumns: '2fr 1fr 1fr 48px'}}>
+              <div className="px-3 py-2 border-r border-gray-300">
                 <input
                   className="w-full px-2 py-1 border-0 bg-transparent text-xs focus:outline-none focus:ring-1 focus:ring-blue-400 rounded"
                   placeholder="Description"
@@ -205,7 +205,7 @@ const ParamsTable: React.FC<ParamsTableProps> = ({
                   data-field="description"
                 />
               </div>
-              <div className="px-3 py-2 border-r border-gray-300" style={{width: '30%'}}>
+              <div className="px-3 py-2 border-r border-gray-300">
                 <input
                   className="w-full px-2 py-1 border-0 bg-transparent text-xs focus:outline-none focus:ring-1 focus:ring-blue-400 rounded text-center"
                   placeholder="Key"
@@ -213,7 +213,7 @@ const ParamsTable: React.FC<ParamsTableProps> = ({
                   onChange={(e) => onUpdateParam(param.id, 'key', e.target.value)}
                 />
               </div>
-              <div className="px-3 py-2 border-r border-gray-300" style={{width: '30%'}}>
+              <div className="px-3 py-2 border-r border-gray-300">
                 <input
                   className="w-full px-2 py-1 border-0 bg-transparent text-xs focus:outline-none focus:ring-1 focus:ring-blue-400 rounded text-center"
                   placeholder="Value"
@@ -221,7 +221,7 @@ const ParamsTable: React.FC<ParamsTableProps> = ({
                   onChange={(e) => onUpdateParam(param.id, 'value', e.target.value)}
                 />
               </div>
-              <div className="w-12 px-3 py-2 flex justify-center">
+              <div className="px-3 py-2 flex justify-center">
                 <button
                   onClick={() => onRemoveParam(param.id)}
                   className="text-gray-400 hover:text-red-600 text-sm transition-colors duration-200 w-6 h-6 flex items-center justify-center rounded hover:bg-red-50"

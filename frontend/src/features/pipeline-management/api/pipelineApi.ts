@@ -11,12 +11,12 @@ const pipelineApiClient = axios.create({
   withCredentials: true,
 });
 
-// 응답 인터셉터 설정 - 401 에러 시 인증 실패 처리
+// 응답 인터셉터 설정 - 401, 403 에러 시 인증 실패 처리
 pipelineApiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // 401 에러 시 로그아웃 이벤트 발생
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // 401, 403 에러 시 로그아웃 이벤트 발생
       window.dispatchEvent(new CustomEvent('auth-error'));
     }
     return Promise.reject(error);

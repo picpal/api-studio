@@ -219,11 +219,11 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
       </div>
 
       {/* 폴더 목록 */}
-      <div className={`border-b lg:flex-shrink-0 relative ${apiSectionCollapsed ? '' : 'lg:h-2/5'}`}>
+      <div className={`border-b lg:flex-shrink-0 relative ${apiSectionCollapsed ? '' : 'lg:max-h-60'}`}>
         {!apiSectionCollapsed && (
           <div 
             ref={folderScrollRef}
-            className="px-4 pb-4 pt-4 lg:overflow-y-auto lg:max-h-[calc(100%)]"
+            className="px-4 pb-4 pt-4 overflow-y-auto max-h-56"
           >
             {activeTab === 'apis' ? (
               <div className="space-y-1">
@@ -294,7 +294,7 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
       </div>
 
       {/* Content 목록 - 데스크톱에서만 폴더와 같은 영역에 표시 */}
-      <div className={`hidden lg:flex lg:flex-col relative ${apiSectionCollapsed ? 'lg:h-full' : 'lg:h-3/5'}`}>
+      <div className={`hidden lg:flex lg:flex-col relative ${apiSectionCollapsed ? 'lg:flex-1' : 'lg:flex-1'} lg:min-h-0`}>
         <div className="p-4 pb-0">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-md font-semibold">{activeTab === 'apis' ? 'APIs' : 'Pipelines'}</h3>
@@ -315,8 +315,7 @@ export const ApiSelection: React.FC<ApiSelectionProps> = ({
         
         <div 
           ref={desktopScrollRef}
-          className="px-4 overflow-y-auto min-h-0"
-          style={{ height: 'calc(100% - 150px)' }}
+          className="px-4 overflow-y-auto flex-1 min-h-0"
         >
           <div className="space-y-2 pb-4">
           {activeTab === 'apis' ? (

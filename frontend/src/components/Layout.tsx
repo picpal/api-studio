@@ -63,6 +63,20 @@ const Layout: React.FC<LayoutProps> = () => {
     }
   }, [location.pathname]);
 
+  // 인증 에러 이벤트 리스너 설정
+  useEffect(() => {
+    const handleAuthError = () => {
+      // 로그인 페이지로 리디렉션
+      window.location.href = '/login';
+    };
+
+    window.addEventListener('auth-error', handleAuthError);
+    
+    return () => {
+      window.removeEventListener('auth-error', handleAuthError);
+    };
+  }, []);
+
   const fetchPipelineById = async (pipelineId: number) => {
     try {
       // 모든 폴더를 가져와서 해당 파이프라인 찾기

@@ -1,4 +1,5 @@
 import { API_CONFIG } from '../config/api';
+import { api } from './api';
 
 interface PipelineFolder {
   id: number;
@@ -36,15 +37,8 @@ const BASE_URL = `${API_CONFIG.API_URL}/pipelines`;
 export const pipelineApi = {
   // Folder operations
   async getFolders(): Promise<PipelineFolder[]> {
-    const response = await fetch(`${BASE_URL}/folders`, {
-      credentials: 'include'
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error('Failed to fetch folders');
-    }
-    const folders = await response.json();
+    const response = await api.get('/pipelines/folders');
+    const folders = response.data;
     
     const processedFolders = folders.map((folder: any) => ({
       ...folder,
@@ -57,20 +51,9 @@ export const pipelineApi = {
   },
 
   async createFolder(folderData: CreateFolderRequest): Promise<PipelineFolder> {
-    const response = await fetch(`${BASE_URL}/folders`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify(folderData),
-    });
+    const response = await api.post('/pipelines/folders', folderData);
+    const folder = response.data;
     
-    if (!response.ok) {
-      throw new Error('Failed to create folder');
-    }
-    
-    const folder = await response.json();
     return {
       ...folder,
       createdAt: new Date(folder.createdAt),
@@ -80,20 +63,9 @@ export const pipelineApi = {
   },
 
   async updateFolder(id: number, folderData: CreateFolderRequest): Promise<PipelineFolder> {
-    const response = await fetch(`${BASE_URL}/folders/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify(folderData),
-    });
+    const response = await api.put(`/pipelines/folders/${id}`, folderData);
+    const folder = response.data;
     
-    if (!response.ok) {
-      throw new Error('Failed to update folder');
-    }
-    
-    const folder = await response.json();
     return {
       ...folder,
       createdAt: new Date(folder.createdAt),
@@ -103,25 +75,14 @@ export const pipelineApi = {
   },
 
   async deleteFolder(id: number): Promise<void> {
-    const response = await fetch(`${BASE_URL}/folders/${id}`, {
-      method: 'DELETE',
-      credentials: 'include',
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to delete folder');
-    }
+    await api.delete(`/pipelines/folders/${id}`);
   },
 
   // Pipeline operations
   async getPipelines(): Promise<Pipeline[]> {
-    const response = await fetch(BASE_URL, {
-      credentials: 'include'
-    });
-    if (!response.ok) {
-      throw new Error('Failed to fetch pipelines');
-    }
-    const pipelines = await response.json();
+    const response = await api.get('/pipelines');
+    const pipelines = response.data;
+    
     return pipelines.map((pipeline: any) => ({
       ...pipeline,
       createdAt: new Date(pipeline.createdAt),
@@ -130,13 +91,9 @@ export const pipelineApi = {
   },
 
   async getPipelinesByFolder(folderId: number): Promise<Pipeline[]> {
-    const response = await fetch(`${BASE_URL}/folder/${folderId}`, {
-      credentials: 'include'
-    });
-    if (!response.ok) {
-      throw new Error('Failed to fetch pipelines by folder');
-    }
-    const pipelines = await response.json();
+    const response = await api.get(`/pipelines/folder/${folderId}`);
+    const pipelines = response.data;
+    
     return pipelines.map((pipeline: any) => ({
       ...pipeline,
       createdAt: new Date(pipeline.createdAt),
@@ -145,20 +102,9 @@ export const pipelineApi = {
   },
 
   async createPipeline(pipelineData: CreatePipelineRequest): Promise<Pipeline> {
-    const response = await fetch(BASE_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify(pipelineData),
-    });
+    const response = await api.post('/pipelines', pipelineData);
+    const pipeline = response.data;
     
-    if (!response.ok) {
-      throw new Error('Failed to create pipeline');
-    }
-    
-    const pipeline = await response.json();
     return {
       ...pipeline,
       createdAt: new Date(pipeline.createdAt),
@@ -167,20 +113,9 @@ export const pipelineApi = {
   },
 
   async updatePipeline(id: string, pipelineData: Partial<CreatePipelineRequest>): Promise<Pipeline> {
-    const response = await fetch(`${BASE_URL}/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify(pipelineData),
-    });
+    const response = await api.put(`/pipelines/${id}`, pipelineData);
+    const pipeline = response.data;
     
-    if (!response.ok) {
-      throw new Error('Failed to update pipeline');
-    }
-    
-    const pipeline = await response.json();
     return {
       ...pipeline,
       createdAt: new Date(pipeline.createdAt),
@@ -189,14 +124,7 @@ export const pipelineApi = {
   },
 
   async deletePipeline(id: string): Promise<void> {
-    const response = await fetch(`${BASE_URL}/${id}`, {
-      method: 'DELETE',
-      credentials: 'include',
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to delete pipeline');
-    }
+    await api.delete(`/pipelines/${id}`);
   }
 };
 
