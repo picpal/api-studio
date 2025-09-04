@@ -12,6 +12,7 @@ const AdminPage = lazy(() => import('../pages/AdminPage'));
 const TestAutomationPage = lazy(() => import('../pages/TestAutomationPage'));
 const PipelineManagementPage = lazy(() => import('../pages/pipeline').then(module => ({ default: module.PipelineManagementPage })));
 const MeetingPage = lazy(() => import('../pages/MeetingPage').then(module => ({ default: module.MeetingPage })));
+const DocumentPage = lazy(() => import('../pages/DocumentPage'));
 
 interface LayoutProps {
   children?: React.ReactNode;
@@ -31,7 +32,7 @@ const Layout: React.FC<LayoutProps> = () => {
   const [selectedItem, setSelectedItem] = useState<ApiItem | null>(null);
   const [selectedPipeline, setSelectedPipeline] = useState<any>(null);
   const [showAdminPage, setShowAdminPage] = useState(false);
-  const [currentPage, setCurrentPage] = useState<'api-testing' | 'test-automation' | 'pipeline-management' | 'meeting'>('api-testing');
+  const [currentPage, setCurrentPage] = useState<'api-testing' | 'test-automation' | 'pipeline-management' | 'meeting' | 'documentation'>('api-testing');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     // 데스크톱에서는 열린 상태, 모바일에서는 닫힌 상태로 시작
     return window.innerWidth < 768;
@@ -55,6 +56,8 @@ const Layout: React.FC<LayoutProps> = () => {
       setCurrentPage('test-automation');
     } else if (path.startsWith('/meeting')) {
       setCurrentPage('meeting');
+    } else if (path.startsWith('/documentation')) {
+      setCurrentPage('documentation');
     } else {
       setCurrentPage('api-testing');
     }
@@ -156,7 +159,7 @@ const Layout: React.FC<LayoutProps> = () => {
     }
   };
 
-  const handleNavigate = (page: 'api-testing' | 'test-automation' | 'pipeline-management' | 'meeting') => {
+  const handleNavigate = (page: 'api-testing' | 'test-automation' | 'pipeline-management' | 'meeting' | 'documentation') => {
     setCurrentPage(page);
     // URL 업데이트
     if (page === 'api-testing') {
@@ -167,6 +170,8 @@ const Layout: React.FC<LayoutProps> = () => {
       navigate('/pipeline-management');
     } else if (page === 'meeting') {
       navigate('/meeting');
+    } else if (page === 'documentation') {
+      navigate('/documentation');
     }
   };
 
@@ -320,6 +325,8 @@ const Layout: React.FC<LayoutProps> = () => {
                 selectedPipeline={selectedPipeline}
                 onPipelineUpdate={handlePipelineUpdate}
               />
+            ) : currentPage === 'documentation' ? (
+              <DocumentPage />
             ) : (
               <MeetingPage />
             )}
