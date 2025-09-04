@@ -61,14 +61,14 @@ public class PipelineController {
     }
 
     @PostMapping("/folders")
-    @RequireApiAuth(adminOnly = true)
+    @RequireApiAuth
     public ResponseEntity<PipelineFolder> createFolder(@RequestBody PipelineFolder folder) {
         PipelineFolder savedFolder = pipelineService.createFolder(folder);
         return ResponseEntity.ok(savedFolder);
     }
 
     @PutMapping("/folders/{id}")
-    @RequireApiAuth(adminOnly = true)
+    @RequireApiAuth
     public ResponseEntity<PipelineFolder> updateFolder(@PathVariable Long id, @RequestBody PipelineFolder folder) {
         return pipelineService.updateFolder(id, folder)
             .map(updatedFolder -> ResponseEntity.ok(updatedFolder))
@@ -76,7 +76,7 @@ public class PipelineController {
     }
 
     @DeleteMapping("/folders/{id}")
-    @RequireApiAuth(adminOnly = true)
+    @RequireApiAuth
     public ResponseEntity<Void> deleteFolder(@PathVariable Long id) {
         if (pipelineService.deleteFolder(id)) {
             return ResponseEntity.ok().build();

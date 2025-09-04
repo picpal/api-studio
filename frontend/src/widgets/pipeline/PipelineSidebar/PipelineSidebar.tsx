@@ -182,8 +182,12 @@ export const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
     if (contextMenu.folderId && confirm(`"${contextMenu.folderName}" 폴더를 삭제하시겠습니까?`)) {
       try {
         await deleteFolder(contextMenu.folderId);
-      } catch (error) {
-        alert('폴더 삭제에 실패했습니다.');
+      } catch (error: any) {
+        if (error.response?.status === 403) {
+          alert('폴더 삭제 권한이 없습니다.');
+        } else {
+          alert('폴더 삭제에 실패했습니다.');
+        }
       }
     }
     handleContextMenuClose();
@@ -198,8 +202,12 @@ export const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
         if (selectedPipeline?.id === pipelineContextMenu.pipelineId) {
           onSelectPipeline?.(null);
         }
-      } catch (error) {
-        alert('파이프라인 삭제에 실패했습니다.');
+      } catch (error: any) {
+        if (error.response?.status === 403) {
+          alert('파이프라인 삭제 권한이 없습니다.');
+        } else {
+          alert('파이프라인 삭제에 실패했습니다.');
+        }
       }
     }
     handlePipelineContextMenuClose();
