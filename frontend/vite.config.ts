@@ -31,12 +31,6 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       open: true,
       proxy: {
-        '/api/external': {
-          target: 'https://devpg.bluewalnut.co.kr',
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/api\/external/, ''),
-          secure: true,
-        },
         '/api': {
           target: apiBaseUrl,
           changeOrigin: true,

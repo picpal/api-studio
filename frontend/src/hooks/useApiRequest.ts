@@ -207,9 +207,10 @@ export const useApiRequest = () => {
     try {
       let fullUrl = requestToSend.url;
       
-      // 외부 API인 경우 프록시 경로로 변경
-      if (fullUrl.includes('devpg.bluewalnut.co.kr')) {
-        fullUrl = fullUrl.replace('https://devpg.bluewalnut.co.kr', '/api/external');
+      // 외부 API인 경우 (절대 URL인 경우) 백엔드 프록시를 통해 호출
+      if (fullUrl.startsWith('http://') || fullUrl.startsWith('https://')) {
+        // 백엔드 프록시 사용 (target 파라미터로 URL 전달)
+        fullUrl = `/api/proxy?target=${encodeURIComponent(fullUrl)}`;
       }
       
       const axiosConfig: any = {

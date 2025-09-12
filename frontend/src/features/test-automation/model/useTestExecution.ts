@@ -66,9 +66,9 @@ export const useTestExecution = () => {
 
       const startTime = Date.now();
 
-      // MainContent와 동일한 방식으로 외부 API 프록시 처리
-      if (fullUrl.includes('devpg.bluewalnut.co.kr')) {
-        fullUrl = fullUrl.replace('https://devpg.bluewalnut.co.kr', '/api/external');
+      // 외부 API인 경우 백엔드 프록시를 통해 호출
+      if (fullUrl.startsWith('http://') || fullUrl.startsWith('https://')) {
+        fullUrl = `/api/proxy?target=${encodeURIComponent(fullUrl)}`;
       }
       
       const axiosConfig: any = {
