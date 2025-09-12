@@ -1,0 +1,41 @@
+{
+  "reqHeaderInfo": {
+    "interfaceID": "IF-KIA-001",
+    "interfaceType": "100"
+  },
+  "reqStoreInfo": {
+    "requestDate": "20250912114758",
+    "corporateNo": "1338500011",
+    "encryptData": "MmE3ZDM5NmU5NjY3ZDlkNDBiMjFlMTMwNTM5Yjg0YzZiNTU4NWJhY2YxN2Q3NzhlODQ3YTM2NjE4YjBiNmZlNA=="
+  },
+  "reqOrderInfo": {
+    "contractNo": "KIA-0912-002",
+    "buyerName": "김고객",
+    "buyerTel": "01096771739",
+    "salesManName": "나영업",
+    "salesManTel": "01096771739",
+    "carModel": "모하비",
+    "buyerAuthNum": "990123",
+    "senderTel": "15224910",
+    "virtualContractNo": "",
+    "modelType": "",
+    "cmEmpNumber": "",
+    "buyerCI": "",
+    "managerTel": ""
+  },
+  "reqPaymentInfo": {
+    "expire_dt": "",
+    "payList": [
+      {
+        "payMethod": "CARD",
+        "payOrder": "1",
+        "subContractNo": "1",
+        "orderType": "01",
+        "cardCode": "",
+        "amt": "100000",
+        "quota": "00",
+        "payType": "00"
+      }
+    ]
+  }
+}
