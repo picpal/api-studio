@@ -215,17 +215,17 @@ const DocumentPage: React.FC = () => {
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
-                    code({ node, inline, className, children, ...props }) {
+                    code({ node, className, children, ...props }: any) {
+                      const inline = props.inline;
                       const match = /language-(\w+)/.exec(className || '');
                       const language = match ? match[1] : '';
                       
                       return !inline && language ? (
                         <SyntaxHighlighter
-                          style={tomorrow}
+                          style={tomorrow as any}
                           language={language}
                           PreTag="div"
                           className="rounded-md"
-                          {...props}
                         >
                           {String(children).replace(/\n$/, '')}
                         </SyntaxHighlighter>

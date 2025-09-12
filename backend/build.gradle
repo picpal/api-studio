@@ -3,6 +3,7 @@ plugins {
     id 'org.springframework.boot' version '3.2.2'
     id 'io.spring.dependency-management' version '1.1.4'
     id 'jacoco'
+    id 'maven-publish'
 }
 
 group = 'com.example'
@@ -76,6 +77,28 @@ jacocoTestCoverageVerification {
         rule {
             limit {
                 minimum = 0.05
+            }
+        }
+    }
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+            
+            // Boot JAR 포함
+            artifact bootJar
+        }
+    }
+    
+    repositories {
+        maven {
+            name = "nexus"
+            url = "http://YOUR_NEXUS_URL/repository/maven-releases/"
+            credentials {
+                username = project.findProperty("nexusUsername") ?: System.getenv("NEXUS_USERNAME")
+                password = project.findProperty("nexusPassword") ?: System.getenv("NEXUS_PASSWORD")
             }
         }
     }
