@@ -205,21 +205,15 @@ export const useApiRequest = () => {
     const startTime = Date.now();
     
     try {
-      let fullUrl = requestToSend.url;
+      const { createAxiosConfig } = await import('../utils/apiRouter');
       
-      // 외부 API인 경우 (절대 URL인 경우) 백엔드 프록시를 통해 호출
-      if (fullUrl.startsWith('http://') || fullUrl.startsWith('https://')) {
-        // 백엔드 프록시 사용 (target 파라미터로 URL 전달)
-        fullUrl = `/api/proxy?target=${encodeURIComponent(fullUrl)}`;
-      }
-      
-      const axiosConfig: any = {
-        method: requestToSend.method.toLowerCase(),
-        url: fullUrl,
-        params: requestToSend.params,
-        headers: requestToSend.headers,
-        withCredentials: true,
-      };
+      const axiosConfig = createAxiosConfig(
+        requestToSend.method,
+        requestToSend.url,
+        requestToSend.params,
+        requestToSend.headers,
+        undefined
+      );
 
       if (requestToSend.method !== 'GET' && requestToSend.body) {
         try {

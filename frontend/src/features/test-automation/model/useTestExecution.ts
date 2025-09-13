@@ -62,22 +62,17 @@ export const useTestExecution = () => {
         });
       }
       
-      let fullUrl = url;
-
       const startTime = Date.now();
 
-      // 외부 API인 경우 백엔드 프록시를 통해 호출
-      if (fullUrl.startsWith('http://') || fullUrl.startsWith('https://')) {
-        fullUrl = `/api/proxy?target=${encodeURIComponent(fullUrl)}`;
-      }
+      const { createAxiosConfig } = await import('../../../utils/apiRouter');
       
-      const axiosConfig: any = {
-        method: method.toLowerCase(),
-        url: fullUrl,
-        params: paramsObject,
-        headers: requestHeaders,
-        withCredentials: true,
-      };
+      const axiosConfig = createAxiosConfig(
+        method,
+        url,
+        paramsObject,
+        requestHeaders,
+        undefined
+      );
 
       if (method !== 'GET' && requestBody && requestBody.trim() !== '') {
         try {
