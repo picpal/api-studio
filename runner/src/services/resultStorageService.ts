@@ -37,6 +37,19 @@ export class ResultStorageService {
 
   async saveExecutionResult(result: TestExecutionResult): Promise<StoredExecutionResult> {
     try {
+      // 새 결과 저장 전에 같은 fileName의 이전 결과 삭제 (실행 성공 후 정리)
+      if (result.fileName) {
+        try {
+          const deletedCount = await this.deleteResultsByFileName(result.fileName);
+          if (deletedCount > 0) {
+            Logger.info(`Cleaned up ${deletedCount} previous result(s) for file: ${result.fileName}`);
+          }
+        } catch (error) {
+          Logger.warn(`Failed to cleanup previous results for ${result.fileName}, continuing...`, error);
+          // 정리 실패해도 새 결과는 저장
+        }
+      }
+
       const executionId = `${result.scriptId}_${Date.now()}`;
       const storedResult: StoredExecutionResult = {
         ...result,
