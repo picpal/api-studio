@@ -347,7 +347,10 @@ const Layout: React.FC<LayoutProps> = () => {
             ) : currentPage === 'documentation' ? (
               <DocumentPage />
             ) : currentPage === 'ui-testing' ? (
-              <UiTestingPage />
+              <UiTestingPage
+                sidebarCollapsed={sidebarCollapsed}
+                onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+              />
             ) : (
               <MeetingPage />
             )}

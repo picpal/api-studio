@@ -1,16 +1,37 @@
 // 새로운 UI Testing 페이지 (FSD 구조)
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UiTestScript } from '../entities/ui-testing/types';
 import UiTestingSidebar from '../widgets/ui-testing/UiTestingSidebar';
 import UiTestingMainContent from '../widgets/ui-testing/UiTestingMainContent';
 
-const UiTestingPageNew: React.FC = () => {
+interface UiTestingPageNewProps {
+  sidebarCollapsed?: boolean;
+  onToggleSidebar?: () => void;
+}
+
+const UiTestingPageNew: React.FC<UiTestingPageNewProps> = ({
+  sidebarCollapsed: externalSidebarCollapsed,
+  onToggleSidebar
+}) => {
   const [selectedScript, setSelectedScript] = useState<UiTestScript | null>(null);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+  const [internalSidebarCollapsed, setInternalSidebarCollapsed] = useState(() => {
     // 모바일에서는 닫힌 상태로 시작
     return window.innerWidth < 768;
   });
+
+  // Use external state if provided, otherwise use internal state
+  const sidebarCollapsed = externalSidebarCollapsed !== undefined
+    ? externalSidebarCollapsed
+    : internalSidebarCollapsed;
+
+  const handleToggleSidebar = () => {
+    if (onToggleSidebar) {
+      onToggleSidebar();
+    } else {
+      setInternalSidebarCollapsed(!internalSidebarCollapsed);
+    }
+  };
 
   const handleSelectScript = (script: UiTestScript, folderId: number | null, folderName?: string) => {
     setSelectedScript({
@@ -59,7 +80,7 @@ const UiTestingPageNew: React.FC = () => {
         }`}>
           <UiTestingSidebar
             collapsed={sidebarCollapsed}
-            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+            onToggleCollapse={handleToggleSidebar}
             onSelectScript={handleSelectScript}
             onResetForm={handleResetForm}
             selectedScript={selectedScript}
@@ -75,7 +96,7 @@ const UiTestingPageNew: React.FC = () => {
           <div className="w-80 h-full border-r border-gray-200 bg-white shadow-lg">
             <UiTestingSidebar
               collapsed={false}
-              onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+              onToggleCollapse={handleToggleSidebar}
               onSelectScript={handleSelectScript}
               onResetForm={handleResetForm}
               selectedScript={selectedScript}
@@ -90,7 +111,7 @@ const UiTestingPageNew: React.FC = () => {
           <div
             className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-20"
             style={{ top: '64px' }}
-            onClick={() => setSidebarCollapsed(true)}
+            onClick={handleToggleSidebar}
           />
         )}
 

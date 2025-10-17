@@ -8,6 +8,7 @@ import {
   PlusIcon,
   ChevronRightIcon,
   ChevronDownIcon,
+  ChevronLeftIcon,
   MagnifyingGlassIcon,
   CodeBracketIcon,
   PlayIcon,
@@ -288,16 +289,19 @@ const FolderComponent: React.FC<{
         className={`px-2.5 py-1.5 flex items-center gap-2 cursor-pointer hover:bg-gray-100 rounded-sm ${
           isSelected ? 'bg-blue-50' : ''
         } ${isDragOverFolder ? 'bg-blue-100 border-2 border-blue-300 border-dashed' : ''}`}
-        onClick={onSelect}
+        onClick={(e) => {
+          onSelect();
+          onToggle();
+        }}
         onContextMenu={onContextMenu}
       >
-        <button onClick={(e) => { e.stopPropagation(); onToggle(); }} className="p-0.5">
+        <div className="p-0.5 pointer-events-none">
           {folder.isExpanded ? (
             <ChevronDownIcon className="w-3 h-3 text-gray-600" />
           ) : (
             <ChevronRightIcon className="w-3 h-3 text-gray-600" />
           )}
-        </button>
+        </div>
         <FolderIcon className="w-4 h-4 text-blue-500" />
         <span className="text-sm text-gray-800 flex-1">{folder.name}</span>
         <span className="text-xs text-gray-500">{folderScripts.length}</span>
@@ -350,6 +354,8 @@ const UiTestingSidebar: React.FC<UiTestingSidebarProps> = ({
     deleteFolder,
     deleteScript,
     toggleFolder,
+    expandAll,
+    collapseAll,
     resetSelection
   } = useUiTestingSidebar();
 
@@ -641,7 +647,7 @@ test('example test', async ({ page }) => {
               className="w-8 h-8 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors flex items-center justify-center flex-shrink-0"
               title="Collapse Sidebar"
             >
-              <ChevronDownIcon className="w-4 h-4" />
+              <ChevronLeftIcon className="w-4 h-4" />
             </button>
           )}
         </div>
@@ -649,15 +655,45 @@ test('example test', async ({ page }) => {
 
       {/* Search Bar */}
       <div className="px-4 py-3 border-b border-gray-100">
-        <div className="relative">
-          <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search items..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search items..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-8 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {/* Expand/Collapse All Buttons */}
+          <div className="flex gap-1">
+            <button
+              onClick={expandAll}
+              className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+              title="모든 폴더 펼치기"
+            >
+              <img src="/icon/ArrowsOutLineVertical.svg" alt="Expand All" className="w-4 h-4" />
+            </button>
+            <button
+              onClick={collapseAll}
+              className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+              title="모든 폴더 접기"
+            >
+              <img src="/icon/ArrowsInLineVertical.svg" alt="Collapse All" className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 

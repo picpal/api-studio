@@ -27,6 +27,8 @@ interface UseUiTestingSidebarReturn {
   deleteFolder: (id: number) => Promise<void>;
   deleteScript: (id: number) => Promise<void>;
   toggleFolder: (id: number) => void;
+  expandAll: () => void;
+  collapseAll: () => void;
   resetSelection: () => void;
 }
 
@@ -159,6 +161,16 @@ export const useUiTestingSidebar = (): UseUiTestingSidebarReturn => {
     ));
   }, []);
 
+  // Expand all folders
+  const expandAll = useCallback(() => {
+    setFolders(prev => prev.map(folder => ({ ...folder, isExpanded: true })));
+  }, []);
+
+  // Collapse all folders
+  const collapseAll = useCallback(() => {
+    setFolders(prev => prev.map(folder => ({ ...folder, isExpanded: false })));
+  }, []);
+
   // Reset selection
   const resetSelection = useCallback(() => {
     setSelectedFolderId(null);
@@ -199,6 +211,8 @@ export const useUiTestingSidebar = (): UseUiTestingSidebarReturn => {
     deleteFolder,
     deleteScript,
     toggleFolder,
+    expandAll,
+    collapseAll,
     resetSelection,
   };
 };
