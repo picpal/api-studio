@@ -5,11 +5,13 @@ import com.example.apitest.service.AuthService;
 import com.example.apitest.service.UiTestScriptService;
 import com.example.apitest.service.UiTestFolderService;
 import com.example.apitest.service.UiTestExecutionService;
+import com.example.apitest.service.UiTestFileService;
 import com.example.apitest.service.ActivityLoggingService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -32,10 +34,16 @@ public class UiTestController {
     private UiTestExecutionService executionService;
 
     @Autowired
+    private UiTestFileService fileService;
+
+    @Autowired
     private ActivityLoggingService activityLoggingService;
 
     @Autowired
     private AuthService authService;
+
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
 
     private User getCurrentUser(HttpSession session) {
         String userEmail = (String) session.getAttribute("userEmail");
@@ -198,10 +206,23 @@ public class UiTestController {
         }
     }
 
-    @PostMapping("/scripts/upload")
-    public ResponseEntity<Map<String, Object>> uploadScript(@RequestParam("file") MultipartFile file,
-                                                           @RequestParam(value = "folderId", required = false) Long folderId,
-                                                           HttpSession session) {
+    // File endpoints
+    @GetMapping("/scripts/{scriptId}/files")
+    public List<Map<String, Object>> getFilesByScript(@PathVariable Long scriptId) {
+        return fileService.getFilesByScript(scriptId);
+    }
+
+    @GetMapping("/files/{id}")
+    public ResponseEntity<Map<String, Object>> getFile(@PathVariable Long id) {
+        return fileService.getFile(id)
+                .map(file -> ResponseEntity.ok(file))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/scripts/{scriptId}/files/upload")
+    public ResponseEntity<Map<String, Object>> uploadFile(@PathVariable Long scriptId,
+                                                          @RequestParam("file") MultipartFile file,
+                                                          HttpSession session) {
         try {
             User currentUser = getCurrentUser(session);
             if (currentUser == null) {
@@ -218,8 +239,137 @@ public class UiTestController {
                 return ResponseEntity.badRequest().body(Map.of("error", "Invalid file type. Only .js, .ts, .spec.js, .spec.ts, .test.js, .test.ts files are allowed"));
             }
 
-            Map<String, Object> response = scriptService.uploadScript(file, folderId, currentUser);
+            Map<String, Object> response = fileService.uploadFile(scriptId, file, currentUser);
             return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/files/{id}")
+    public ResponseEntity<?> deleteFile(@PathVariable Long id, HttpSession session) {
+        try {
+            User currentUser = getCurrentUser(session);
+            if (currentUser == null) {
+                return ResponseEntity.status(401).build();
+            }
+
+            boolean deleted = fileService.deleteFile(id);
+            if (deleted) {
+                return ResponseEntity.ok().build();
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/files/{id}/execute")
+    public ResponseEntity<Map<String, Object>> executeFile(@PathVariable Long id,
+                                                           HttpSession session) {
+        try {
+            User currentUser = getCurrentUser(session);
+            if (currentUser == null) {
+                return ResponseEntity.status(401).build();
+            }
+
+            Map<String, Object> response = fileService.executeFile(id, currentUser);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/files/{id}/callback")
+    public ResponseEntity<Map<String, Object>> fileExecutionCallback(@PathVariable Long id,
+                                                                     @RequestBody Map<String, Object> result) {
+        try {
+            String status = (String) result.get("status");
+            String resultData = (String) result.get("result");
+
+            com.example.apitest.entity.UiTestFile.FileStatus fileStatus;
+            if ("completed".equalsIgnoreCase(status)) {
+                fileStatus = com.example.apitest.entity.UiTestFile.FileStatus.COMPLETED;
+            } else if ("failed".equalsIgnoreCase(status)) {
+                fileStatus = com.example.apitest.entity.UiTestFile.FileStatus.FAILED;
+            } else {
+                fileStatus = com.example.apitest.entity.UiTestFile.FileStatus.RUNNING;
+            }
+
+            fileService.updateFileStatus(id, fileStatus, resultData);
+
+            // WebSocket으로 실시간 상태 업데이트 브로드캐스트
+            Map<String, Object> wsMessage = Map.of(
+                "fileId", id,
+                "status", fileStatus.name(),
+                "result", resultData != null ? resultData : "",
+                "timestamp", System.currentTimeMillis()
+            );
+            messagingTemplate.convertAndSend("/topic/ui-test-updates", wsMessage);
+            System.out.println("WebSocket message sent to /topic/ui-test-updates: " + wsMessage);
+
+            return ResponseEntity.ok(Map.of("message", "Status updated"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/files/{id}/stop")
+    public ResponseEntity<Map<String, Object>> stopFileExecution(@PathVariable Long id,
+                                                                 HttpSession session) {
+        try {
+            User currentUser = getCurrentUser(session);
+            if (currentUser == null) {
+                return ResponseEntity.status(401).build();
+            }
+
+            // 파일 실행 중지 (Runner 프로세스도 종료)
+            boolean stopped = fileService.stopFile(id);
+
+            if (stopped) {
+                // WebSocket으로 상태 업데이트 브로드캐스트
+                Map<String, Object> wsMessage = Map.of(
+                    "fileId", id,
+                    "status", "UPLOADED",
+                    "result", "Execution stopped by user",
+                    "timestamp", System.currentTimeMillis()
+                );
+                messagingTemplate.convertAndSend("/topic/ui-test-updates", wsMessage);
+
+                return ResponseEntity.ok(Map.of("message", "File execution stopped", "fileId", id));
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/scripts/{scriptId}/files/stop-all")
+    public ResponseEntity<Map<String, Object>> stopAllFileExecutions(@PathVariable Long scriptId,
+                                                                     HttpSession session) {
+        try {
+            User currentUser = getCurrentUser(session);
+            if (currentUser == null) {
+                return ResponseEntity.status(401).build();
+            }
+
+            int stoppedCount = fileService.stopAllRunningFiles(scriptId);
+
+            // WebSocket으로 전체 리프레시 알림
+            Map<String, Object> wsMessage = Map.of(
+                "scriptId", scriptId,
+                "action", "stop-all",
+                "stoppedCount", stoppedCount,
+                "timestamp", System.currentTimeMillis()
+            );
+            messagingTemplate.convertAndSend("/topic/ui-test-updates", wsMessage);
+
+            return ResponseEntity.ok(Map.of(
+                "message", "All running files stopped",
+                "stoppedCount", stoppedCount
+            ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

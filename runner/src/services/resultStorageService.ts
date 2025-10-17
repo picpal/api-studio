@@ -133,6 +133,39 @@ export class ResultStorageService {
     }
   }
 
+  /**
+   * 파일명으로 모든 결과 삭제 (테스트 파일 삭제 시 사용)
+   */
+  async deleteResultsByFileName(fileName: string): Promise<number> {
+    try {
+      const files = await fs.readdir(this.resultsDir);
+      const jsonFiles = files.filter(file => file.endsWith('.json'));
+
+      let deletedCount = 0;
+
+      for (const file of jsonFiles) {
+        try {
+          const result = await fs.readJSON(path.join(this.resultsDir, file)) as StoredExecutionResult;
+
+          if (result.fileName === fileName) {
+            await this.deleteExecutionResult(result.executionId);
+            deletedCount++;
+            Logger.info(`Deleted result for file ${fileName}: ${result.executionId}`);
+          }
+        } catch (error) {
+          Logger.warn(`Failed to process file: ${file}`, error);
+        }
+      }
+
+      Logger.info(`Deleted ${deletedCount} results for file: ${fileName}`);
+      return deletedCount;
+
+    } catch (error) {
+      Logger.error(`Failed to delete results for file: ${fileName}`, error);
+      return 0;
+    }
+  }
+
   async getExecutionStats(): Promise<{
     total: number;
     successful: number;

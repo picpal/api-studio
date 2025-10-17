@@ -345,6 +345,8 @@ const UiTestingSidebar: React.FC<UiTestingSidebarProps> = ({
     loadScripts,
     createFolder,
     createScript,
+    updateFolder,
+    updateScript,
     deleteFolder,
     deleteScript,
     toggleFolder,
@@ -758,6 +760,78 @@ test('example test', async ({ page }) => {
             }}
             confirmText="Create"
             error={createScriptError}
+          />
+
+          <Modal
+            isOpen={showRenameFolderModal}
+            title="Rename Folder"
+            value={renameFolderName}
+            placeholder="Enter new folder name..."
+            onValueChange={setRenameFolderName}
+            onConfirm={async () => {
+              if (!renameFolderName.trim()) {
+                setRenameFolderError('폴더 이름을 입력해주세요.');
+                return;
+              }
+              if (renamingFolder) {
+                try {
+                  await updateFolder(renamingFolder.id, renameFolderName);
+                  if (onFolderUpdate) {
+                    onFolderUpdate(renamingFolder.id, renameFolderName);
+                  }
+                  setShowRenameFolderModal(false);
+                  setRenamingFolder(null);
+                  setRenameFolderName('');
+                  setRenameFolderError(null);
+                } catch (error) {
+                  setRenameFolderError('폴더 이름 변경에 실패했습니다.');
+                }
+              }
+            }}
+            onCancel={() => {
+              setShowRenameFolderModal(false);
+              setRenamingFolder(null);
+              setRenameFolderName('');
+              setRenameFolderError(null);
+            }}
+            confirmText="Rename"
+            error={renameFolderError}
+          />
+
+          <Modal
+            isOpen={showRenameScriptModal}
+            title="Rename Script"
+            value={renameScriptName}
+            placeholder="Enter new script name..."
+            onValueChange={setRenameScriptName}
+            onConfirm={async () => {
+              if (!renameScriptName.trim()) {
+                setRenameScriptError('스크립트 이름을 입력해주세요.');
+                return;
+              }
+              if (renamingScript) {
+                try {
+                  await updateScript(renamingScript.id, { name: renameScriptName });
+                  if (onScriptUpdate) {
+                    onScriptUpdate(renamingScript.id, renameScriptName);
+                  }
+                  setShowRenameScriptModal(false);
+                  setRenamingScript(null);
+                  setRenameScriptName('');
+                  setRenameScriptError(null);
+                } catch (error) {
+                  setRenameScriptError('스크립트 이름 변경에 실패했습니다.');
+                }
+              }
+            }}
+            onCancel={() => {
+              setShowRenameScriptModal(false);
+              setRenamingScript(null);
+              setRenameScriptName('');
+              setRenameScriptError(null);
+            }}
+            confirmText="Rename"
+            error={renameScriptError}
           />
 
           {/* Upload Modal */}

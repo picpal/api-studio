@@ -2,6 +2,7 @@ import { execFile, spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs-extra';
 import { v4 as uuidv4 } from 'uuid';
+import axios from 'axios';
 import { Logger } from '../utils/logger';
 import { ResultStorageService } from './resultStorageService';
 import {
@@ -53,6 +54,14 @@ export class PlaywrightService {
       await this.collectAndSaveAssets(result, request);
       await this.resultStorage.saveExecutionResult(result);
 
+      // 백엔드에 콜백
+      if (request.callbackUrl) {
+        Logger.info(`Sending callback to: ${request.callbackUrl}`);
+        await this.sendCallback(request.callbackUrl, result);
+      } else {
+        Logger.warn('No callback URL provided');
+      }
+
       return result;
 
     } catch (error) {
@@ -67,6 +76,14 @@ export class PlaywrightService {
       // 실행 결과 저장 (실패한 경우도 저장 - 특히 스크린샷 중요)
       await this.collectAndSaveAssets(result, request);
       await this.resultStorage.saveExecutionResult(result);
+
+      // 백엔드에 콜백 (실패한 경우도 알림)
+      if (request.callbackUrl) {
+        Logger.info(`Sending failure callback to: ${request.callbackUrl}`);
+        await this.sendCallback(request.callbackUrl, result);
+      } else {
+        Logger.warn('No callback URL provided for failed execution');
+      }
 
       return result;
     } finally {
@@ -123,9 +140,16 @@ export class PlaywrightService {
   private async runPlaywrightScript(request: TestExecutionRequest): Promise<string> {
     const options = request.options || {};
 
+    // 하드 링크 생성 (복사 없이 같은 파일 참조, 디스크 공간 절약)
+    const tempFileName = `temp-${Date.now()}-${path.basename(request.scriptPath)}`;
+    const tempFilePath = path.join(process.cwd(), tempFileName);
+
+    await fs.link(request.scriptPath, tempFilePath);
+    Logger.info(`Created hard link for test file: ${tempFilePath}`);
+
     const args = [
       'test',
-      request.scriptPath,
+      tempFileName, // 상대 경로 사용
       '--reporter=json',
     ];
 
@@ -150,14 +174,26 @@ export class PlaywrightService {
       let stderr = '';
 
       playwrightProcess.stdout?.on('data', (data) => {
-        stdout += data.toString();
+        const output = data.toString();
+        stdout += output;
+        Logger.info(`Playwright stdout: ${output}`);
       });
 
       playwrightProcess.stderr?.on('data', (data) => {
-        stderr += data.toString();
+        const errorOutput = data.toString();
+        stderr += errorOutput;
+        Logger.error(`Playwright stderr: ${errorOutput}`);
       });
 
-      playwrightProcess.on('close', (code) => {
+      playwrightProcess.on('close', async (code) => {
+        // 하드 링크 제거 (원본 파일은 유지됨)
+        try {
+          await fs.remove(tempFilePath);
+          Logger.info(`Removed hard link: ${tempFilePath}`);
+        } catch (cleanupError) {
+          Logger.warn(`Failed to remove hard link: ${tempFilePath}`, cleanupError);
+        }
+
         if (code === 0) {
           resolve(stdout);
         } else {
@@ -165,7 +201,13 @@ export class PlaywrightService {
         }
       });
 
-      playwrightProcess.on('error', (error) => {
+      playwrightProcess.on('error', async (error) => {
+        // 에러 발생 시에도 하드 링크 제거
+        try {
+          await fs.remove(tempFilePath);
+        } catch (cleanupError) {
+          Logger.warn(`Failed to remove hard link: ${tempFilePath}`, cleanupError);
+        }
         reject(error);
       });
     });
@@ -187,6 +229,21 @@ export class PlaywrightService {
 
   getRunningTests(): string[] {
     return Array.from(this.runningTests.keys());
+  }
+
+  private async sendCallback(callbackUrl: string, result: TestExecutionResult): Promise<void> {
+    try {
+      await axios.post(callbackUrl, {
+        status: result.status,
+        result: result.output || result.error || '',
+        duration: result.duration,
+        startTime: result.startTime,
+        endTime: result.endTime
+      });
+      Logger.info(`Callback sent to: ${callbackUrl}`);
+    } catch (error) {
+      Logger.error(`Failed to send callback to ${callbackUrl}`, error);
+    }
   }
 
   private async collectAndSaveAssets(result: TestExecutionResult, request: TestExecutionRequest): Promise<void> {

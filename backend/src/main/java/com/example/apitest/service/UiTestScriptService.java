@@ -242,16 +242,24 @@ public class UiTestScriptService {
         UiTestExecution savedExecution = executionRepository.save(execution);
 
         try {
+            // 스크립트 내용을 임시 파일로 저장
+            java.nio.file.Path tempDir = java.nio.file.Paths.get(System.getProperty("java.io.tmpdir"));
+            String fileName = script.getName().endsWith(".js") || script.getName().endsWith(".ts")
+                ? script.getName()
+                : script.getName() + ".js";
+            java.nio.file.Path scriptPath = tempDir.resolve("ui_test_" + executionId + "_" + fileName);
+
+            java.nio.file.Files.write(scriptPath, script.getScriptContent().getBytes(StandardCharsets.UTF_8));
+
             Map<String, Object> request = new HashMap<>();
             request.put("scriptId", executionId);
-            request.put("scriptPath", "/tmp/ui_test_" + executionId + ".js");
-            request.put("fileName", script.getName());
+            request.put("scriptPath", scriptPath.toString());
+            request.put("fileName", fileName);
 
             Map<String, Object> options = new HashMap<>();
             options.put("headless", script.getHeadlessMode());
             options.put("timeout", script.getTimeoutSeconds() * 1000);
-            options.put("browserName", script.getBrowserType().name().toLowerCase());
-            options.put("screenshot", script.getScreenshotOnFailure());
+            options.put("browser", script.getBrowserType().name().toLowerCase());
             request.put("options", options);
 
             HttpHeaders headers = new HttpHeaders();
@@ -259,10 +267,14 @@ public class UiTestScriptService {
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
 
             ResponseEntity<Map> response = restTemplate.postForEntity(
-                    RUNNER_SERVER_URL + "/api/test/execute",
+                    RUNNER_SERVER_URL + "/api/execute",
                     entity,
                     Map.class
             );
+
+            // 실행 상태를 RUNNING으로 변경
+            execution.setStatus(UiTestExecution.ExecutionStatus.RUNNING);
+            executionRepository.save(execution);
 
             Map<String, Object> result = new HashMap<>();
             result.put("executionId", executionId);

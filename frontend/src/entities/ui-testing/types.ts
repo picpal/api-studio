@@ -31,6 +31,19 @@ export interface UiTestScript {
   updatedAt: string;
 }
 
+export interface UiTestFile {
+  id: number;
+  scriptId: number;
+  fileName: string;
+  fileSize: number;
+  status: 'UPLOADED' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+  lastExecutionResult?: string;
+  lastExecutedAt?: string;
+  uploadedBy: string;
+  uploadedAt: string;
+  updatedAt: string;
+}
+
 export interface UiTestExecution {
   id: number;
   executionId: string;

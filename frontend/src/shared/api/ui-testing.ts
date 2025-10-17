@@ -3,6 +3,7 @@
 import {
   UiTestFolder,
   UiTestScript,
+  UiTestFile,
   UiTestExecution,
   CreateUiTestFolderRequest,
   UpdateUiTestFolderRequest,
@@ -122,20 +123,32 @@ export const uiTestScriptApi = {
     return response.json();
   },
 
-  async uploadScript(file: File, folderId?: number): Promise<UiTestScript> {
+}
+
+// File API
+export const uiTestFileApi = {
+  async getFilesByScript(scriptId: number): Promise<UiTestFile[]> {
+    const response = await fetch(`${BASE_URL}/scripts/${scriptId}/files`, createFetchOptions());
+    if (!response.ok) throw new Error('Failed to fetch files');
+    return response.json();
+  },
+
+  async getById(fileId: number): Promise<UiTestFile> {
+    const response = await fetch(`${BASE_URL}/files/${fileId}`, createFetchOptions());
+    if (!response.ok) throw new Error('Failed to fetch file');
+    return response.json();
+  },
+
+  async uploadFile(scriptId: number, file: File): Promise<UiTestFile> {
     const formData = new FormData();
     formData.append('file', file);
-    if (folderId) {
-      formData.append('folderId', folderId.toString());
-    }
 
-    const response = await fetch(`${BASE_URL}/scripts/upload`, {
+    const response = await fetch(`${BASE_URL}/scripts/${scriptId}/files/upload`, {
       method: 'POST',
       credentials: 'include',
       body: formData,
     });
     if (!response.ok) {
-      // Try to extract meaningful error from server
       const contentType = response.headers.get('content-type') || '';
       let errorDetail = '';
       try {
@@ -155,6 +168,37 @@ export const uiTestScriptApi = {
         : `Upload failed [${statusInfo}]`;
       throw new Error(message);
     }
+    return response.json();
+  },
+
+  async delete(fileId: number): Promise<void> {
+    const response = await fetch(`${BASE_URL}/files/${fileId}`, createFetchOptions({
+      method: 'DELETE',
+    }));
+    if (!response.ok) throw new Error('Failed to delete file');
+  },
+
+  async execute(fileId: number): Promise<any> {
+    const response = await fetch(`${BASE_URL}/files/${fileId}/execute`, createFetchOptions({
+      method: 'POST',
+    }));
+    if (!response.ok) throw new Error('Failed to execute file');
+    return response.json();
+  },
+
+  async stop(fileId: number): Promise<any> {
+    const response = await fetch(`${BASE_URL}/files/${fileId}/stop`, createFetchOptions({
+      method: 'POST',
+    }));
+    if (!response.ok) throw new Error('Failed to stop file execution');
+    return response.json();
+  },
+
+  async stopAll(scriptId: number): Promise<any> {
+    const response = await fetch(`${BASE_URL}/scripts/${scriptId}/files/stop-all`, createFetchOptions({
+      method: 'POST',
+    }));
+    if (!response.ok) throw new Error('Failed to stop all file executions');
     return response.json();
   }
 };

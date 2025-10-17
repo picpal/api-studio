@@ -35,11 +35,19 @@ export class TestController {
 
   async executeScript(req: Request, res: Response): Promise<void> {
     try {
-      const { scriptPath, fileName, options } = req.body as {
+      const { scriptPath, fileName, options, callbackUrl, fileId } = req.body as {
         scriptPath: string;
         fileName: string;
         options?: PlaywrightOptions;
+        callbackUrl?: string;
+        fileId?: number;
       };
+
+      Logger.info(`=== Received execution request ===`);
+      Logger.info(`scriptPath: ${scriptPath}`);
+      Logger.info(`fileName: ${fileName}`);
+      Logger.info(`callbackUrl: ${callbackUrl}`);
+      Logger.info(`fileId: ${fileId}`);
 
       if (!scriptPath || !fileName) {
         res.status(400).json({
@@ -53,7 +61,9 @@ export class TestController {
         scriptId,
         scriptPath: path.resolve(scriptPath),
         fileName,
-        options: options || {}
+        options: options || {},
+        callbackUrl,
+        fileId
       };
 
       Logger.info(`Received script execution request: ${fileName}`);

@@ -36,6 +36,7 @@ public class SecurityConfig {
                 .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers("/api/admin/reset-password").permitAll()
                 .requestMatchers("/api/admin/**").permitAll()  // 관리자 API는 AOP에서 처리
+                .requestMatchers("/api/ui-tests/files/*/callback").permitAll()  // Runner 콜백 허용
                 .requestMatchers("/api/**").authenticated()  // 일반 API 요청은 인증 필요
                 .anyRequest().permitAll()  // 웹 페이지는 세션 기반 인증 (AOP 처리)
             )

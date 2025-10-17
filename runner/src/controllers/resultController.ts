@@ -124,6 +124,37 @@ export class ResultController {
     }
   }
 
+  async deleteResultsByFileName(req: Request, res: Response): Promise<void> {
+    try {
+      const { fileName } = req.params;
+
+      if (!fileName) {
+        res.status(400).json({
+          error: 'Missing fileName parameter'
+        });
+        return;
+      }
+
+      Logger.info(`Deleting all results for fileName: ${fileName}`);
+
+      const deletedCount = await this.resultStorage.deleteResultsByFileName(fileName);
+
+      res.status(200).json({
+        success: true,
+        message: `Deleted ${deletedCount} execution result(s)`,
+        fileName,
+        deletedCount
+      });
+
+    } catch (error) {
+      Logger.error('Error in deleteResultsByFileName endpoint', error);
+      res.status(500).json({
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+
   async getScreenshot(req: Request, res: Response): Promise<void> {
     try {
       const { executionId, fileName } = req.params;

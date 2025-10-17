@@ -21,4 +21,15 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
+
+    @Bean(name = "uiTestExecutor")
+    public Executor uiTestExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(3);  // 동시 실행 가능한 기본 쓰레드 수
+        executor.setMaxPoolSize(10);  // 최대 쓰레드 수
+        executor.setQueueCapacity(50); // 대기 큐 크기
+        executor.setThreadNamePrefix("UiTest-");
+        executor.initialize();
+        return executor;
+    }
 }

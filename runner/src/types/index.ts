@@ -3,6 +3,8 @@ export interface TestExecutionRequest {
   scriptPath: string;
   fileName: string;
   options?: PlaywrightOptions;
+  callbackUrl?: string;
+  fileId?: number;
 }
 
 export interface PlaywrightOptions {

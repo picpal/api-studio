@@ -71,6 +71,9 @@ async function initializeServices() {
 
   app.delete('/api/results/:executionId', (req, res) => resultController.deleteExecutionResult(req, res));
 
+  // 파일명으로 결과 삭제 (테스트 파일 삭제 시 사용)
+  app.delete('/api/results/by-filename/:fileName', (req, res) => resultController.deleteResultsByFileName(req, res));
+
   // 스크린샷 및 트레이스 파일 제공
   app.get('/api/results/:executionId/screenshot/:fileName', (req, res) => resultController.getScreenshot(req, res));
 
