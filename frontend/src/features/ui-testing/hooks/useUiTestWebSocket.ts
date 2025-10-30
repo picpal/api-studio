@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { websocketService } from '../../meeting-management/api/websocketService';
+import { websocketService } from '../../../shared/lib/websocketService';
 
 interface UiTestUpdate {
   fileId: number;

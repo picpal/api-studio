@@ -34,9 +34,9 @@ import {
 } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useUiTestingSidebar } from '../../features/ui-testing-management/hooks/useUiTestingSidebar';
+import { useUiTestingSidebar } from '../../features/ui-testing/hooks/useUiTestingSidebar';
 import { UiTestScript } from '../../entities/ui-testing/types';
-import ScriptUpload from '../../features/ui-testing-management/components/ScriptUpload';
+import ScriptUpload from '../../features/ui-testing/components/ScriptUpload';
 
 interface UiTestingSidebarProps {
   collapsed?: boolean;

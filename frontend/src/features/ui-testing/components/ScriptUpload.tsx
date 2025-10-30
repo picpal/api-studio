@@ -6,7 +6,7 @@ import {
   DocumentTextIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
-import { uiTestScriptApi } from '../../../shared/api/ui-testing';
+import { uiTestScriptApi, uiTestFileApi } from '../../../shared/api/ui-testing';
 
 interface ScriptUploadProps {
   folderId?: number;
@@ -71,7 +71,23 @@ const ScriptUpload: React.FC<ScriptUploadProps> = ({
 
     setUploading(true);
     try {
-      await uiTestScriptApi.uploadScript(selectedFile, folderId);
+      // Step 1: Create a new script with the file name (without extension)
+      const scriptName = selectedFile.name.replace(/\.(js|ts|spec\.js|spec\.ts|test\.js|test\.ts)$/, '');
+      const newScript = await uiTestScriptApi.create({
+        name: scriptName,
+        description: `Uploaded from file: ${selectedFile.name}`,
+        scriptContent: '',
+        scriptType: 'PLAYWRIGHT',
+        browserType: 'CHROMIUM',
+        timeoutSeconds: 30,
+        headlessMode: true,
+        screenshotOnFailure: true,
+        folderId: folderId
+      });
+
+      // Step 2: Upload the file to the newly created script
+      await uiTestFileApi.uploadFile(newScript.id, selectedFile);
+
       setSelectedFile(null);
       onUploadSuccess?.();
     } catch (error) {
