@@ -17,9 +17,80 @@ export class PlaywrightService {
   private runningTests: Map<string, any> = new Map();
   private onProgressCallback?: (result: TestExecutionResult) => void;
   private resultStorage: ResultStorageService = new ResultStorageService();
+  private cleanupInterval: NodeJS.Timeout | null = null;
+
+  constructor() {
+    // 정기적인 임시 파일 정리 시작 (1시간마다)
+    this.startCleanupScheduler();
+  }
 
   setProgressCallback(callback: (result: TestExecutionResult) => void): void {
     this.onProgressCallback = callback;
+  }
+
+  /**
+   * 정기적인 임시 하드 링크 파일 정리 스케줄러 시작
+   */
+  private startCleanupScheduler(): void {
+    // 1시간마다 실행
+    this.cleanupInterval = setInterval(() => {
+      this.cleanupOldTempFiles().catch(err => {
+        Logger.error('Failed to cleanup old temp files', err);
+      });
+    }, 60 * 60 * 1000); // 1시간
+
+    Logger.info('Temp file cleanup scheduler started (runs every 1 hour)');
+  }
+
+  /**
+   * 오래된 임시 하드 링크 파일 정리 (1시간 이상 된 파일)
+   */
+  private async cleanupOldTempFiles(): Promise<void> {
+    try {
+      const tempDir = path.join(process.cwd(), 'temp');
+
+      if (!await fs.pathExists(tempDir)) {
+        return;
+      }
+
+      const now = Date.now();
+      const maxAge = 60 * 60 * 1000; // 1시간
+      let removedCount = 0;
+
+      const files = await fs.readdir(tempDir);
+
+      for (const file of files) {
+        try {
+          const filePath = path.join(tempDir, file);
+          const stats = await fs.stat(filePath);
+
+          // 1시간 이상 된 파일 삭제
+          if (now - stats.mtimeMs > maxAge) {
+            await fs.remove(filePath);
+            removedCount++;
+            Logger.info(`Removed old temp file: ${file}`);
+          }
+        } catch (err) {
+          Logger.warn(`Failed to process temp file: ${file}`, err);
+        }
+      }
+
+      if (removedCount > 0) {
+        Logger.info(`Cleanup completed: removed ${removedCount} old temp files`);
+      }
+    } catch (error) {
+      Logger.error('Failed to cleanup temp files', error);
+    }
+  }
+
+  /**
+   * 서비스 종료 시 정리
+   */
+  public shutdown(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      Logger.info('Temp file cleanup scheduler stopped');
+    }
   }
 
   async executeScript(request: TestExecutionRequest): Promise<TestExecutionResult> {
@@ -172,6 +243,35 @@ export class PlaywrightService {
 
       let stdout = '';
       let stderr = '';
+      let timeoutId: NodeJS.Timeout | null = null;
+
+      // 타임아웃 설정 (기본 5분)
+      const executionTimeout = options.timeout || 300000; // 5분
+      timeoutId = setTimeout(() => {
+        Logger.warn(`Test execution timeout after ${executionTimeout}ms for script: ${request.scriptId}`);
+
+        // 프로세스 종료
+        try {
+          playwrightProcess.kill('SIGTERM');
+
+          // SIGTERM으로 종료되지 않으면 3초 후 SIGKILL
+          setTimeout(() => {
+            if (!playwrightProcess.killed) {
+              playwrightProcess.kill('SIGKILL');
+              Logger.warn(`Force killed test process for script: ${request.scriptId}`);
+            }
+          }, 3000);
+        } catch (killError) {
+          Logger.error('Failed to kill timed out process', killError);
+        }
+
+        // 하드 링크 제거
+        fs.remove(tempFilePath).catch((cleanupError) => {
+          Logger.warn(`Failed to remove hard link after timeout: ${tempFilePath}`, cleanupError);
+        });
+
+        reject(new Error(`Test execution timeout after ${executionTimeout}ms`));
+      }, executionTimeout);
 
       playwrightProcess.stdout?.on('data', (data) => {
         const output = data.toString();
@@ -186,6 +286,11 @@ export class PlaywrightService {
       });
 
       playwrightProcess.on('close', async (code) => {
+        // 타임아웃 타이머 정리
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+
         // 하드 링크 제거 (원본 파일은 유지됨)
         try {
           await fs.remove(tempFilePath);
@@ -202,6 +307,11 @@ export class PlaywrightService {
       });
 
       playwrightProcess.on('error', async (error) => {
+        // 타임아웃 타이머 정리
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+
         // 에러 발생 시에도 하드 링크 제거
         try {
           await fs.remove(tempFilePath);

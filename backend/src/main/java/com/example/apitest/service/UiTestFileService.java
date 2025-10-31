@@ -6,6 +6,7 @@ import com.example.apitest.entity.User;
 import com.example.apitest.repository.UiTestFileRepository;
 import com.example.apitest.repository.UiTestScriptRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -46,7 +47,9 @@ public class UiTestFileService {
     @org.springframework.beans.factory.annotation.Qualifier("uiTestExecutor")
     private java.util.concurrent.Executor uiTestExecutor;
 
-    private static final String RUNNER_SERVER_URL = "http://localhost:3002";
+    @Value("${runner.server.url}")
+    private String runnerServerUrl;
+
     private static final String UPLOAD_DIR = "uploads/ui-tests";
 
     public List<Map<String, Object>> getFilesByScript(Long scriptId) {
@@ -130,7 +133,7 @@ public class UiTestFileService {
 
             // Runner에 결과 파일 삭제 요청 (비동기)
             try {
-                restTemplate.delete(RUNNER_SERVER_URL + "/api/results/by-filename/" + fileName);
+                restTemplate.delete(runnerServerUrl + "/api/results/by-filename/" + fileName);
                 System.out.println("Requested result cleanup for file: " + fileName);
             } catch (Exception e) {
                 System.err.println("Failed to request result cleanup: " + e.getMessage());
@@ -255,7 +258,7 @@ public class UiTestFileService {
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
 
             ResponseEntity<Map> response = restTemplate.postForEntity(
-                    RUNNER_SERVER_URL + "/api/execute",
+                    runnerServerUrl + "/api/execute",
                     entity,
                     Map.class
             );
@@ -292,7 +295,7 @@ public class UiTestFileService {
         if (executionId != null) {
             try {
                 // Runner에 중지 요청
-                restTemplate.delete(RUNNER_SERVER_URL + "/api/execute/" + executionId);
+                restTemplate.delete(runnerServerUrl + "/api/execute/" + executionId);
                 System.out.println("Sent stop request to Runner for executionId: " + executionId);
             } catch (Exception e) {
                 System.err.println("Failed to stop Runner execution: " + e.getMessage());
@@ -342,7 +345,7 @@ public class UiTestFileService {
             if (executionId != null) {
                 try {
                     // Runner에 중지 요청
-                    restTemplate.delete(RUNNER_SERVER_URL + "/api/execute/" + executionId);
+                    restTemplate.delete(runnerServerUrl + "/api/execute/" + executionId);
                     System.out.println("Sent stop request to Runner for executionId: " + executionId);
                 } catch (Exception e) {
                     System.err.println("Failed to stop Runner execution for fileId " + file.getId() + ": " + e.getMessage());
