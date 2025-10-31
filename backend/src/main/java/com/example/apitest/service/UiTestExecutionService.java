@@ -6,6 +6,7 @@ import com.example.apitest.entity.User;
 import com.example.apitest.repository.UiTestExecutionRepository;
 import com.example.apitest.repository.UiTestScriptRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -33,7 +34,8 @@ public class UiTestExecutionService {
     @Autowired
     private RestTemplate restTemplate;
 
-    private static final String RUNNER_SERVER_URL = "http://localhost:3002";
+    @Value("${runner.server.url}")
+    private String runnerServerUrl;
 
     public List<Map<String, Object>> getAllExecutions() {
         List<UiTestExecution> executions = executionRepository.findAll();
@@ -161,7 +163,7 @@ public class UiTestExecutionService {
     public boolean cancelExecution(String executionId) {
         try {
             ResponseEntity<Map> response = restTemplate.postForEntity(
-                    RUNNER_SERVER_URL + "/api/test/cancel/" + executionId,
+                    runnerServerUrl + "/api/test/cancel/" + executionId,
                     null,
                     Map.class
             );

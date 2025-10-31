@@ -1,5 +1,6 @@
 package com.example.apitest.controller;
 
+import com.example.apitest.dto.ErrorResponse;
 import com.example.apitest.entity.User;
 import com.example.apitest.service.AuthService;
 import com.example.apitest.service.UiTestScriptService;
@@ -9,7 +10,10 @@ import com.example.apitest.service.UiTestFileService;
 import com.example.apitest.service.ActivityLoggingService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +27,8 @@ import java.util.Optional;
 @RequestMapping("/api/ui-tests")
 @CrossOrigin(origins = {"http://localhost:3001", "http://localhost:3003"}, allowCredentials = "true")
 public class UiTestController {
+
+    private static final Logger logger = LoggerFactory.getLogger(UiTestController.class);
 
     @Autowired
     private UiTestScriptService scriptService;
@@ -78,18 +84,24 @@ public class UiTestController {
     }
 
     @PostMapping("/folders")
-    public ResponseEntity<Map<String, Object>> createFolder(@RequestBody Map<String, Object> folderData,
-                                                           HttpSession session, HttpServletRequest request) {
+    public ResponseEntity<?> createFolder(@RequestBody Map<String, Object> folderData,
+                                         HttpSession session, HttpServletRequest request) {
         try {
             User currentUser = getCurrentUser(session);
             if (currentUser == null) {
-                return ResponseEntity.status(401).build();
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
 
             Map<String, Object> response = folderService.createFolder(folderData, currentUser);
             return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            logger.warn("Invalid folder creation request: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(new ErrorResponse("UI_TEST_001", "Invalid folder data"));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            logger.error("Failed to create folder", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("INTERNAL_ERROR", "Failed to create folder"));
         }
     }
 
@@ -220,29 +232,38 @@ public class UiTestController {
     }
 
     @PostMapping("/scripts/{scriptId}/files/upload")
-    public ResponseEntity<Map<String, Object>> uploadFile(@PathVariable Long scriptId,
-                                                          @RequestParam("file") MultipartFile file,
-                                                          HttpSession session) {
+    public ResponseEntity<?> uploadFile(@PathVariable Long scriptId,
+                                       @RequestParam("file") MultipartFile file,
+                                       HttpSession session) {
         try {
             User currentUser = getCurrentUser(session);
             if (currentUser == null) {
-                return ResponseEntity.status(401).build();
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
 
             if (file.isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of("error", "File is empty"));
+                logger.warn("Empty file upload attempt for script ID: {}", scriptId);
+                return ResponseEntity.badRequest()
+                        .body(new ErrorResponse("UI_TEST_002", "File is empty"));
             }
 
-            // 파일 확장자 검증
-            String fileName = file.getOriginalFilename();
-            if (fileName == null || !isValidTestFile(fileName)) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Invalid file type. Only .js, .ts, .spec.js, .spec.ts, .test.js, .test.ts files are allowed"));
+            // 파일 보안 검증 (경로 트래버설, 확장자, MIME 타입)
+            if (!isValidAndSafeFile(file)) {
+                logger.warn("Invalid file upload attempt: {}", file.getOriginalFilename());
+                return ResponseEntity.badRequest()
+                        .body(new ErrorResponse("UI_TEST_003", "Invalid file type or security check failed"));
             }
 
             Map<String, Object> response = fileService.uploadFile(scriptId, file, currentUser);
             return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            logger.warn("Invalid upload request for script {}: {}", scriptId, e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(new ErrorResponse("UI_TEST_004", "Invalid request"));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            logger.error("Failed to upload file for script {}", scriptId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("INTERNAL_ERROR", "Failed to upload file"));
         }
     }
 
@@ -266,18 +287,24 @@ public class UiTestController {
     }
 
     @PostMapping("/files/{id}/execute")
-    public ResponseEntity<Map<String, Object>> executeFile(@PathVariable Long id,
-                                                           HttpSession session) {
+    public ResponseEntity<?> executeFile(@PathVariable Long id,
+                                        HttpSession session) {
         try {
             User currentUser = getCurrentUser(session);
             if (currentUser == null) {
-                return ResponseEntity.status(401).build();
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
 
             Map<String, Object> response = fileService.executeFile(id, currentUser);
             return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            logger.warn("Invalid file execution request for file {}: {}", id, e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(new ErrorResponse("UI_TEST_005", "Invalid execution request"));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            logger.error("Failed to execute file {}", id, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("INTERNAL_ERROR", "Failed to execute file"));
         }
     }
 
@@ -375,6 +402,39 @@ public class UiTestController {
         }
     }
 
+    /**
+     * 파일 보안 검증: 경로 트래버설, 파일명, 확장자, MIME 타입 검사
+     */
+    private boolean isValidAndSafeFile(MultipartFile file) {
+        String fileName = file.getOriginalFilename();
+
+        // 파일명 null 체크
+        if (fileName == null || fileName.trim().isEmpty()) {
+            return false;
+        }
+
+        // 경로 트래버설 공격 방어: .., /, \ 문자 차단
+        if (fileName.contains("..") || fileName.contains("/") || fileName.contains("\\")) {
+            return false;
+        }
+
+        // 파일 확장자 검증
+        if (!isValidTestFile(fileName)) {
+            return false;
+        }
+
+        // MIME 타입 검증
+        String contentType = file.getContentType();
+        if (!isValidContentType(contentType)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * 허용된 테스트 파일 확장자 검증
+     */
     private boolean isValidTestFile(String fileName) {
         String lowerCaseFileName = fileName.toLowerCase();
         return lowerCaseFileName.endsWith(".js") ||
@@ -383,6 +443,24 @@ public class UiTestController {
                lowerCaseFileName.endsWith(".spec.ts") ||
                lowerCaseFileName.endsWith(".test.js") ||
                lowerCaseFileName.endsWith(".test.ts");
+    }
+
+    /**
+     * 허용된 MIME 타입 검증
+     */
+    private boolean isValidContentType(String contentType) {
+        if (contentType == null) {
+            return false;
+        }
+
+        // JavaScript/TypeScript 파일의 일반적인 MIME 타입들
+        return contentType.equals("application/javascript") ||
+               contentType.equals("application/x-javascript") ||
+               contentType.equals("text/javascript") ||
+               contentType.equals("text/plain") ||
+               contentType.equals("application/typescript") ||
+               contentType.equals("text/typescript") ||
+               contentType.equals("application/octet-stream"); // 일부 브라우저에서 사용
     }
 
     @PostMapping("/scripts/{id}/execute")
