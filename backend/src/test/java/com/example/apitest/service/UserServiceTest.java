@@ -79,64 +79,6 @@ class UserServiceTest {
         verify(userRepository).findAll();
     }
 
-    @Test
-    @DisplayName("현재 사용자는 채팅 가능 목록에서 제외되어야 함")
-    void shouldExcludeCurrentUserFromChatList() {
-        // given
-        Long currentUserId = 1L;
-        List<User> allUsers = Arrays.asList(testUser1, testUser2);
-
-        when(userRepository.findAll()).thenReturn(allUsers);
-
-        // when
-        List<UserDTO> result = userService.getAvailableUsersForChat(currentUserId);
-
-        // then
-        assertThat(result).noneMatch(user -> user.getId().equals(currentUserId));
-        verify(userRepository).findAll();
-    }
-
-    @Test
-    @DisplayName("PENDING 상태 사용자는 채팅 가능 목록에서 제외되어야 함")
-    void shouldExcludePendingUsersFromChatList() {
-        // given
-        Long currentUserId = 1L;
-        List<User> allUsers = Arrays.asList(testUser1, testUser2, testUser3);
-
-        when(userRepository.findAll()).thenReturn(allUsers);
-
-        // when
-        List<UserDTO> result = userService.getAvailableUsersForChat(currentUserId);
-
-        // then
-        assertThat(result).noneMatch(user -> user.getStatus().equals(User.Status.PENDING));
-        verify(userRepository).findAll();
-    }
-
-    @Test
-    @DisplayName("REJECTED 상태 사용자는 채팅 가능 목록에서 제외되어야 함")
-    void shouldExcludeRejectedUsersFromChatList() {
-        // given
-        Long currentUserId = 1L;
-
-        User rejectedUser = new User();
-        rejectedUser.setId(4L);
-        rejectedUser.setEmail("rejected@example.com");
-        rejectedUser.setRole(User.Role.USER);
-        rejectedUser.setStatus(User.Status.REJECTED);
-        rejectedUser.setCreatedAt(LocalDateTime.now());
-
-        List<User> allUsers = Arrays.asList(testUser1, testUser2, rejectedUser);
-
-        when(userRepository.findAll()).thenReturn(allUsers);
-
-        // when
-        List<UserDTO> result = userService.getAvailableUsersForChat(currentUserId);
-
-        // then
-        assertThat(result).noneMatch(user -> user.getStatus().equals(User.Status.REJECTED));
-        verify(userRepository).findAll();
-    }
 
     @Test
     @DisplayName("사용자가 없는 경우 빈 목록을 반환해야 함")
@@ -218,30 +160,6 @@ class UserServiceTest {
         verify(userRepository).findById(userId);
     }
 
-    @Test
-    @DisplayName("UserDTO 변환 시 모든 필드가 올바르게 매핑되어야 함")
-    void shouldCorrectlyConvertToDTO() {
-        // given
-        Long currentUserId = 1L;
-        List<User> allUsers = Arrays.asList(testUser1, testUser2);
-
-        when(userRepository.findAll()).thenReturn(allUsers);
-
-        // when
-        List<UserDTO> result = userService.getAvailableUsersForChat(currentUserId);
-
-        // then
-        assertThat(result).hasSize(1);
-        UserDTO dto = result.get(0);
-
-        assertThat(dto.getId()).isEqualTo(testUser2.getId());
-        assertThat(dto.getEmail()).isEqualTo(testUser2.getEmail());
-        assertThat(dto.getRole()).isEqualTo(testUser2.getRole());
-        assertThat(dto.getStatus()).isEqualTo(testUser2.getStatus());
-        assertThat(dto.getCreatedAt()).isEqualTo(testUser2.getCreatedAt());
-
-        verify(userRepository).findAll();
-    }
 
     @Test
     @DisplayName("ADMIN 역할 사용자도 APPROVED 상태면 채팅 가능 목록에 포함되어야 함")

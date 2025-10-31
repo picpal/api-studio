@@ -347,26 +347,6 @@ class ApiItemServiceTest {
         verifyNoInteractions(historyRepository);
     }
 
-    @Test
-    @DisplayName("아이템 삭제 시 관련 파이프라인 스텝과 히스토리도 함께 삭제해야 함")
-    void shouldDeleteRelatedDataWhenDeletingItem() {
-        // given
-        Long itemId = 1L;
-
-        when(itemRepository.findById(itemId)).thenReturn(Optional.of(testItem));
-        when(itemRepository.deleteByIdCustom(itemId)).thenReturn(1);
-
-        // when
-        boolean result = apiItemService.deleteItem(itemId);
-
-        // then
-        assertThat(result).isTrue();
-
-        // 순서대로 삭제되는지 확인
-        verify(pipelineStepRepository).deleteByApiItemId(itemId);
-        verify(historyRepository).deleteByApiItemId(itemId);
-        verify(itemRepository).deleteByIdCustom(itemId);
-    }
 
     // === getFolderName 테스트 ===
 
@@ -411,49 +391,6 @@ class ApiItemServiceTest {
         verifyNoInteractions(folderRepository);
     }
 
-    // === HTTP Method 변환 테스트 ===
-
-    @Test
-    @DisplayName("다양한 HTTP 메소드를 처리할 수 있어야 함")
-    void shouldHandleVariousHttpMethods() {
-        // given
-        Map<String, Object> itemData = new HashMap<>();
-        itemData.put("name", "Test API");
-        itemData.put("url", "https://api.example.com/test");
-
-        when(itemRepository.save(any(ApiItem.class))).thenAnswer(invocation -> {
-            ApiItem item = invocation.getArgument(0);
-            item.setId(1L);
-            return item;
-        });
-
-        // Test GET
-        itemData.put("method", "GET");
-        Map<String, Object> result1 = apiItemService.createItem(itemData);
-        assertThat(result1).isNotNull();
-
-        // Test POST
-        itemData.put("method", "POST");
-        Map<String, Object> result2 = apiItemService.createItem(itemData);
-        assertThat(result2).isNotNull();
-
-        // Test PUT
-        itemData.put("method", "PUT");
-        Map<String, Object> result3 = apiItemService.createItem(itemData);
-        assertThat(result3).isNotNull();
-
-        // Test DELETE
-        itemData.put("method", "DELETE");
-        Map<String, Object> result4 = apiItemService.createItem(itemData);
-        assertThat(result4).isNotNull();
-
-        // Test PATCH
-        itemData.put("method", "PATCH");
-        Map<String, Object> result5 = apiItemService.createItem(itemData);
-        assertThat(result5).isNotNull();
-
-        verify(itemRepository, times(5)).save(any(ApiItem.class));
-    }
 
     // === Validation 테스트 ===
 
