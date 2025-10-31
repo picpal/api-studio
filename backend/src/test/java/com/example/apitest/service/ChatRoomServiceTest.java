@@ -390,7 +390,7 @@ class ChatRoomServiceTest {
         when(participantRepository.save(any(ChatRoomParticipant.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(userRepository.findById(userId)).thenReturn(Optional.of(testUser1));
         when(messageRepository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(participantRepository.countByRoomIdAndIsActive(roomId, true)).thenReturn(0);
+        when(participantRepository.countByRoomIdAndIsActive(roomId, true)).thenReturn(0L);
         when(chatRoomRepository.findById(roomId)).thenReturn(Optional.of(testRoom));
         doNothing().when(chatReadStatusService).cleanupReadStatusForUser(roomId, userId);
         doNothing().when(chatReadStatusService).cleanupReadStatusForRoom(roomId);
@@ -418,7 +418,7 @@ class ChatRoomServiceTest {
         when(participantRepository.save(any(ChatRoomParticipant.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(userRepository.findById(userId)).thenReturn(Optional.of(testUser1));
         when(messageRepository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(participantRepository.countByRoomIdAndIsActive(roomId, true)).thenReturn(0);
+        when(participantRepository.countByRoomIdAndIsActive(roomId, true)).thenReturn(0L);
         when(chatRoomRepository.findById(roomId)).thenReturn(Optional.of(testRoom));
         when(chatRoomRepository.save(any(ChatRoom.class))).thenAnswer(invocation -> invocation.getArgument(0));
         doNothing().when(chatReadStatusService).cleanupReadStatusForUser(roomId, userId);
