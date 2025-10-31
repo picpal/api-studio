@@ -314,8 +314,6 @@ class ApiItemServiceTest {
         Long itemId = 1L;
 
         when(itemRepository.findById(itemId)).thenReturn(Optional.of(testItem));
-        doNothing().when(pipelineStepRepository).deleteByApiItemId(itemId);
-        doNothing().when(historyRepository).deleteByApiItemId(itemId);
         when(itemRepository.deleteByIdCustom(itemId)).thenReturn(1);
 
         // when
@@ -356,8 +354,6 @@ class ApiItemServiceTest {
         Long itemId = 1L;
 
         when(itemRepository.findById(itemId)).thenReturn(Optional.of(testItem));
-        doNothing().when(pipelineStepRepository).deleteByApiItemId(itemId);
-        doNothing().when(historyRepository).deleteByApiItemId(itemId);
         when(itemRepository.deleteByIdCustom(itemId)).thenReturn(1);
 
         // when
