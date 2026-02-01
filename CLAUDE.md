@@ -28,6 +28,12 @@ QA 팀을 위한 API 테스트 자동화 도구 개발
 - H2 Database (개발용)
 - Spring Security (세션 기반 인증)
 
+### Runner (Playwright Test Runner)
+- Node.js + TypeScript
+- Express (REST API 서버)
+- Playwright (UI 테스트 실행)
+- WebSocket (실시간 결과 전송)
+
 ## 주요 명령어
 
 ### Backend
@@ -65,6 +71,21 @@ npm run test
 npm run lint
 ```
 
+### Runner
+```bash
+# 개발 서버 실행
+npm run dev
+
+# 프로덕션 빌드
+npm run build
+
+# 프로덕션 서버 실행
+npm start
+
+# Playwright 브라우저 설치
+npm run install-browsers
+```
+
 ## 주요 아키텍처
 
 ### Frontend 구조 (FSD)
@@ -100,14 +121,37 @@ com/example/apitest/
 └── aspect/           # 횡단 관심사
 ```
 
+### Runner 구조 (Playwright Test Runner)
+- Node.js + TypeScript 기반 테스트 실행기
+- Playwright를 사용한 UI 테스트 실행
+- WebSocket을 통한 실시간 결과 전송
+- Express 서버 (포트 3002)
+
+```
+runner/
+├── src/
+│   ├── index.ts                 # Express 서버 진입점
+│   ├── controllers/
+│   │   ├── testController.ts    # 테스트 실행 API
+│   │   └── resultController.ts  # 결과 조회 API
+│   ├── services/
+│   │   ├── playwrightService.ts    # Playwright 테스트 실행
+│   │   ├── websocketService.ts     # 실시간 결과 전송
+│   │   └── resultStorageService.ts # 결과 저장 관리
+│   ├── types/                   # TypeScript 타입 정의
+│   └── utils/                   # 유틸리티 (Logger 등)
+└── uploads/                     # 업로드된 테스트 스크립트
+```
+
 ## 데이터베이스
 - H2 Console: http://localhost:8080/h2-console
 - JDBC URL: jdbc:h2:file:./data/testdb
 - Username: sa, Password: (빈 값)
 
 ## API 서버
-- Frontend: http://localhost:3001
+- Frontend: http://localhost:3001 (Vite가 포트 충돌 시 자동으로 다음 포트 선택: 3002, 3003 등)
 - Backend API: http://localhost:8080/api
+- Runner API: http://localhost:3002 (WebSocket: ws://localhost:3002/ws)
 
 ## 주요 API 엔드포인트
 
@@ -137,6 +181,69 @@ com/example/apitest/
 - `POST /pipelines/{id}/execute` - Pipeline 실행
 - `GET /pipelines/executions/{id}` - 실행 상태 조회
 - `GET /pipelines/executions/{id}/steps` - Step 실행 결과
+
+### UI Testing
+- `GET /ui-tests/folders` - UI 테스트 폴더 목록 조회
+- `GET /ui-tests/folders/structure` - 폴더 구조 조회
+- `GET /ui-tests/folders/{id}` - 폴더 상세 조회
+- `GET /ui-tests/folders/{id}/children` - 하위 폴더 조회
+- `POST /ui-tests/folders` - 폴더 생성
+- `PUT /ui-tests/folders/{id}` - 폴더 수정
+- `DELETE /ui-tests/folders/{id}` - 폴더 삭제
+- `GET /ui-tests/scripts` - 스크립트 목록 조회
+- `GET /ui-tests/scripts/{id}` - 스크립트 상세 조회
+- `GET /ui-tests/folders/{folderId}/scripts` - 폴더별 스크립트 조회
+- `GET /ui-tests/scripts/search` - 스크립트 검색
+- `POST /ui-tests/scripts` - 스크립트 생성
+- `PUT /ui-tests/scripts/{id}` - 스크립트 수정
+- `DELETE /ui-tests/scripts/{id}` - 스크립트 삭제
+- `POST /ui-tests/scripts/{id}/execute` - 스크립트 실행
+- `GET /ui-tests/scripts/{scriptId}/files` - 스크립트 파일 목록 조회
+- `GET /ui-tests/files/{id}` - 파일 상세 조회
+- `POST /ui-tests/scripts/{scriptId}/files/upload` - 파일 업로드
+- `DELETE /ui-tests/files/{id}` - 파일 삭제
+- `POST /ui-tests/files/{id}/execute` - 파일 실행
+- `POST /ui-tests/files/{id}/callback` - 파일 실행 결과 콜백
+- `POST /ui-tests/files/{id}/stop` - 파일 실행 중지
+- `POST /ui-tests/scripts/{scriptId}/files/stop-all` - 스크립트 내 모든 파일 실행 중지
+- `GET /ui-tests/executions` - 실행 목록 조회
+- `GET /ui-tests/executions/{id}` - 실행 상세 조회
+- `GET /ui-tests/executions/by-execution-id/{executionId}` - 실행 ID로 조회
+- `GET /ui-tests/scripts/{scriptId}/executions` - 스크립트별 실행 이력 조회
+- `GET /ui-tests/executions/running` - 실행 중인 테스트 조회
+- `GET /ui-tests/executions/stats` - 실행 통계 조회
+- `POST /ui-tests/executions/{executionId}/cancel` - 실행 취소
+- `PUT /ui-tests/executions/by-execution-id/{executionId}` - 실행 상태 업데이트
+- `DELETE /ui-tests/executions/{id}` - 실행 이력 삭제
+- `GET /ui-tests/health` - 헬스 체크
+
+### Chat (채팅방 관리)
+- `GET /chat/rooms` - 사용자 채팅방 목록 조회
+- `GET /chat/rooms/{roomId}` - 특정 채팅방 조회
+- `POST /chat/rooms` - 채팅방 생성
+- `POST /chat/rooms/{roomId}/invite/{targetUserId}` - 사용자 초대
+- `POST /chat/rooms/{roomId}/leave` - 채팅방 나가기
+- `GET /chat/rooms/{roomId}/messages` - 채팅방 메시지 조회 (size, beforeMessageId 파라미터)
+- `POST /chat/rooms/{roomId}/messages` - 메시지 전송
+- `GET /chat/available-users` - 채팅 가능한 사용자 목록 조회
+
+### Chat (읽음 상태)
+- `POST /chat/rooms/{roomId}/messages/read` - 메시지 읽음 처리
+- `GET /chat/rooms/{roomId}/unread-count` - 안읽은 메시지 수 조회
+- `GET /chat/messages/{messageId}/read-status` - 메시지 읽음 상태 조회
+- `GET /chat/messages/{messageId}/read-count` - 메시지 읽은 사용자 수 조회
+- `POST /chat/messages/read-counts` - 여러 메시지 읽음 상태 일괄 조회
+- `GET /chat/messages/{messageId}/read-by-me` - 현재 사용자 메시지 읽음 확인
+
+### Chat WebSocket
+- WebSocket 연결: `/ws/chat`
+- `@MessageMapping /chat/{roomId}/send` - 메시지 전송 (구독: `/topic/room/{roomId}`)
+- `@MessageMapping /chat/{roomId}/join` - 채팅방 입장 알림
+- `@MessageMapping /chat/{roomId}/leave` - 채팅방 퇴장 알림
+- `@MessageMapping /chat/{roomId}/typing` - 타이핑 표시 (구독: `/topic/room/{roomId}/typing`)
+- 개인 알림 구독: `/user/queue/notifications`
+- 에러 메시지 구독: `/user/queue/errors`
+- 초대 알림 구독: `/user/queue/room-invitation`
 
 ## 핵심 기능
 

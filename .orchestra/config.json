@@ -1,0 +1,8 @@
+{
+  "projectName": "api-studio",
+  "language": "auto-detect",
+  "testFramework": "auto-detect",
+  "coverageThreshold": 80,
+  "autoCommit": false,
+  "verificationMode": "standard"
+}

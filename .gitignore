@@ -88,3 +88,7 @@ gradle.lockfile
 /backend/build/
 /backend/out/
 /backend/target/
+
+# Orchestra logs
+.orchestra/logs/
+.orchestra/journal/
