@@ -1,0 +1,29 @@
+{
+  "mode": "IDLE",
+  "currentContext": "dev",
+  "currentPlan": null,
+  "todos": [],
+  "tddMetrics": {
+    "testCount": 0,
+    "redGreenCycles": 0,
+    "testDeletionAttempts": 32
+  },
+  "commitHistory": [],
+  "verificationMetrics": {
+    "lastRun": null,
+    "mode": null,
+    "results": {},
+    "prReady": false,
+    "blockers": []
+  },
+  "learningMetrics": {
+    "totalSessions": 32,
+    "patternsExtracted": 63,
+    "lastLearningRun": "2026-02-03T14:17:45Z"
+  },
+  "sessionStartedAt": "2026-02-01T00:00:00.000Z",
+  "workflowStatus": {
+    "journalWritten": true,
+    "mode": "IDLE"
+  }
+}
