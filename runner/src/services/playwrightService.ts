@@ -1,4 +1,4 @@
-import { execFile, spawn } from 'child_process';
+import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs-extra';
 import { v4 as uuidv4 } from 'uuid';
@@ -13,8 +13,16 @@ import {
   BatchExecutionResult
 } from '../types';
 
+// M3: 하드코딩 값 상수 추출
+const DEFAULT_EXPECT_TIMEOUT = 10000;
+const DEFAULT_ACTION_TIMEOUT = 15000;
+const DEFAULT_NAVIGATION_TIMEOUT = 30000;
+const DEFAULT_VIEWPORT = { width: 1280, height: 720 };
+const DEFAULT_LOCALE = 'ko-KR';
+const DEFAULT_TIMEZONE = 'Asia/Seoul';
+
 export class PlaywrightService {
-  private runningTests: Map<string, any> = new Map();
+  private runningTests: Map<string, { process: any; scriptId: string }> = new Map();
   private onProgressCallback?: (result: TestExecutionResult) => void;
   private resultStorage: ResultStorageService = new ResultStorageService();
 
@@ -24,6 +32,7 @@ export class PlaywrightService {
 
   async executeScript(request: TestExecutionRequest): Promise<TestExecutionResult> {
     const startTime = new Date();
+    const executionId = uuidv4();
     const result: TestExecutionResult = {
       scriptId: request.scriptId,
       fileName: request.fileName,
@@ -32,7 +41,7 @@ export class PlaywrightService {
     };
 
     try {
-      Logger.info(`Starting execution of script: ${request.fileName}`);
+      Logger.info(`Starting execution of script: ${request.fileName} (executionId: ${executionId})`);
 
       if (!await fs.pathExists(request.scriptPath)) {
         throw new Error(`Script file not found: ${request.scriptPath}`);
@@ -40,7 +49,7 @@ export class PlaywrightService {
 
       this.notifyProgress(result);
 
-      const output = await this.runPlaywrightScript(request);
+      const output = await this.runPlaywrightScript(request, executionId);
 
       result.status = 'completed';
       result.endTime = new Date();
@@ -87,7 +96,7 @@ export class PlaywrightService {
 
       return result;
     } finally {
-      this.runningTests.delete(request.scriptId);
+      this.runningTests.delete(executionId);
     }
   }
 
@@ -127,51 +136,126 @@ export class PlaywrightService {
   }
 
   async cancelExecution(scriptId: string): Promise<boolean> {
-    const process = this.runningTests.get(scriptId);
-    if (process) {
-      process.kill('SIGTERM');
-      this.runningTests.delete(scriptId);
-      Logger.info(`Cancelled execution: ${scriptId}`);
-      return true;
+    let cancelled = false;
+    for (const [executionId, entry] of this.runningTests.entries()) {
+      if (entry.scriptId === scriptId) {
+        entry.process.kill('SIGTERM');
+        this.runningTests.delete(executionId);
+        Logger.info(`Cancelled execution: ${scriptId} (executionId: ${executionId})`);
+        cancelled = true;
+      }
     }
-    return false;
+    return cancelled;
   }
 
-  private async runPlaywrightScript(request: TestExecutionRequest): Promise<string> {
+  private buildPlaywrightConfig(
+    scriptDir: string,
+    scriptFileName: string,
+    timeout: number,
+    headless: boolean,
+    options: PlaywrightOptions
+  ): string {
+    const browserName = options.browser || 'chromium';
+    const viewport = options.viewport || DEFAULT_VIEWPORT;
+
+    return `
+/**
+ * Temporary Playwright Configuration
+ * Auto-generated for script: ${scriptFileName}
+ * Generated at: ${new Date().toISOString()}
+ */
+module.exports = {
+  testDir: ${JSON.stringify(scriptDir)},
+  testMatch: [${JSON.stringify(scriptFileName)}],
+  timeout: ${Number(timeout)},
+  expect: {
+    timeout: ${DEFAULT_EXPECT_TIMEOUT},
+  },
+  retries: 0,
+  workers: 1,
+  reporter: [
+    ['list'],
+    ['json', { outputFile: 'test-results/results.json' }],
+  ],
+  outputDir: 'test-results',
+  use: {
+    headless: ${Boolean(headless)},
+    viewport: { width: ${Number(viewport.width)}, height: ${Number(viewport.height)} },
+    actionTimeout: ${DEFAULT_ACTION_TIMEOUT},
+    navigationTimeout: ${DEFAULT_NAVIGATION_TIMEOUT},
+    screenshot: 'only-on-failure',
+    video: 'on-first-retry',
+    trace: 'on-first-retry',
+    locale: '${DEFAULT_LOCALE}',
+    timezoneId: '${DEFAULT_TIMEZONE}',
+    ignoreHTTPSErrors: true,
+  },
+  projects: [
+    {
+      name: '${browserName}',
+      use: {
+        browserName: '${browserName}',
+      },
+    },
+  ],
+};
+`;
+  }
+
+  private async runPlaywrightScript(request: TestExecutionRequest, executionId: string): Promise<string> {
     const options = request.options || {};
+    const scriptPath = request.scriptPath;
 
-    // 하드 링크 생성 (복사 없이 같은 파일 참조, 디스크 공간 절약)
-    const tempFileName = `temp-${Date.now()}-${path.basename(request.scriptPath)}`;
-    const tempFilePath = path.join(process.cwd(), tempFileName);
-
-    await fs.link(request.scriptPath, tempFilePath);
-    Logger.info(`Created hard link for test file: ${tempFilePath}`);
-
-    const args = [
-      'test',
-      tempFileName, // 상대 경로 사용
-      '--reporter=json',
-    ];
-
-    if (options.headless === false) {
-      args.push('--headed');
+    // Path Traversal 방지: scriptPath가 uploads/ 디렉토리 내부인지 검증
+    const resolvedPath = path.resolve(scriptPath);
+    const uploadsDir = path.resolve(process.cwd(), 'uploads');
+    if (!resolvedPath.startsWith(uploadsDir + path.sep)) {
+      throw new Error('Script path is outside allowed directory');
     }
 
-    if (options.timeout) {
-      args.push(`--timeout=${options.timeout}`);
+    const scriptDir = path.dirname(scriptPath);
+    const scriptFileName = path.basename(scriptPath);
+
+    // M1: uuidv4()로 파일명 고유성 보장
+    const tempConfigPath = path.join(process.cwd(), `temp-playwright-config-${uuidv4()}.js`);
+
+    Logger.info(`Creating temporary config for test: ${scriptFileName}`);
+    Logger.info(`Test directory: ${scriptDir}`);
+
+    const timeout = options.timeout || 60000;
+    const headless = options.headless !== false;
+    const configContent = this.buildPlaywrightConfig(scriptDir, scriptFileName, timeout, headless, options);
+
+    try {
+      await fs.writeFile(tempConfigPath, configContent, 'utf-8');
+      Logger.info(`Temporary config created: ${tempConfigPath}`);
+
+      return await this.spawnPlaywrightProcess(tempConfigPath, executionId, request.scriptId);
+    } catch (error) {
+      await this.cleanupTempConfig(tempConfigPath);
+      throw error;
     }
+  }
+
+  private spawnPlaywrightProcess(tempConfigPath: string, executionId: string, scriptId: string): Promise<string> {
+    const args = ['test', `--config=${tempConfigPath}`];
 
     return new Promise((resolve, reject) => {
       const playwrightProcess = spawn('npx', ['playwright', ...args], {
         cwd: process.cwd(),
         stdio: 'pipe',
-        env: { ...process.env, NODE_ENV: 'test' }
+        env: {
+          ...process.env,
+          NODE_ENV: 'test',
+          NODE_PATH: path.join(process.cwd(), 'node_modules'),
+        }
       });
 
-      this.runningTests.set(request.scriptId, playwrightProcess);
+      this.runningTests.set(executionId, { process: playwrightProcess, scriptId });
 
       let stdout = '';
       let stderr = '';
+      let settled = false;
 
       playwrightProcess.stdout?.on('data', (data) => {
         const output = data.toString();
@@ -186,13 +270,9 @@ export class PlaywrightService {
       });
 
       playwrightProcess.on('close', async (code) => {
-        // 하드 링크 제거 (원본 파일은 유지됨)
-        try {
-          await fs.remove(tempFilePath);
-          Logger.info(`Removed hard link: ${tempFilePath}`);
-        } catch (cleanupError) {
-          Logger.warn(`Failed to remove hard link: ${tempFilePath}`, cleanupError);
-        }
+        if (settled) return;
+        settled = true;
+        await this.cleanupTempConfig(tempConfigPath);
 
         if (code === 0) {
           resolve(stdout);
@@ -202,15 +282,23 @@ export class PlaywrightService {
       });
 
       playwrightProcess.on('error', async (error) => {
-        // 에러 발생 시에도 하드 링크 제거
-        try {
-          await fs.remove(tempFilePath);
-        } catch (cleanupError) {
-          Logger.warn(`Failed to remove hard link: ${tempFilePath}`, cleanupError);
-        }
+        if (settled) return;
+        settled = true;
+        await this.cleanupTempConfig(tempConfigPath);
         reject(error);
       });
     });
+  }
+
+  private async cleanupTempConfig(configPath: string): Promise<void> {
+    try {
+      if (await fs.pathExists(configPath)) {
+        await fs.remove(configPath);
+        Logger.info(`Temporary config deleted: ${configPath}`);
+      }
+    } catch (error) {
+      Logger.warn(`Failed to delete temporary config: ${configPath}`, error);
+    }
   }
 
   private notifyProgress(result: TestExecutionResult): void {
