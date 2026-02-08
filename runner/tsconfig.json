@@ -35,6 +35,7 @@
   "exclude": [
     "node_modules",
     "dist",
-    "uploads"
+    "uploads",
+    "src/**/__tests__"
   ]
 }

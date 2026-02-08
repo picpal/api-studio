@@ -4,6 +4,7 @@ import fs from 'fs-extra';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
 import { Logger } from '../utils/logger';
+import { isPathAllowed, getAllowedScriptDirs } from '../utils/pathValidation';
 import { ResultStorageService } from './resultStorageService';
 import {
   TestExecutionRequest,
@@ -206,11 +207,10 @@ module.exports = {
     const options = request.options || {};
     const scriptPath = request.scriptPath;
 
-    // Path Traversal 방지: scriptPath가 uploads/ 디렉토리 내부인지 검증
-    const resolvedPath = path.resolve(scriptPath);
-    const uploadsDir = path.resolve(process.cwd(), 'uploads');
-    if (!resolvedPath.startsWith(uploadsDir + path.sep)) {
-      throw new Error('Script path is outside allowed directory');
+    // Path Traversal 방지: scriptPath가 허용된 디렉토리 내부인지 검증
+    const allowedDirs = getAllowedScriptDirs();
+    if (!isPathAllowed(scriptPath, allowedDirs)) {
+      throw new Error(`Script path is outside allowed directories: ${allowedDirs.join(', ')}`);
     }
 
     const scriptDir = path.dirname(scriptPath);
