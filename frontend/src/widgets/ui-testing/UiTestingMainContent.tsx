@@ -523,8 +523,7 @@ const UiTestingMainContent: React.FC<UiTestingMainContentProps> = ({
 
             {/* Uploaded Files List */}
             {uploadedFiles.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-gray-700">Uploaded Files</h4>
+              <div className="mt-4">
                 <div className="bg-gray-50 rounded-lg p-4">
                   {uploadedFiles.map(file => (
                     <div key={file.id} className="flex items-center justify-between py-3 border-b border-gray-200 last:border-b-0">
