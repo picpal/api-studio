@@ -237,7 +237,7 @@ const Layout: React.FC<LayoutProps> = () => {
         {currentPage === 'api-testing' && (
           <>
             {/* Desktop Sidebar */}
-            <div className={`hidden md:block flex-shrink-0 border-r border-gray-400 transition-all duration-300 ${sidebarCollapsed ? 'w-12' : 'w-80'}`}>
+            <div className={`hidden md:block flex-shrink-0 border-r border-gray-200 transition-all duration-300 overflow-hidden ${sidebarCollapsed ? 'w-12' : 'w-80'}`}>
               <Sidebar
                 baseUrls={baseUrls}
                 onAddBaseUrl={handleAddBaseUrl}
@@ -257,7 +257,7 @@ const Layout: React.FC<LayoutProps> = () => {
             <div className={`md:hidden fixed inset-y-0 left-0 z-30 transform transition-transform duration-300 ease-in-out ${
               sidebarCollapsed ? '-translate-x-full' : 'translate-x-0'
             }`} style={{ top: '64px' }}>
-              <div className="w-80 h-full border-r border-gray-400 bg-white shadow-lg">
+              <div className="w-80 h-full border-r border-gray-200 bg-white shadow-lg">
                 <Sidebar
                   baseUrls={baseUrls}
                   onAddBaseUrl={handleAddBaseUrl}
@@ -289,7 +289,7 @@ const Layout: React.FC<LayoutProps> = () => {
         {currentPage === 'pipeline-management' && (
           <>
             {/* Desktop Pipeline Sidebar */}
-            <div className={`hidden md:block flex-shrink-0 border-r border-gray-200 transition-all duration-300 ${sidebarCollapsed ? 'w-12' : 'w-80'}`}>
+            <div className={`hidden md:block flex-shrink-0 border-r border-gray-200 transition-all duration-300 overflow-hidden ${sidebarCollapsed ? 'w-12' : 'w-80'}`}>
               <PipelineSidebar
                 collapsed={sidebarCollapsed}
                 onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
