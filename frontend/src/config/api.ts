@@ -11,7 +11,7 @@ const getEnvVar = (key: string, defaultValue: string = ''): string => {
 };
 
 // API 관련 설정
-const BASE_URL = getEnvVar('VITE_API_BASE_URL', 'http://localhost:8080');
+const BASE_URL = getEnvVar('VITE_API_BASE_URL', 'http://localhost:3020');
 
 export const API_CONFIG = {
   BASE_URL,

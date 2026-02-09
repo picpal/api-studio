@@ -27,7 +27,7 @@ describe('PlaywrightGuide', () => {
       render(<PlaywrightGuide />);
 
       // Assert
-      const expectedCommand = 'npx playwright codegen --target playwright-test -o ./test.spec.js http://localhost:3001';
+      const expectedCommand = 'npx playwright codegen --target playwright-test -o ./test.spec.js http://localhost:3010';
       expect(screen.getByText(expectedCommand)).toBeInTheDocument();
     });
 
@@ -67,7 +67,7 @@ describe('PlaywrightGuide', () => {
   });
 
   describe('copy button', () => {
-    const expectedCommand = 'npx playwright codegen --target playwright-test -o ./test.spec.js http://localhost:3001';
+    const expectedCommand = 'npx playwright codegen --target playwright-test -o ./test.spec.js http://localhost:3010';
 
     beforeEach(() => {
       // Mock navigator.clipboard.writeText

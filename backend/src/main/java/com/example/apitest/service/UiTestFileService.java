@@ -46,7 +46,7 @@ public class UiTestFileService {
     @org.springframework.beans.factory.annotation.Qualifier("uiTestExecutor")
     private java.util.concurrent.Executor uiTestExecutor;
 
-    private static final String RUNNER_SERVER_URL = "http://localhost:3002";
+    private static final String RUNNER_SERVER_URL = "http://localhost:3030";
     private static final String UPLOAD_DIR = "uploads/ui-tests";
 
     public List<Map<String, Object>> getFilesByScript(Long scriptId) {
@@ -237,7 +237,7 @@ public class UiTestFileService {
             request.put("scriptPath", absolutePath);
             request.put("fileName", fileName);
             request.put("fileId", fileId);
-            request.put("callbackUrl", "http://localhost:8080/api/ui-tests/files/" + fileId + "/callback");
+            request.put("callbackUrl", "http://localhost:3020/api/ui-tests/files/" + fileId + "/callback");
 
             Map<String, Object> options = new HashMap<>();
             options.put("headless", headless);

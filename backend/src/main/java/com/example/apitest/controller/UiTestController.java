@@ -21,7 +21,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/ui-tests")
-@CrossOrigin(origins = {"http://localhost:3001", "http://localhost:3003"}, allowCredentials = "true")
+@CrossOrigin(origins = {"http://localhost:3010", "http://localhost:3020", "http://localhost:3030"}, allowCredentials = "true")
 public class UiTestController {
 
     @Autowired

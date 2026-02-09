@@ -8,7 +8,7 @@ import { visualizer } from 'rollup-plugin-visualizer'
 export default defineConfig(({ mode }) => {
   // 환경변수 로드
   const env = loadEnv(mode, process.cwd(), '');
-  const apiBaseUrl = env.VITE_API_BASE_URL || 'http://localhost:8080';
+  const apiBaseUrl = env.VITE_API_BASE_URL || 'http://localhost:3020';
   const pgProxyTarget = env.VITE_PG_BASE_URL || 'https://pg.bluewalnut.co.kr';
 
   return {
@@ -28,7 +28,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      port: 3001,
+      port: 3010,
       host: '0.0.0.0',
       open: true,
       proxy: {

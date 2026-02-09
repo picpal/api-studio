@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 const CODEGEN_COMMAND =
-  'npx playwright codegen --target playwright-test -o ./test.spec.js http://localhost:3001';
+  'npx playwright codegen --target playwright-test -o ./test.spec.js http://localhost:3010';
 
 const CAUTIONS = [
   'Playwright가 설치되어 있어야 합니다 (npm init playwright@latest)',
