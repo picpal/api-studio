@@ -17,6 +17,7 @@ import {
 import { UiTestScript, UiTestFile, UiTestExecution } from '../../entities/ui-testing/types';
 import { uiTestScriptApi, uiTestFileApi, uiTestExecutionApi } from '../../shared/api/ui-testing';
 import { useUiTestWebSocket } from '../../features/ui-testing/hooks/useUiTestWebSocket';
+import PlaywrightGuide from '../../features/ui-testing/components/PlaywrightGuide';
 
 interface UiTestingMainContentProps {
   selectedScript: UiTestScript | null;
@@ -88,7 +89,7 @@ const UiTestingMainContent: React.FC<UiTestingMainContentProps> = ({
       // WebSocket이 상태를 업데이트할 것임
     } catch (error) {
       console.error('Failed to execute file:', error);
-      alert('Failed to execute file');
+      alert('파일 실행에 실패했습니다');
       // Backend가 실패를 처리하고 WebSocket으로 FAILED 상태 브로드캐스트
     } finally {
       setExecuting(false);
@@ -102,7 +103,7 @@ const UiTestingMainContent: React.FC<UiTestingMainContentProps> = ({
       // WebSocket이 상태를 업데이트할 것임
     } catch (error) {
       console.error('Failed to stop file:', error);
-      alert('Failed to stop file execution');
+      alert('파일 실행 중지에 실패했습니다');
     }
   };
 
@@ -116,7 +117,7 @@ const UiTestingMainContent: React.FC<UiTestingMainContentProps> = ({
       await loadUploadedFiles(selectedScript.id);
     } catch (error) {
       console.error('Failed to stop all files:', error);
-      alert('Failed to stop all file executions');
+      alert('모든 파일 실행 중지에 실패했습니다');
     }
   };
 
@@ -198,7 +199,7 @@ const UiTestingMainContent: React.FC<UiTestingMainContentProps> = ({
   };
 
   const handleDeleteFile = async (fileId: number) => {
-    if (!confirm('Are you sure you want to delete this file?')) {
+    if (!confirm('이 파일을 삭제하시겠습니까?')) {
       return;
     }
 
@@ -207,7 +208,7 @@ const UiTestingMainContent: React.FC<UiTestingMainContentProps> = ({
       setUploadedFiles(prev => prev.filter(file => file.id !== fileId));
     } catch (error) {
       console.error('Failed to delete file:', error);
-      alert('Failed to delete file');
+      alert('파일 삭제에 실패했습니다');
     }
   };
 
@@ -241,7 +242,7 @@ const UiTestingMainContent: React.FC<UiTestingMainContentProps> = ({
 
   const handleFileUpload = async (files: File[]) => {
     if (!selectedScript) {
-      alert('Please select a script first');
+      alert('먼저 스크립트를 선택해주세요');
       return;
     }
 
@@ -252,7 +253,7 @@ const UiTestingMainContent: React.FC<UiTestingMainContentProps> = ({
       const isValid = allowedExtensions.some(ext => fileExtension.endsWith(ext));
 
       if (!isValid) {
-        alert(`Only JavaScript/TypeScript test files are allowed (.js, .ts, .spec.js, .spec.ts, .test.js, .test.ts): ${file.name}`);
+        alert(`JavaScript/TypeScript 테스트 파일만 업로드 가능합니다 (.js, .ts, .spec.js, .spec.ts, .test.js, .test.ts): ${file.name}`);
         continue;
       }
 
@@ -265,7 +266,7 @@ const UiTestingMainContent: React.FC<UiTestingMainContentProps> = ({
       } catch (error) {
         console.error('Failed to upload file:', error);
         const detail = error instanceof Error ? error.message : String(error);
-        alert(`Failed to upload file: ${file.name}\n${detail}`);
+        alert(`파일 업로드에 실패했습니다: ${file.name}\n${detail}`);
       }
     }
 
@@ -516,6 +517,9 @@ const UiTestingMainContent: React.FC<UiTestingMainContentProps> = ({
                 onChange={handleFileInputChange}
               />
             </div>
+
+            {/* Playwright Codegen Guide */}
+            <PlaywrightGuide />
 
             {/* Uploaded Files List */}
             {uploadedFiles.length > 0 && (

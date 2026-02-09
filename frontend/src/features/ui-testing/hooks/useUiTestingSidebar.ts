@@ -49,7 +49,7 @@ export const useUiTestingSidebar = (): UseUiTestingSidebarReturn => {
       const data = await uiTestFolderApi.getStructure();
       setFolders(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load folders');
+      setError(err instanceof Error ? err.message : '폴더 목록을 불러오는데 실패했습니다');
     } finally {
       setLoading(false);
     }
@@ -69,7 +69,7 @@ export const useUiTestingSidebar = (): UseUiTestingSidebarReturn => {
 
       setScripts(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load scripts');
+      setError(err instanceof Error ? err.message : '스크립트 목록을 불러오는데 실패했습니다');
     }
   }, [selectedFolderId]);
 
@@ -80,7 +80,7 @@ export const useUiTestingSidebar = (): UseUiTestingSidebarReturn => {
       await uiTestFolderApi.create({ name, description, parentId });
       await loadFolders();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create folder');
+      setError(err instanceof Error ? err.message : '폴더 생성에 실패했습니다');
       throw err;
     }
   }, [loadFolders]);
@@ -92,7 +92,7 @@ export const useUiTestingSidebar = (): UseUiTestingSidebarReturn => {
       await uiTestScriptApi.create(data);
       await loadScripts();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create script');
+      setError(err instanceof Error ? err.message : '스크립트 생성에 실패했습니다');
       throw err;
     }
   }, [loadScripts]);
@@ -104,7 +104,7 @@ export const useUiTestingSidebar = (): UseUiTestingSidebarReturn => {
       await uiTestFolderApi.update(id, { name, description });
       await loadFolders();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update folder');
+      setError(err instanceof Error ? err.message : '폴더 수정에 실패했습니다');
       throw err;
     }
   }, [loadFolders]);
@@ -116,7 +116,7 @@ export const useUiTestingSidebar = (): UseUiTestingSidebarReturn => {
       await uiTestScriptApi.update(id, data);
       await loadScripts();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update script');
+      setError(err instanceof Error ? err.message : '스크립트 수정에 실패했습니다');
       throw err;
     }
   }, [loadScripts]);
@@ -132,7 +132,7 @@ export const useUiTestingSidebar = (): UseUiTestingSidebarReturn => {
       await loadFolders();
       await loadScripts(null); // Reload all scripts
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete folder');
+      setError(err instanceof Error ? err.message : '폴더 삭제에 실패했습니다');
       throw err;
     }
   }, [selectedFolderId, loadFolders, loadScripts]);
@@ -147,7 +147,7 @@ export const useUiTestingSidebar = (): UseUiTestingSidebarReturn => {
       }
       await loadScripts();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete script');
+      setError(err instanceof Error ? err.message : '스크립트 삭제에 실패했습니다');
       throw err;
     }
   }, [selectedScriptId, loadScripts]);

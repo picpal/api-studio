@@ -7,6 +7,7 @@ import {
   XMarkIcon
 } from '@heroicons/react/24/outline';
 import { uiTestScriptApi, uiTestFileApi } from '../../../shared/api/ui-testing';
+import PlaywrightGuide from './PlaywrightGuide';
 
 interface ScriptUploadProps {
   folderId?: number;
@@ -59,7 +60,7 @@ const ScriptUpload: React.FC<ScriptUploadProps> = ({
     const isValid = allowedExtensions.some(ext => fileExtension.endsWith(ext));
 
     if (!isValid) {
-      onUploadError?.('Only JavaScript/TypeScript test files are allowed (.js, .ts, .spec.js, .spec.ts, .test.js, .test.ts)');
+      onUploadError?.('JavaScript/TypeScript 테스트 파일만 업로드 가능합니다 (.js, .ts, .spec.js, .spec.ts, .test.js, .test.ts)');
       return;
     }
 
@@ -91,7 +92,7 @@ const ScriptUpload: React.FC<ScriptUploadProps> = ({
       setSelectedFile(null);
       onUploadSuccess?.();
     } catch (error) {
-      onUploadError?.(error instanceof Error ? error.message : 'Upload failed');
+      onUploadError?.(error instanceof Error ? error.message : '업로드에 실패했습니다');
     } finally {
       setUploading(false);
     }
@@ -111,41 +112,44 @@ const ScriptUpload: React.FC<ScriptUploadProps> = ({
   return (
     <div className="w-full">
       {!selectedFile ? (
-        <div
-          className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-            dragActive
-              ? 'border-blue-500 bg-blue-50'
-              : 'border-gray-300 hover:border-gray-400'
-          }`}
-          onDragEnter={handleDrag}
-          onDragLeave={handleDrag}
-          onDragOver={handleDrag}
-          onDrop={handleDrop}
-        >
-          <CloudArrowUpIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <div className="mt-4">
-            <p className="text-sm font-medium text-gray-900">
-              Drop your test script here, or{' '}
-              <button
-                type="button"
-                onClick={openFileDialog}
-                className="text-blue-600 hover:text-blue-500"
-              >
-                browse
-              </button>
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              Supports: .js, .ts, .spec.js, .spec.ts, .test.js, .test.ts
-            </p>
+        <>
+          <div
+            className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+              dragActive
+                ? 'border-blue-500 bg-blue-50'
+                : 'border-gray-300 hover:border-gray-400'
+            }`}
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDragOver={handleDrag}
+            onDrop={handleDrop}
+          >
+            <CloudArrowUpIcon className="mx-auto h-12 w-12 text-gray-400" />
+            <div className="mt-4">
+              <p className="text-sm font-medium text-gray-900">
+                Drop your test script here, or{' '}
+                <button
+                  type="button"
+                  onClick={openFileDialog}
+                  className="text-blue-600 hover:text-blue-500"
+                >
+                  browse
+                </button>
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Supports: .js, .ts, .spec.js, .spec.ts, .test.js, .test.ts
+              </p>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              accept=".js,.ts,.spec.js,.spec.ts,.test.js,.test.ts"
+              onChange={handleFileInputChange}
+            />
           </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            accept=".js,.ts,.spec.js,.spec.ts,.test.js,.test.ts"
-            onChange={handleFileInputChange}
-          />
-        </div>
+          <PlaywrightGuide />
+        </>
       ) : (
         <div className="border border-gray-200 rounded-lg p-4">
           <div className="flex items-center justify-between">

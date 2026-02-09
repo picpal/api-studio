@@ -172,7 +172,7 @@ const UiTestingPage: React.FC = () => {
   };
 
   const handleDeleteScript = async (scriptId: number) => {
-    if (!confirm('Are you sure you want to delete this script?')) return;
+    if (!confirm('이 스크립트를 삭제하시겠습니까?')) return;
 
     try {
       const response = await fetch(`/api/ui-tests/scripts/${scriptId}`, {

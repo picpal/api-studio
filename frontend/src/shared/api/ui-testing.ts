@@ -28,19 +28,19 @@ const createFetchOptions = (options: RequestInit = {}) => ({
 export const uiTestFolderApi = {
   async getAll(): Promise<UiTestFolder[]> {
     const response = await fetch(`${BASE_URL}/folders`, createFetchOptions());
-    if (!response.ok) throw new Error('Failed to fetch folders');
+    if (!response.ok) throw new Error('폴더 목록을 불러오는데 실패했습니다');
     return response.json();
   },
 
   async getStructure(): Promise<UiTestFolder[]> {
     const response = await fetch(`${BASE_URL}/folders/structure`, createFetchOptions());
-    if (!response.ok) throw new Error('Failed to fetch folder structure');
+    if (!response.ok) throw new Error('폴더 구조를 불러오는데 실패했습니다');
     return response.json();
   },
 
   async getById(id: number): Promise<UiTestFolder> {
     const response = await fetch(`${BASE_URL}/folders/${id}`, createFetchOptions());
-    if (!response.ok) throw new Error('Failed to fetch folder');
+    if (!response.ok) throw new Error('폴더 정보를 불러오는데 실패했습니다');
     return response.json();
   },
 
@@ -49,7 +49,7 @@ export const uiTestFolderApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }));
-    if (!response.ok) throw new Error('Failed to create folder');
+    if (!response.ok) throw new Error('폴더 생성에 실패했습니다');
     return response.json();
   },
 
@@ -58,7 +58,7 @@ export const uiTestFolderApi = {
       method: 'PUT',
       body: JSON.stringify(data),
     }));
-    if (!response.ok) throw new Error('Failed to update folder');
+    if (!response.ok) throw new Error('폴더 수정에 실패했습니다');
     return response.json();
   },
 
@@ -66,12 +66,12 @@ export const uiTestFolderApi = {
     const response = await fetch(`${BASE_URL}/folders/${id}`, createFetchOptions({
       method: 'DELETE',
     }));
-    if (!response.ok) throw new Error('Failed to delete folder');
+    if (!response.ok) throw new Error('폴더 삭제에 실패했습니다');
   },
 
   async getScripts(folderId: number): Promise<UiTestScript[]> {
     const response = await fetch(`${BASE_URL}/folders/${folderId}/scripts`, createFetchOptions());
-    if (!response.ok) throw new Error('Failed to fetch folder scripts');
+    if (!response.ok) throw new Error('폴더의 스크립트 목록을 불러오는데 실패했습니다');
     return response.json();
   }
 };
@@ -80,13 +80,13 @@ export const uiTestFolderApi = {
 export const uiTestScriptApi = {
   async getAll(): Promise<UiTestScript[]> {
     const response = await fetch(`${BASE_URL}/scripts`, createFetchOptions());
-    if (!response.ok) throw new Error('Failed to fetch scripts');
+    if (!response.ok) throw new Error('스크립트 목록을 불러오는데 실패했습니다');
     return response.json();
   },
 
   async getById(id: number): Promise<UiTestScript> {
     const response = await fetch(`${BASE_URL}/scripts/${id}`, createFetchOptions());
-    if (!response.ok) throw new Error('Failed to fetch script');
+    if (!response.ok) throw new Error('스크립트 정보를 불러오는데 실패했습니다');
     return response.json();
   },
 
@@ -95,7 +95,7 @@ export const uiTestScriptApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }));
-    if (!response.ok) throw new Error('Failed to create script');
+    if (!response.ok) throw new Error('스크립트 생성에 실패했습니다');
     return response.json();
   },
 
@@ -104,7 +104,7 @@ export const uiTestScriptApi = {
       method: 'PUT',
       body: JSON.stringify(data),
     }));
-    if (!response.ok) throw new Error('Failed to update script');
+    if (!response.ok) throw new Error('스크립트 수정에 실패했습니다');
     return response.json();
   },
 
@@ -112,14 +112,14 @@ export const uiTestScriptApi = {
     const response = await fetch(`${BASE_URL}/scripts/${id}`, createFetchOptions({
       method: 'DELETE',
     }));
-    if (!response.ok) throw new Error('Failed to delete script');
+    if (!response.ok) throw new Error('스크립트 삭제에 실패했습니다');
   },
 
   async execute(id: number): Promise<UiTestExecutionResult> {
     const response = await fetch(`${BASE_URL}/scripts/${id}/execute`, createFetchOptions({
       method: 'POST',
     }));
-    if (!response.ok) throw new Error('Failed to execute script');
+    if (!response.ok) throw new Error('스크립트 실행에 실패했습니다');
     return response.json();
   },
 
@@ -129,13 +129,13 @@ export const uiTestScriptApi = {
 export const uiTestFileApi = {
   async getFilesByScript(scriptId: number): Promise<UiTestFile[]> {
     const response = await fetch(`${BASE_URL}/scripts/${scriptId}/files`, createFetchOptions());
-    if (!response.ok) throw new Error('Failed to fetch files');
+    if (!response.ok) throw new Error('파일 목록을 불러오는데 실패했습니다');
     return response.json();
   },
 
   async getById(fileId: number): Promise<UiTestFile> {
     const response = await fetch(`${BASE_URL}/files/${fileId}`, createFetchOptions());
-    if (!response.ok) throw new Error('Failed to fetch file');
+    if (!response.ok) throw new Error('파일 정보를 불러오는데 실패했습니다');
     return response.json();
   },
 
@@ -164,8 +164,8 @@ export const uiTestFileApi = {
 
       const statusInfo = `${response.status}${response.statusText ? ' ' + response.statusText : ''}`;
       const message = errorDetail
-        ? `Upload failed [${statusInfo}]: ${errorDetail}`
-        : `Upload failed [${statusInfo}]`;
+        ? `업로드 실패 [${statusInfo}]: ${errorDetail}`
+        : `업로드 실패 [${statusInfo}]`;
       throw new Error(message);
     }
     return response.json();
@@ -175,14 +175,14 @@ export const uiTestFileApi = {
     const response = await fetch(`${BASE_URL}/files/${fileId}`, createFetchOptions({
       method: 'DELETE',
     }));
-    if (!response.ok) throw new Error('Failed to delete file');
+    if (!response.ok) throw new Error('파일 삭제에 실패했습니다');
   },
 
   async execute(fileId: number): Promise<any> {
     const response = await fetch(`${BASE_URL}/files/${fileId}/execute`, createFetchOptions({
       method: 'POST',
     }));
-    if (!response.ok) throw new Error('Failed to execute file');
+    if (!response.ok) throw new Error('파일 실행에 실패했습니다');
     return response.json();
   },
 
@@ -190,7 +190,7 @@ export const uiTestFileApi = {
     const response = await fetch(`${BASE_URL}/files/${fileId}/stop`, createFetchOptions({
       method: 'POST',
     }));
-    if (!response.ok) throw new Error('Failed to stop file execution');
+    if (!response.ok) throw new Error('파일 실행 중지에 실패했습니다');
     return response.json();
   },
 
@@ -198,7 +198,7 @@ export const uiTestFileApi = {
     const response = await fetch(`${BASE_URL}/scripts/${scriptId}/files/stop-all`, createFetchOptions({
       method: 'POST',
     }));
-    if (!response.ok) throw new Error('Failed to stop all file executions');
+    if (!response.ok) throw new Error('모든 파일 실행 중지에 실패했습니다');
     return response.json();
   }
 };
@@ -207,25 +207,25 @@ export const uiTestFileApi = {
 export const uiTestExecutionApi = {
   async getAll(): Promise<UiTestExecution[]> {
     const response = await fetch(`${BASE_URL}/executions`, createFetchOptions());
-    if (!response.ok) throw new Error('Failed to fetch executions');
+    if (!response.ok) throw new Error('실행 목록을 불러오는데 실패했습니다');
     return response.json();
   },
 
   async getById(id: number): Promise<UiTestExecution> {
     const response = await fetch(`${BASE_URL}/executions/${id}`, createFetchOptions());
-    if (!response.ok) throw new Error('Failed to fetch execution');
+    if (!response.ok) throw new Error('실행 정보를 불러오는데 실패했습니다');
     return response.json();
   },
 
   async getByScript(scriptId: number): Promise<UiTestExecution[]> {
     const response = await fetch(`${BASE_URL}/scripts/${scriptId}/executions`, createFetchOptions());
-    if (!response.ok) throw new Error('Failed to fetch script executions');
+    if (!response.ok) throw new Error('스크립트 실행 이력을 불러오는데 실패했습니다');
     return response.json();
   },
 
   async getStats(): Promise<any> {
     const response = await fetch(`${BASE_URL}/executions/stats`, createFetchOptions());
-    if (!response.ok) throw new Error('Failed to fetch execution stats');
+    if (!response.ok) throw new Error('실행 통계를 불러오는데 실패했습니다');
     return response.json();
   },
 
@@ -233,6 +233,6 @@ export const uiTestExecutionApi = {
     const response = await fetch(`${BASE_URL}/executions/${id}/cancel`, createFetchOptions({
       method: 'POST',
     }));
-    if (!response.ok) throw new Error('Failed to cancel execution');
+    if (!response.ok) throw new Error('실행 취소에 실패했습니다');
   }
 };
