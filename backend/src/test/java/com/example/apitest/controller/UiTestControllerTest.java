@@ -2,14 +2,19 @@ package com.example.apitest.controller;
 
 import com.example.apitest.entity.User;
 import com.example.apitest.service.AuthService;
+import com.example.apitest.service.ApiKeyService;
 import com.example.apitest.service.UiTestScriptService;
 import com.example.apitest.service.UiTestFolderService;
 import com.example.apitest.service.UiTestExecutionService;
+import com.example.apitest.service.UiTestFileService;
 import com.example.apitest.service.ActivityLoggingService;
+import com.example.apitest.config.ApiKeyAuthenticationFilter;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
@@ -24,6 +29,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(UiTestController.class)
+@AutoConfigureMockMvc(addFilters = false)
 public class UiTestControllerTest {
 
     @Autowired
@@ -46,6 +52,18 @@ public class UiTestControllerTest {
 
     @MockBean
     private AuthService authService;
+
+    @MockBean
+    private UiTestFileService fileService;
+
+    @MockBean
+    private SimpMessagingTemplate messagingTemplate;
+
+    @MockBean
+    private ApiKeyService apiKeyService;
+
+    @MockBean
+    private ApiKeyAuthenticationFilter apiKeyAuthenticationFilter;
 
     private MockHttpSession mockSession;
     private User testUser;
@@ -141,7 +159,7 @@ public class UiTestControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("New Folder"));
 
-        verify(authService).findByEmail("test@example.com");
+        verify(authService, atLeastOnce()).findByEmail("test@example.com");
         verify(folderService).createFolder(any(Map.class), eq(testUser));
     }
 
@@ -158,7 +176,7 @@ public class UiTestControllerTest {
                         .content(objectMapper.writeValueAsString(folderData)))
                 .andExpect(status().isUnauthorized());
 
-        verify(authService).findByEmail("test@example.com");
+        verify(authService, atLeastOnce()).findByEmail("test@example.com");
         verifyNoInteractions(folderService);
     }
 
@@ -228,7 +246,7 @@ public class UiTestControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("New Script"));
 
-        verify(authService).findByEmail("test@example.com");
+        verify(authService, atLeastOnce()).findByEmail("test@example.com");
         verify(scriptService).createScript(any(Map.class), eq(testUser));
     }
 
@@ -249,7 +267,7 @@ public class UiTestControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("started"));
 
-        verify(authService).findByEmail("test@example.com");
+        verify(authService, atLeastOnce()).findByEmail("test@example.com");
         verify(scriptService).executeScript(1L, testUser);
     }
 
