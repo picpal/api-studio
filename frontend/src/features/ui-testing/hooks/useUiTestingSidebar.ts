@@ -13,6 +13,7 @@ interface UseUiTestingSidebarReturn {
   selectedFolderId: number | null;
   selectedScriptId: number | null;
   searchTerm: string;
+  expandedFolders: Set<number>;
 
   // Actions
   setSearchTerm: (term: string) => void;
@@ -41,6 +42,7 @@ export const useUiTestingSidebar = (): UseUiTestingSidebarReturn => {
   const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
   const [selectedScriptId, setSelectedScriptId] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [expandedFolders, setExpandedFolders] = useState<Set<number>>(new Set());
 
   // Load folders from API
   const loadFolders = useCallback(async () => {
@@ -180,21 +182,23 @@ export const useUiTestingSidebar = (): UseUiTestingSidebarReturn => {
 
   // Toggle folder expansion
   const toggleFolder = useCallback((id: number) => {
-    setFolders(prev => prev.map(folder =>
-      folder.id === id
-        ? { ...folder, isExpanded: !folder.isExpanded }
-        : folder
-    ));
-  }, []);
+    const newExpanded = new Set(expandedFolders);
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id);
+    } else {
+      newExpanded.add(id);
+    }
+    setExpandedFolders(newExpanded);
+  }, [expandedFolders]);
 
   // Expand all folders
   const expandAll = useCallback(() => {
-    setFolders(prev => prev.map(folder => ({ ...folder, isExpanded: true })));
-  }, []);
+    setExpandedFolders(new Set(folders.map(f => f.id)));
+  }, [folders]);
 
   // Collapse all folders
   const collapseAll = useCallback(() => {
-    setFolders(prev => prev.map(folder => ({ ...folder, isExpanded: false })));
+    setExpandedFolders(new Set());
   }, []);
 
   // Reset selection
@@ -223,6 +227,7 @@ export const useUiTestingSidebar = (): UseUiTestingSidebarReturn => {
     selectedFolderId,
     selectedScriptId,
     searchTerm,
+    expandedFolders,
 
     // Actions
     setSearchTerm,

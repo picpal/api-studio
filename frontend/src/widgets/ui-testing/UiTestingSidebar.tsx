@@ -261,6 +261,7 @@ const FolderComponent: React.FC<{
   onContextMenu: (e: React.MouseEvent) => void;
   onScriptContextMenu: (e: React.MouseEvent, script: UiTestScript) => void;
   isDragOverFolder: boolean;
+  expandedFolders: Set<number>;
 }> = ({
   folder,
   scripts,
@@ -271,7 +272,8 @@ const FolderComponent: React.FC<{
   onSelectScript,
   onContextMenu,
   onScriptContextMenu,
-  isDragOverFolder
+  isDragOverFolder,
+  expandedFolders
 }) => {
   const {
     setNodeRef,
@@ -294,7 +296,7 @@ const FolderComponent: React.FC<{
         <div className="flex items-center gap-2 font-medium">
           <span
             className={`text-xs transition-transform duration-200 text-gray-500 ${
-              folder.isExpanded ? 'rotate-90' : ''
+              expandedFolders.has(folder.id) ? 'rotate-90' : ''
             }`}
           >
             ▶
@@ -303,7 +305,7 @@ const FolderComponent: React.FC<{
         </div>
       </div>
 
-      {folder.isExpanded && (
+      {expandedFolders.has(folder.id) && (
         <div className="pt-1 pb-3">
           {folderScripts.map(script => (
             <SortableScriptItem
@@ -353,7 +355,8 @@ const UiTestingSidebar: React.FC<UiTestingSidebarProps> = ({
     toggleFolder,
     expandAll,
     collapseAll,
-    resetSelection
+    resetSelection,
+    expandedFolders
   } = useUiTestingSidebar();
 
   // 드래그 앤 드롭 상태
@@ -603,8 +606,7 @@ test('example test', async ({ page }) => {
         moveScriptToFolder(scriptId, targetFolderId);
 
         // 대상 폴더가 접혀있으면 펼치기
-        const targetFolder = folders.find(f => f.id === targetFolderId);
-        if (targetFolder && !targetFolder.isExpanded) {
+        if (!expandedFolders.has(targetFolderId)) {
           toggleFolder(targetFolderId);
         }
       }
@@ -750,6 +752,7 @@ test('example test', async ({ page }) => {
                       onContextMenu={(e) => handleFolderContextMenu(e, folder.id, folder.name)}
                       onScriptContextMenu={handleScriptContextMenu}
                       isDragOverFolder={dragOverFolderId === folder.id}
+                      expandedFolders={expandedFolders}
                     />
                   ))
                 )}
