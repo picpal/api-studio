@@ -205,6 +205,20 @@ export const pipelineApi = {
       status: data.status,
       completed: data.status === 'SUCCESS' || data.status === 'FAILED' || data.status === 'CANCELLED'
     };
+  },
+
+  async movePipelineToFolder(pipelineId: number, folderId: number): Promise<Pipeline> {
+    const response = await apiClient.put(`/pipelines/${pipelineId}`, { folderId });
+    const pipeline = response.data;
+    return {
+      ...pipeline,
+      createdAt: new Date(pipeline.createdAt),
+      updatedAt: new Date(pipeline.updatedAt)
+    };
+  },
+
+  async reorderPipelines(folderId: number, pipelines: { pipelineId: number; orderIndex: number }[]): Promise<void> {
+    await apiClient.put('/pipelines/reorder', { folderId, pipelines });
   }
 };
 

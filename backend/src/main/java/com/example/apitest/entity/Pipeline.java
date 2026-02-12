@@ -35,6 +35,9 @@ public class Pipeline {
     @Column(name = "is_active")
     private Boolean isActive = true;
 
+    @Column(name = "order_index")
+    private Integer orderIndex = 0;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -116,6 +119,14 @@ public class Pipeline {
 
     public void setIsActive(Boolean isActive) {
         this.isActive = isActive;
+    }
+
+    public Integer getOrderIndex() {
+        return orderIndex;
+    }
+
+    public void setOrderIndex(Integer orderIndex) {
+        this.orderIndex = orderIndex;
     }
 
     public LocalDateTime getCreatedAt() {

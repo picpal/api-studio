@@ -43,9 +43,9 @@ public class PipelineService {
         List<PipelineFolder> folders = pipelineFolderRepository.findAll().stream()
             .filter(folder -> folder.getIsActive() != null && folder.getIsActive())
             .collect(Collectors.toList());
-        
+
         return folders.stream().map(folder -> {
-            List<Pipeline> pipelines = pipelineRepository.findByIsActiveTrueAndFolderIdOrderByCreatedAtAsc(folder.getId());
+            List<Pipeline> pipelines = pipelineRepository.findByIsActiveTrueAndFolderIdOrderByOrderIndexAsc(folder.getId());
             List<PipelineStep> allSteps = pipelines.stream()
                 .flatMap(pipeline -> pipelineStepRepository.findByPipelineIdOrderByStepOrderAsc(pipeline.getId()).stream())
                 .collect(Collectors.toList());
@@ -110,6 +110,21 @@ public class PipelineService {
             .map(pipeline -> {
                 pipeline.setName(request.getName());
                 pipeline.setDescription(request.getDescription());
+
+                // folderId 업데이트 (null이 아닌 경우만)
+                if (request.getFolderId() != null) {
+                    Optional<PipelineFolder> folder = pipelineFolderRepository.findById(request.getFolderId());
+                    folder.ifPresent(f -> {
+                        pipeline.setFolderId(request.getFolderId());
+                        pipeline.setFolder(f);
+                    });
+                }
+
+                // orderIndex 업데이트 (null이 아닌 경우만)
+                if (request.getOrderIndex() != null) {
+                    pipeline.setOrderIndex(request.getOrderIndex());
+                }
+
                 return pipelineRepository.save(pipeline);
             });
     }
@@ -275,23 +290,34 @@ public class PipelineService {
 
         // 현재 파이프라인의 모든 step들 가져오기
         List<PipelineStep> allSteps = pipelineStepRepository.findByIsActiveTrueAndPipelineIdOrderByStepOrderAsc(pipelineId);
-        
+
         // 요청에 포함된 step들의 순서를 업데이트
         for (BatchUpdateStepOrderRequest.StepOrderItem item : request.getSteps()) {
             PipelineStep step = allSteps.stream()
                 .filter(s -> s.getId().equals(item.getStepId()))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Step not found: " + item.getStepId()));
-            
+
             step.setStepOrder(item.getNewOrder());
         }
-        
+
         // 업데이트된 step들 저장
         List<PipelineStep> savedSteps = pipelineStepRepository.saveAll(allSteps);
-        
+
         // DTO로 변환하여 반환
         return savedSteps.stream()
             .map(pipelineMapper::toPipelineStepDTO)
             .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void reorderPipelines(ReorderPipelinesRequest request) {
+        for (var item : request.getPipelines()) {
+            pipelineRepository.findById(item.getPipelineId())
+                .ifPresent(pipeline -> {
+                    pipeline.setOrderIndex(item.getOrderIndex());
+                    pipelineRepository.save(pipeline);
+                });
+        }
     }
 }

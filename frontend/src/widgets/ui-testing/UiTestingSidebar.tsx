@@ -3,16 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  FolderIcon,
   DocumentTextIcon,
   PlusIcon,
   ChevronRightIcon,
-  ChevronDownIcon,
   ChevronLeftIcon,
   MagnifyingGlassIcon,
   CodeBracketIcon,
-  PlayIcon,
-  EllipsisVerticalIcon
+  PlayIcon
 } from '@heroicons/react/24/outline';
 import {
   DndContext,
@@ -229,21 +226,20 @@ const SortableScriptItem: React.FC<{
     <div
       ref={setNodeRef}
       style={style}
-      className={`ml-8 px-2.5 py-1.5 flex items-center gap-2 cursor-pointer hover:bg-gray-100 rounded-sm ${
-        isSelected ? 'bg-blue-50 border-l-2 border-blue-500' : ''
+      className={`ml-8 mx-3 mb-1 px-2.5 py-1.5 flex items-center gap-2 cursor-pointer hover:bg-gray-50 group rounded-md transition-colors ${
+        isSelected ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'text-gray-600 hover:border hover:border-gray-200'
       }`}
       onClick={handleClick}
       onContextMenu={onContextMenu}
     >
       {/* 드래그 핸들 영역 (좌측 작은 영역) */}
-      <div
+      <span
         {...attributes}
         {...listeners}
-        className="cursor-grab active:cursor-grabbing p-1 -ml-1 hover:bg-gray-200 rounded"
-        title="Drag to move"
+        className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 text-xs"
       >
-        <EllipsisVerticalIcon className="w-3 h-3 text-gray-400" />
-      </div>
+        ⋮⋮
+      </span>
 
       <span className={`px-1.5 py-0.5 rounded text-xs font-medium text-white ${getScriptTypeBadge(script.scriptType)}`}>
         {script.scriptType.substring(0, 3)}
@@ -286,8 +282,8 @@ const FolderComponent: React.FC<{
   return (
     <div ref={setNodeRef}>
       <div
-        className={`px-2.5 py-1.5 flex items-center gap-2 cursor-pointer hover:bg-gray-100 rounded-sm ${
-          isSelected ? 'bg-blue-50' : ''
+        className={`px-3 py-2.5 cursor-pointer select-none hover:bg-gray-50 group flex items-center justify-between rounded-lg mx-2 transition-colors ${
+          isSelected ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'
         } ${isDragOverFolder ? 'bg-blue-100 border-2 border-blue-300 border-dashed' : ''}`}
         onClick={(e) => {
           onSelect();
@@ -295,20 +291,20 @@ const FolderComponent: React.FC<{
         }}
         onContextMenu={onContextMenu}
       >
-        <div className="p-0.5 pointer-events-none">
-          {folder.isExpanded ? (
-            <ChevronDownIcon className="w-3 h-3 text-gray-600" />
-          ) : (
-            <ChevronRightIcon className="w-3 h-3 text-gray-600" />
-          )}
+        <div className="flex items-center gap-2 font-medium">
+          <span
+            className={`text-xs transition-transform duration-200 text-gray-500 ${
+              folder.isExpanded ? 'rotate-90' : ''
+            }`}
+          >
+            ▶
+          </span>
+          <span className="text-sm">{folder.name}</span>
         </div>
-        <FolderIcon className="w-4 h-4 text-blue-500" />
-        <span className="text-sm text-gray-800 flex-1">{folder.name}</span>
-        <span className="text-xs text-gray-500">{folderScripts.length}</span>
       </div>
 
       {folder.isExpanded && (
-        <div>
+        <div className="pt-1 pb-3">
           {folderScripts.map(script => (
             <SortableScriptItem
               key={script.id}
@@ -353,6 +349,7 @@ const UiTestingSidebar: React.FC<UiTestingSidebarProps> = ({
     updateScript,
     deleteFolder,
     deleteScript,
+    moveScriptToFolder,
     toggleFolder,
     expandAll,
     collapseAll,
@@ -600,8 +597,17 @@ test('example test', async ({ page }) => {
       const scriptId = parseInt(activeId.replace('script-', ''));
       const targetFolderId = parseInt(overId.replace('droppable-folder-', ''));
 
-      // TODO: 스크립트를 다른 폴더로 이동하는 API 호출
-      console.log(`Moving script ${scriptId} to folder ${targetFolderId}`);
+      // 스크립트를 다른 폴더로 이동
+      const script = scripts.find(s => s.id === scriptId);
+      if (script && script.folderId !== targetFolderId) {
+        moveScriptToFolder(scriptId, targetFolderId);
+
+        // 대상 폴더가 접혀있으면 펼치기
+        const targetFolder = folders.find(f => f.id === targetFolderId);
+        if (targetFolder && !targetFolder.isExpanded) {
+          toggleFolder(targetFolderId);
+        }
+      }
     }
   };
 

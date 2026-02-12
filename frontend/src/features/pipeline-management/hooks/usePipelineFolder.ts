@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { PipelineFolder, Pipeline } from '../../../entities/pipeline';
 import { pipelineApi } from '../../../services/pipelineApi';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -185,6 +185,71 @@ export const usePipelineFolder = () => {
     }
   };
 
+  // 파이프라인을 다른 폴더로 이동
+  const movePipelineToFolder = useCallback(async (
+    pipelineId: number,
+    sourceFolderId: number | null,
+    targetFolderId: number
+  ) => {
+    // 1. 원본 상태 저장
+    const originalFolders = [...folders];
+
+    // 2. 낙관적 업데이트: 소스 폴더에서 제거, 타겟 폴더에 추가
+    setFolders(prev => prev.map(folder => {
+      if (folder.id === sourceFolderId) {
+        return { ...folder, pipelines: folder.pipelines.filter(p => p.id !== pipelineId) };
+      }
+      if (folder.id === targetFolderId) {
+        const movedPipeline = originalFolders
+          .find(f => f.id === sourceFolderId)?.pipelines
+          .find(p => p.id === pipelineId);
+        if (movedPipeline) {
+          return { ...folder, pipelines: [...folder.pipelines, movedPipeline] };
+        }
+      }
+      return folder;
+    }));
+
+    // 3. API 호출
+    try {
+      await pipelineApi.movePipelineToFolder(pipelineId, targetFolderId);
+    } catch (error) {
+      console.error('Failed to move pipeline:', error);
+      // 4. 실패 시 롤백
+      setFolders(originalFolders);
+    }
+  }, [folders]);
+
+  // 같은 폴더 내 파이프라인 순서 변경
+  const reorderPipelinesInFolder = useCallback(async (
+    folderId: number,
+    reorderedPipelines: Pipeline[]
+  ) => {
+    // 1. 원본 상태 저장
+    const originalFolders = [...folders];
+
+    // 2. 낙관적 업데이트
+    setFolders(prev => prev.map(folder => {
+      if (folder.id === folderId) {
+        return { ...folder, pipelines: reorderedPipelines };
+      }
+      return folder;
+    }));
+
+    // 3. API 호출 (orderIndex 포함)
+    try {
+      const pipelineOrders = reorderedPipelines.map((p, index) => ({
+        pipelineId: p.id,
+        orderIndex: index
+      }));
+      await pipelineApi.reorderPipelines(folderId, pipelineOrders);
+    } catch (error) {
+      console.error('Failed to reorder pipelines:', error);
+      // 4. 실패 시 롤백
+      setFolders(originalFolders);
+    }
+  }, [folders]);
+
   // 필터링된 폴더 목록
   const filteredFolders = folders.map(folder => ({
     ...folder,
@@ -213,6 +278,8 @@ export const usePipelineFolder = () => {
     updateFolder,
     createPipeline,
     deletePipeline,
+    movePipelineToFolder,
+    reorderPipelinesInFolder,
     reload: loadFolders
   };
 };

@@ -3,6 +3,7 @@ package com.example.apitest.controller;
 import com.example.apitest.annotation.RequireApiAuth;
 import com.example.apitest.dto.pipeline.request.*;
 import com.example.apitest.dto.pipeline.request.BatchUpdateStepOrderRequest;
+import com.example.apitest.dto.pipeline.request.ReorderPipelinesRequest;
 import com.example.apitest.dto.pipeline.response.*;
 import com.example.apitest.entity.ApiKey;
 import com.example.apitest.entity.Pipeline;
@@ -145,6 +146,19 @@ public class PipelineController {
             return ResponseEntity.ok().build();
         }
         return ResponseEntity.notFound().build();
+    }
+
+    @PutMapping("/reorder")
+    @RequireApiAuth
+    public ResponseEntity<Void> reorderPipelines(@RequestBody ReorderPipelinesRequest request) {
+        try {
+            pipelineService.reorderPipelines(request);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            System.err.println("Error in reorderPipelines: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     // Step Operations

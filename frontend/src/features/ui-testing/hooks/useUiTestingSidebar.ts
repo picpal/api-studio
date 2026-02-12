@@ -26,6 +26,7 @@ interface UseUiTestingSidebarReturn {
   updateScript: (id: number, data: any) => Promise<void>;
   deleteFolder: (id: number) => Promise<void>;
   deleteScript: (id: number) => Promise<void>;
+  moveScriptToFolder: (scriptId: number, targetFolderId: number) => Promise<void>;
   toggleFolder: (id: number) => void;
   expandAll: () => void;
   collapseAll: () => void;
@@ -152,6 +153,31 @@ export const useUiTestingSidebar = (): UseUiTestingSidebarReturn => {
     }
   }, [selectedScriptId, loadScripts]);
 
+  // Move script to folder
+  const moveScriptToFolder = useCallback(async (scriptId: number, targetFolderId: number) => {
+    // 1. 현재 스크립트 찾기
+    const script = scripts.find(s => s.id === scriptId);
+    if (!script || script.folderId === targetFolderId) return;
+
+    const originalFolderId = script.folderId;
+
+    // 2. UI 먼저 업데이트 (낙관적 업데이트)
+    setScripts(prev => prev.map(s =>
+      s.id === scriptId ? { ...s, folderId: targetFolderId } : s
+    ));
+
+    // 3. 백엔드 API 호출
+    try {
+      await uiTestScriptApi.update(scriptId, { folderId: targetFolderId });
+    } catch (err) {
+      // 실패 시 원래 상태로 롤백
+      setScripts(prev => prev.map(s =>
+        s.id === scriptId ? { ...s, folderId: originalFolderId } : s
+      ));
+      setError('스크립트 이동에 실패했습니다');
+    }
+  }, [scripts]);
+
   // Toggle folder expansion
   const toggleFolder = useCallback((id: number) => {
     setFolders(prev => prev.map(folder =>
@@ -210,6 +236,7 @@ export const useUiTestingSidebar = (): UseUiTestingSidebarReturn => {
     updateScript,
     deleteFolder,
     deleteScript,
+    moveScriptToFolder,
     toggleFolder,
     expandAll,
     collapseAll,

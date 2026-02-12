@@ -781,9 +781,9 @@ const SidebarRefactored: React.FC<SidebarProps> = ({
       
       {/* Folders List */}
       <div className="flex-1 relative min-h-0">
-        <div 
+        <div
           ref={scrollContainerRef}
-          className="overflow-y-auto h-full pb-4"
+          className="overflow-y-auto h-full p-2"
         >
         {loading ? (
           <div className="p-4 text-center text-gray-500">

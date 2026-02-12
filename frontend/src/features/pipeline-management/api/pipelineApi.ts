@@ -104,10 +104,23 @@ export const pipelineApi = {
     }
   },
 
-  async updatePipeline(pipelineId: number, data: { name: string; description: string }): Promise<any> {
+  async updatePipeline(pipelineId: number, data: {
+    name?: string;
+    description?: string;
+    folderId?: number;
+    orderIndex?: number
+  }): Promise<any> {
     try {
       const response = await pipelineApiClient.put(`/pipelines/${pipelineId}`, data);
       return response.data;
+    } catch (error: any) {
+      throw error;
+    }
+  },
+
+  async reorderPipelines(folderId: number, pipelines: { pipelineId: number; orderIndex: number }[]): Promise<void> {
+    try {
+      await pipelineApiClient.put('/pipelines/reorder', { folderId, pipelines });
     } catch (error: any) {
       throw error;
     }
