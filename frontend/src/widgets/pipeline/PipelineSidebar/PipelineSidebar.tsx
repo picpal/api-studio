@@ -111,9 +111,10 @@ const DroppableFolder: React.FC<DroppableFolderProps> = ({
   const isOver = dragOverFolderId === folder.id;
 
   return (
-    <div ref={setNodeRef} className="space-y-1">
-      {/* Folder Header */}
-      {renamingFolder.id === folder.id ? (
+    <div ref={setNodeRef}>
+      <div className="space-y-1">
+        {/* Folder Header */}
+        {renamingFolder.id === folder.id ? (
         <div className="flex items-center gap-2 p-2">
           <span
             className={`text-xs transition-transform duration-200 text-gray-500 ${
@@ -199,6 +200,7 @@ const DroppableFolder: React.FC<DroppableFolderProps> = ({
           </div>
         </SortableContext>
       )}
+      </div>
     </div>
   );
 };
