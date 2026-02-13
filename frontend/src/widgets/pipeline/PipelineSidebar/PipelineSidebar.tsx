@@ -701,33 +701,41 @@ export const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
               onDragOver={handleDragOver}
               onDragEnd={handleDragEnd}
             >
-              {/* Folders and Pipelines */}
-              <div className="space-y-2">
-                {filteredFolders.map(folder => (
-                  <DroppableFolder
-                    key={folder.id}
-                    folder={folder}
-                    expandedFolders={expandedFolders}
-                    renamingFolder={renamingFolder}
-                    setRenamingFolder={setRenamingFolder}
-                    handleRenameKeyDown={handleRenameKeyDown}
-                    handleCancelRename={handleCancelRename}
-                    handleConfirmRename={handleConfirmRename}
-                    toggleFolder={toggleFolder}
-                    handleFolderRightClick={handleFolderRightClick}
-                    handlePipelineRightClick={handlePipelineRightClick}
-                    onSelectPipeline={onSelectPipeline}
-                    selectedPipeline={selectedPipeline}
-                    dragOverFolderId={dragOverFolderId}
-                  />
-                ))}
-              </div>
-
-              {filteredFolders.length === 0 && (
-                <div className="text-center text-gray-500 text-sm py-8">
-                  {searchTerm ? '검색 결과가 없습니다.' : '파이프라인이 없습니다.'}
+              <SortableContext
+                items={[
+                  ...filteredFolders.map(f => `droppable-folder-${f.id}`),
+                  ...filteredFolders.flatMap(f => f.pipelines.map(p => `pipeline-${p.id}`))
+                ]}
+                strategy={verticalListSortingStrategy}
+              >
+                {/* Folders and Pipelines */}
+                <div className="space-y-2">
+                  {filteredFolders.map(folder => (
+                    <DroppableFolder
+                      key={folder.id}
+                      folder={folder}
+                      expandedFolders={expandedFolders}
+                      renamingFolder={renamingFolder}
+                      setRenamingFolder={setRenamingFolder}
+                      handleRenameKeyDown={handleRenameKeyDown}
+                      handleCancelRename={handleCancelRename}
+                      handleConfirmRename={handleConfirmRename}
+                      toggleFolder={toggleFolder}
+                      handleFolderRightClick={handleFolderRightClick}
+                      handlePipelineRightClick={handlePipelineRightClick}
+                      onSelectPipeline={onSelectPipeline}
+                      selectedPipeline={selectedPipeline}
+                      dragOverFolderId={dragOverFolderId}
+                    />
+                  ))}
                 </div>
-              )}
+
+                {filteredFolders.length === 0 && (
+                  <div className="text-center text-gray-500 text-sm py-8">
+                    {searchTerm ? '검색 결과가 없습니다.' : '파이프라인이 없습니다.'}
+                  </div>
+                )}
+              </SortableContext>
 
               {/* DragOverlay */}
               <DragOverlay>
