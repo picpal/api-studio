@@ -213,6 +213,7 @@ export const usePipelineFolder = () => {
     // 3. API 호출
     try {
       await pipelineApi.movePipelineToFolder(pipelineId, targetFolderId);
+      await loadFolders();
     } catch (error) {
       console.error('Failed to move pipeline:', error);
       // 4. 실패 시 롤백
