@@ -182,14 +182,16 @@ export const useUiTestingSidebar = (): UseUiTestingSidebarReturn => {
 
   // Toggle folder expansion
   const toggleFolder = useCallback((id: number) => {
-    const newExpanded = new Set(expandedFolders);
-    if (newExpanded.has(id)) {
-      newExpanded.delete(id);
-    } else {
-      newExpanded.add(id);
-    }
-    setExpandedFolders(newExpanded);
-  }, [expandedFolders]);
+    setExpandedFolders(prev => {
+      const newExpanded = new Set(prev);
+      if (newExpanded.has(id)) {
+        newExpanded.delete(id);
+      } else {
+        newExpanded.add(id);
+      }
+      return newExpanded;
+    });
+  }, []);
 
   // Expand all folders
   const expandAll = useCallback(() => {

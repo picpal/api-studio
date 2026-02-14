@@ -68,15 +68,17 @@ export const usePipelineFolder = () => {
     };
   }, [isAuthenticated, authLoading, authReady]);
 
-  const toggleFolder = (folderId: number) => {
-    const newExpanded = new Set(expandedFolders);
-    if (newExpanded.has(folderId)) {
-      newExpanded.delete(folderId);
-    } else {
-      newExpanded.add(folderId);
-    }
-    setExpandedFolders(newExpanded);
-  };
+  const toggleFolder = useCallback((folderId: number) => {
+    setExpandedFolders(prev => {
+      const newExpanded = new Set(prev);
+      if (newExpanded.has(folderId)) {
+        newExpanded.delete(folderId);
+      } else {
+        newExpanded.add(folderId);
+      }
+      return newExpanded;
+    });
+  }, []);
 
   const expandAll = () => {
     setExpandedFolders(new Set(folders.map(f => f.id)));
