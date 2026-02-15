@@ -215,11 +215,6 @@ export const useUiTestingSidebar = (): UseUiTestingSidebarReturn => {
     loadScripts(null);
   }, [loadFolders]);
 
-  // Load scripts when folder selection changes
-  useEffect(() => {
-    loadScripts();
-  }, [selectedFolderId, loadScripts]);
-
   return {
     // State
     folders,
