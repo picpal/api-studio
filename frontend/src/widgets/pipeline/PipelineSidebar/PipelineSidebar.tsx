@@ -12,6 +12,7 @@ import {
   DragEndEvent,
   DragOverEvent,
   rectIntersection,
+  useDroppable,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -104,7 +105,7 @@ const DroppableFolder: React.FC<DroppableFolderProps> = ({
   selectedPipeline,
   dragOverFolderId,
 }) => {
-  const { setNodeRef } = useSortable({
+  const { setNodeRef } = useDroppable({
     id: `droppable-folder-${folder.id}`,
   });
 
@@ -471,6 +472,7 @@ export const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
     const activeId = active.id as string;
+    console.log('🟢 [DRAG START]', { activeId: active.id });
 
     if (activeId.startsWith('pipeline-')) {
       const pipelineId = parseInt(activeId.replace('pipeline-', ''));
@@ -487,6 +489,7 @@ export const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
 
   const handleDragOver = (event: DragOverEvent) => {
     const { over } = event;
+    console.log('🟡 [DRAG OVER]', { overId: over?.id });
 
     if (!over) {
       setDragOverFolderId(null);
@@ -512,6 +515,11 @@ export const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
 
     const activeId = active.id as string;
     const overId = over.id as string;
+    console.log('🔴 [DRAG END]', {
+      activeId,
+      overId,
+      isFolderDrop: activeId.startsWith('pipeline-') && overId.startsWith('droppable-folder-')
+    });
 
     // 폴더로 이동
     if (activeId.startsWith('pipeline-') && overId.startsWith('droppable-folder-')) {
@@ -702,10 +710,7 @@ export const PipelineSidebar: React.FC<PipelineSidebarProps> = ({
               onDragEnd={handleDragEnd}
             >
               <SortableContext
-                items={[
-                  ...filteredFolders.map(f => `droppable-folder-${f.id}`),
-                  ...filteredFolders.flatMap(f => f.pipelines.map(p => `pipeline-${p.id}`))
-                ]}
+                items={filteredFolders.flatMap(f => f.pipelines.map(p => `pipeline-${p.id}`))}
                 strategy={verticalListSortingStrategy}
               >
                 {/* Folders and Pipelines */}
