@@ -108,15 +108,20 @@ public class PipelineService {
     public Optional<Pipeline> updatePipeline(Long id, UpdatePipelineRequest request) {
         return pipelineRepository.findById(id)
             .map(pipeline -> {
-                pipeline.setName(request.getName());
-                pipeline.setDescription(request.getDescription());
+                // name 업데이트 (null이 아닌 경우만)
+                if (request.getName() != null) {
+                    pipeline.setName(request.getName());
+                }
+                // description 업데이트 (null이 아닌 경우만)
+                if (request.getDescription() != null) {
+                    pipeline.setDescription(request.getDescription());
+                }
 
                 // folderId 업데이트 (null이 아닌 경우만)
                 if (request.getFolderId() != null) {
                     Optional<PipelineFolder> folder = pipelineFolderRepository.findById(request.getFolderId());
                     folder.ifPresent(f -> {
                         pipeline.setFolderId(request.getFolderId());
-                        pipeline.setFolder(f);
                     });
                 }
 
